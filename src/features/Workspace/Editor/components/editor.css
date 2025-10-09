@@ -1,0 +1,34 @@
+.editor {
+	background-color: transparent !important;
+	color: var(--foreground) !important;
+}
+.monaco-editor {
+	outline: none !important;
+	background-color: transparent !important;
+
+	.monaco-editor-background,
+	.margin {
+		background-color: transparent !important;
+	}
+	* {
+		color: var(--muted-foreground);
+	}
+
+	.view-overlays {
+		.current-line-exact {
+			border: none !important;
+			outline: none !important;
+			background-color: #ffffff0a !important;
+		}
+	}
+
+	.decorationsOverviewRuler {
+		/* Hides a black bar at the top of scrollbar */
+		top: -5px !important;
+	}
+}
+/* .suggest-widget {
+	display: none !important;
+	visibility: hidden !important;
+} */
+/* editor-widget suggest-widget */

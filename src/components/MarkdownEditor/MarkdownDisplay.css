@@ -1,0 +1,202 @@
+/* Lesson Content Display Styling */
+.markdown-display {
+	font-size: 1.125rem !important;
+	line-height: 1.75 !important;
+	max-width: none !important;
+	color: white !important;
+
+	/* Import Monaco-styled markdown output styles */
+	/* These styles match the MarkdownEditor output */
+
+	/* Headings - Maximum specificity */
+	&& h1,
+	&& h2,
+	&& h3,
+	&& h4,
+	&& h5,
+	&& h6 {
+		font-weight: bold !important;
+		margin-bottom: 1rem !important;
+		margin-top: 1.5rem !important;
+		color: white !important;
+		display: block !important;
+	}
+
+	&& h1 {
+		font-size: 1.875rem !important;
+		line-height: 2.25rem !important;
+	}
+	&& h2 {
+		font-size: 1.5rem !important;
+		line-height: 2rem !important;
+	}
+	&& h3 {
+		font-size: 1.25rem !important;
+		line-height: 1.75rem !important;
+	}
+	&& h4 {
+		font-size: 1.125rem !important;
+		line-height: 1.75rem !important;
+	}
+	&& h5 {
+		font-size: 1rem !important;
+		line-height: 1.5rem !important;
+	}
+	&& h6 {
+		font-size: 0.875rem !important;
+		line-height: 1.25rem !important;
+	}
+
+	/* Paragraphs */
+	&& p {
+		margin-bottom: 1rem !important;
+		color: white !important;
+		line-height: 1.7 !important;
+		display: block !important;
+	}
+
+	/* Lists */
+	ul,
+	ol {
+		margin-bottom: 1rem !important;
+		padding-left: 1.5rem !important;
+	}
+
+	ul li {
+		list-style-type: disc !important;
+		margin-bottom: 0.5rem !important;
+		color: white !important;
+	}
+
+	ol li {
+		list-style-type: decimal !important;
+		margin-bottom: 0.5rem !important;
+		color: white !important;
+	}
+
+	/* Inline code - Monaco colors with dark background */
+	code:not(pre code):not(.multiple-choice-option *) {
+		font-family: "SF Mono", Monaco, Menlo, Consolas, "Ubuntu Mono",
+			monospace;
+		font-size: 0.95em;
+		padding: 3px 8px;
+		/* border-radius: 6px;
+		background: rgba(26, 26, 26, 0.95);
+		border: 1px solid #444;
+		color: #ffffff;
+		backdrop-filter: blur(8px);
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); */
+		position: relative;
+		background: var(--glass-bg);
+		opacity: var(--glass-opacity);
+		border-radius: 8px;
+		box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+		/* -webkit-backdrop-filter: blur(28px); */
+		/* backdrop-filter: blur(28px); */
+		border: var(--glass-border-width) solid var(--glass-border);
+		overflow: hidden;
+		white-space: nowrap;
+	}
+
+	/* Code blocks - Monaco colors with dark theme */
+	.code-block-wrapper {
+		margin: 1.5em 0;
+		border-radius: 8px;
+		overflow: hidden;
+		/* box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2); */
+		/* background: #1a1a1a; */
+		/* border: 1px solid #333; */
+	}
+
+	.code-block-wrapper pre {
+		/* background: #1a1a1a !important; */
+		margin: 0;
+		padding: 1rem;
+		overflow-x: auto;
+		font-family: "SF Mono", Monaco, Menlo, Consolas, "Ubuntu Mono",
+			monospace;
+
+		position: relative;
+		background: var(--glass-bg) !important;
+		opacity: var(--glass-opacity);
+		border-radius: 8px;
+		box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+		-webkit-backdrop-filter: blur(28px);
+		backdrop-filter: blur(28px);
+		border: var(--glass-border-width) solid var(--glass-border);
+		overflow: hidden;
+	}
+
+	.code-block-wrapper code {
+		background: none;
+		border: none;
+		padding: 0;
+		font-family: inherit;
+	}
+
+	/* Blockquotes */
+	blockquote {
+		border-left: 4px solid rgb(96, 165, 250) !important;
+		padding-left: 1rem !important;
+		font-style: italic !important;
+		margin-bottom: 1rem !important;
+		background: rgba(59, 130, 246, 0.1) !important;
+		padding: 1rem !important;
+		border-radius: 0 8px 8px 0 !important;
+		color: #bfdbfe !important;
+	}
+
+	/* Horizontal rules */
+	hr {
+		margin-top: 2rem !important;
+		margin-bottom: 2rem !important;
+		border-color: rgb(75, 85, 99) !important;
+	}
+
+	/* Text formatting */
+	strong {
+		font-weight: bold !important;
+	}
+
+	em {
+		font-style: italic !important;
+	}
+
+	/* Color highlights */
+	.markdown-highlight {
+		padding: 2px 4px;
+		border-radius: 3px;
+		font-weight: 500;
+	}
+
+	/* Links (if any) */
+	a {
+		color: rgb(96, 165, 250) !important;
+		text-decoration: underline !important;
+	}
+
+	a:hover {
+		color: rgb(147, 197, 253) !important;
+	}
+
+	/* Typing animation styles */
+	.typing-word-hidden {
+		opacity: 0 !important;
+		transition: opacity 0.2s ease-out;
+	}
+
+	.typing-word-visible {
+		opacity: 1 !important;
+		transition: opacity 0.2s ease-out;
+	}
+
+	/* Ensure code elements inside hidden words are also invisible */
+	code:has(.typing-word-hidden) {
+		opacity: 0 !important;
+		background: transparent !important;
+		border: none !important;
+		box-shadow: none !important;
+
+		transition: all 0.2s ease-out;
+	}
+}

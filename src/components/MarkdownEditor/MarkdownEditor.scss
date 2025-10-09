@@ -1,0 +1,611 @@
+/* Markdown Editor Styles */
+.markdown-editor {
+    // border: 1px solid #e1e5e9;
+    border-radius: 8px;
+    // background: white;
+    font-family:
+        system-ui,
+        -apple-system,
+        sans-serif;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+
+    /* Toolbar */
+    .markdown-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-bottom: 1px solid #e1e5e9;
+        background: #f8f9fa;
+        border-radius: 8px 8px 0 0;
+        flex-wrap: wrap;
+
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding-right: 8px;
+            border-right: 1px solid #e1e5e9;
+
+            &:last-child {
+                border-right: none;
+            }
+
+            &.toolbar-modes {
+                margin-left: auto;
+            }
+        }
+
+        .toolbar-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            background: white;
+            color: #1f2937;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            min-width: 32px;
+            height: 32px;
+
+            &:hover {
+                background: #f3f4f6;
+                border-color: #9ca3af;
+                color: #111827;
+            }
+
+            &:active {
+                background: #e5e7eb;
+            }
+
+            &.active {
+                background: #3b82f6;
+                color: white;
+                border-color: #2563eb;
+            }
+
+            /* Special button styles */
+            strong,
+            em,
+            del,
+            sup,
+            sub {
+                font-size: 14px;
+            }
+
+            &.process-btn {
+                background: #059669;
+                color: white;
+                border-color: #047857;
+                font-weight: 600;
+                min-width: auto;
+                padding: 6px 12px;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+
+                &:hover:not(:disabled) {
+                    background: #047857;
+                    border-color: #065f46;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+                }
+
+                &:disabled {
+                    background: #d1d5db;
+                    color: #6b7280;
+                    border-color: #9ca3af;
+                    cursor: not-allowed;
+                    box-shadow: none;
+                }
+
+                &.processing {
+                    animation: pulse 1.5s ease-in-out infinite;
+                }
+            }
+        }
+    }
+
+    @keyframes pulse {
+        0%,
+        100% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0.7;
+        }
+    }
+
+    /* Content Area */
+    .markdown-content {
+        position: relative;
+        display: flex;
+        min-height: 300px;
+        flex: 1;
+
+        .markdown-input,
+        .markdown-preview {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+
+            &.split-mode {
+                flex: 1;
+                border-right: 1px solid #e1e5e9;
+
+                &:last-child {
+                    border-right: none;
+                }
+            }
+        }
+
+        .markdown-textarea {
+            flex: 1;
+            width: 100%;
+            min-height: 0; /* Important for flex items */
+            padding: 16px;
+            border: none;
+            outline: none;
+            resize: none;
+            font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            background: white;
+            color: #1f2937;
+            box-sizing: border-box;
+
+            &::placeholder {
+                color: #6b7280;
+            }
+        }
+
+        .markdown-preview {
+            flex: 1;
+            min-height: 0; /* Important for flex items */
+            padding: 16px;
+            // background: white;
+            background: transparent;
+            overflow-y: auto;
+            position: relative;
+            // border-left: 1px solid #e5e7eb;
+            box-sizing: border-box;
+
+            .processing-indicator {
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                font-size: 12px;
+                color: #374151;
+                background: white;
+                padding: 4px 8px;
+                border-radius: 4px;
+                border: 1px solid #d1d5db;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            }
+        }
+    }
+
+    /* Status Bar */
+    .markdown-status {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 8px 12px;
+        border-top: 1px solid #e1e5e9;
+        background: #f8f9fa;
+        border-radius: 0 0 8px 8px;
+        font-size: 12px;
+        color: #374151;
+
+        .processing {
+            color: #059669;
+            font-weight: 500;
+        }
+    }
+}
+
+/* Markdown Output Styles */
+// .markdown-output {
+//     font-family:
+//         system-ui,
+//         -apple-system,
+//         sans-serif;
+//     line-height: 1.6;
+//     color: #111827 !important;
+
+//     /* Headings */
+//     h1,
+//     h2,
+//     h3,
+//     h4,
+//     h5,
+//     h6 {
+//         margin: 1.5em 0 0.5em 0;
+//         font-weight: 600;
+//         line-height: 1.3;
+//         color: #0f172a !important;
+
+//         &:first-child {
+//             margin-top: 0;
+//         }
+//     }
+
+//     h1 {
+//         font-size: 2em;
+//         border-bottom: 2px solid #e1e5e9;
+//         padding-bottom: 0.3em;
+//     }
+//     h2 {
+//         font-size: 1.5em;
+//         border-bottom: 1px solid #e1e5e9;
+//         padding-bottom: 0.3em;
+//     }
+//     h3 {
+//         font-size: 1.25em;
+//     }
+//     h4 {
+//         font-size: 1.1em;
+//     }
+//     h5 {
+//         font-size: 1em;
+//     }
+//     h6 {
+//         font-size: 0.9em;
+//         color: #6b7280;
+//     }
+
+//     /* Paragraphs */
+//     .markdown-paragraph {
+//         margin: 1em 0;
+//         color: #111827 !important;
+
+//         &:first-child {
+//             margin-top: 0;
+//         }
+//         &:last-child {
+//             margin-bottom: 0;
+//         }
+//     }
+
+//     /* Override any potential inherited light colors, but preserve syntax highlighting */
+//     p:not(.syntax-highlighted *):not(.code-block-wrapper *),
+//     div:not(.syntax-highlighted *):not(.code-block-wrapper *),
+//     span:not(.syntax-highlighted *):not([style*="color"]):not(.code-block-wrapper *) {
+//         color: #111827 !important;
+//     }
+
+//     /* Text Formatting */
+//     strong {
+//         font-weight: 600;
+//         color: #0f172a !important;
+//     }
+//     em {
+//         font-style: italic;
+//         color: #374151 !important;
+//     }
+//     del {
+//         opacity: 0.6;
+//         color: #6b7280 !important;
+//     }
+//     sup,
+//     sub {
+//         font-size: 0.8em;
+//         color: #374151 !important;
+//     }
+
+//     /* Code */
+//     code:not(pre code) {
+//         font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+//         font-size: 0.9em;
+//         padding: 2px 6px;
+//         border-radius: 4px;
+//         background: #f3f4f6;
+//         border: 1px solid #d1d5db;
+//         color: #1f2937;
+
+//         &.syntax-highlighted.inline-code {
+//             background: #1a1a1a;
+//             border: 1px solid #333;
+//             color: #ffffff;
+//             padding: 3px 8px;
+//             border-radius: 6px;
+
+//             &.monaco-colors {
+//                 /* Monaco-inspired dark theme for inline code */
+//                 background: rgba(26, 26, 26, 0.95);
+//                 border: 1px solid #444;
+//                 backdrop-filter: blur(8px);
+//                 box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+
+//                 /* Colors are now transformed in JavaScript - see code-highlighter.ts */
+//             }
+
+//             &.no-bg {
+//                 background: transparent;
+//                 border: 1px solid #444;
+//                 color: #ffffff;
+//             }
+//         }
+//     }
+
+//     /* Code Blocks */
+//     .code-block-wrapper {
+//         margin: 1.5em 0;
+//         border-radius: 8px;
+//         overflow: hidden;
+//         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+
+//         &.monaco-colors {
+//             /* Monaco-inspired dark theme for code blocks */
+//             background: #1a1a1a;
+//             border: 1px solid #333;
+
+//             pre {
+//                 background: #1a1a1a !important;
+
+//                 /* Colors are now transformed in JavaScript - see markdown-processor.ts */
+//             }
+//         }
+
+//         pre {
+//             margin: 0;
+//             padding: 1rem;
+//             overflow-x: auto;
+//             font-family: "SF Mono", Monaco, Menlo, Consolas, "Ubuntu Mono", "Liberation Mono", "DejaVu Sans Mono",
+//                 "Courier New", monospace;
+
+//             code {
+//                 background: none;
+//                 border: none;
+//                 padding: 0;
+//                 font-family: inherit;
+//             }
+//         }
+//     }
+
+//     .code-block {
+//         background: #f8fafc;
+//         border: 1px solid #d1d5db;
+//         border-radius: 8px;
+//         padding: 1rem;
+//         margin: 1.5em 0;
+//         overflow-x: auto;
+
+//         code {
+//             background: none;
+//             border: none;
+//             padding: 0;
+//             color: #1f2937;
+//         }
+//     }
+
+//     /* Quotes */
+//     .markdown-quote {
+//         margin: 1.5em 0;
+//         padding: 0.5em 1em;
+//         border-left: 4px solid #3b82f6;
+//         background: #f0f9ff;
+//         font-style: italic;
+//         color: #1e3a8a;
+//     }
+
+//     /* Lists */
+//     .markdown-ul,
+//     .markdown-ol {
+//         margin: 1em 0;
+//         padding-left: 2em;
+
+//         li {
+//             margin: 0.5em 0;
+//             line-height: 1.6;
+//         }
+//     }
+
+//     .markdown-ul {
+//         list-style-type: disc;
+//     }
+
+//     .markdown-ol {
+//         list-style-type: decimal;
+//     }
+
+//     /* Horizontal Rule */
+//     .markdown-hr {
+//         margin: 2em 0;
+//         border: none;
+//         height: 2px;
+//         background: linear-gradient(to right, transparent, #e1e5e9, transparent);
+//     }
+
+//     /* Color Highlights */
+//     .markdown-highlight {
+//         padding: 2px 4px;
+//         border-radius: 3px;
+//         font-weight: 500;
+//     }
+
+//     /* Links (if added later) */
+//     a {
+//         color: #3b82f6;
+//         text-decoration: none;
+
+//         &:hover {
+//             text-decoration: underline;
+//         }
+//     }
+// }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .markdown-editor {
+        .markdown-toolbar {
+            .toolbar-group {
+                &.toolbar-modes {
+                    margin-left: 0;
+                    margin-top: 8px;
+                    width: 100%;
+                    justify-content: center;
+                }
+            }
+        }
+
+        .markdown-content {
+            flex-direction: column;
+
+            .markdown-input.split-mode,
+            .markdown-preview.split-mode {
+                border-right: none;
+                border-bottom: 1px solid #e1e5e9;
+            }
+        }
+    }
+}
+
+/* Dark mode support (optional) */
+@media (prefers-color-scheme: dark) {
+    .markdown-editor {
+        // background: #1f2937;
+        border-color: #374151;
+
+        .markdown-toolbar {
+            background: #111827;
+            border-color: #374151;
+
+            .toolbar-btn {
+                background: #374151;
+                color: #f3f4f6;
+                border-color: #4b5563;
+
+                &:hover {
+                    background: #4b5563;
+                    color: #ffffff;
+                    border-color: #6b7280;
+                }
+
+                &.active {
+                    background: #3b82f6;
+                    color: white;
+                    border-color: #2563eb;
+                }
+
+                &.process-btn {
+                    background: #059669;
+                    color: white;
+                    border-color: #047857;
+
+                    &:hover:not(:disabled) {
+                        background: #047857;
+                        border-color: #065f46;
+                    }
+
+                    &:disabled {
+                        background: #374151;
+                        color: #9ca3af;
+                        border-color: #4b5563;
+                    }
+                }
+            }
+        }
+
+        .markdown-textarea {
+            background: #1f2937;
+            color: #f9fafb;
+
+            &::placeholder {
+                color: #9ca3af;
+            }
+        }
+
+        .markdown-preview {
+            // background: #111827;
+            border-color: #374151;
+
+            .processing-indicator {
+                background: #1f2937;
+                color: #f3f4f6;
+                border-color: #4b5563;
+            }
+        }
+
+        .markdown-status {
+            background: #111827;
+            border-color: #374151;
+            color: #d1d5db;
+
+            .processing {
+                color: #10b981;
+            }
+        }
+    }
+
+    // .markdown-output {
+    //     color: #f9fafb;
+
+    //     h1,
+    //     h2,
+    //     h3,
+    //     h4,
+    //     h5,
+    //     h6 {
+    //         color: #ffffff;
+    //         border-color: #374151;
+    //     }
+
+    //     h6 {
+    //         color: #d1d5db;
+    //     }
+
+    //     strong {
+    //         color: #ffffff;
+    //     }
+
+    //     em {
+    //         color: #e5e7eb;
+    //     }
+
+    //     del {
+    //         color: #9ca3af;
+    //     }
+
+    //     sup,
+    //     sub {
+    //         color: #d1d5db;
+    //     }
+
+    //     .markdown-quote {
+    //         background: rgba(59, 130, 246, 0.15);
+    //         border-color: #3b82f6;
+    //         color: #bfdbfe;
+    //     }
+
+    //     code:not(pre code) {
+    //         background: #374151;
+    //         border-color: #4b5563;
+    //         color: #f3f4f6;
+
+    //         &.syntax-highlighted.inline-code {
+    //             background: #475569;
+    //             border-color: #64748b;
+    //             color: #f1f5f9;
+
+    //             &.no-bg {
+    //                 background: transparent;
+    //                 border-color: #4b5563;
+    //                 color: #d1d5db;
+    //             }
+    //         }
+    //     }
+
+    //     .code-block {
+    //         background: #0f172a;
+    //         border-color: #374151;
+
+    //         code {
+    //             color: #f3f4f6;
+    //         }
+    //     }
+    // }
+}
