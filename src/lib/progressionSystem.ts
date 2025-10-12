@@ -16,7 +16,7 @@ export interface UserProgress {
 	skillNodes: SkillNode[];
 }
 
-// XP calculation: Old School RuneScape closed-form approximation
+// XP calculation:
 // Derived from: Σ(i=1 to level-1) floor((i + 400 × 2^(i/7)) / 4)
 // Mathematical derivation gives us a direct formula without loops
 export function getXPRequiredForLevel(level: number): number {
@@ -75,45 +75,61 @@ export function isSkillNodeCompleted(
 	);
 }
 
-// Default skill tree structure
+// Build skill tree dynamically from lesson metadata
+export function buildSkillTreeFromLessons(
+	lessonMetadata: { id: string; skillNodeId: string }[]
+): SkillNode[] {
+	const skillNodeMap = new Map<string, { lessons: string[]; name: string }>();
+
+	// Group lessons by skillNodeId
+	lessonMetadata.forEach((lesson) => {
+		const skillNodeId = lesson.skillNodeId;
+		if (!skillNodeMap.has(skillNodeId)) {
+			// Capitalize the skill node name
+			const name =
+				skillNodeId.charAt(0).toUpperCase() + skillNodeId.slice(1);
+			skillNodeMap.set(skillNodeId, { lessons: [], name });
+		}
+		skillNodeMap.get(skillNodeId)!.lessons.push(lesson.id);
+	});
+
+	// Convert map to array of SkillNodes
+	return Array.from(skillNodeMap.entries()).map(
+		([id, { lessons, name }]) => ({
+			id,
+			name,
+			lessons,
+			completed: false,
+			progress: 0,
+		})
+	);
+}
+
+// Default skill tree structure (fallback if no lessons provided)
 export const defaultSkillTree: SkillNode[] = [
 	{
 		id: "variables",
 		name: "Variables",
-		lessons: ["lesson-1", "lesson-2"],
-		completed: false,
-		progress: 0,
-	},
-	{
-		id: "functions",
-		name: "Functions",
-		lessons: ["lesson-3", "lesson-4"],
-		completed: false,
-		progress: 0,
-	},
-	{
-		id: "loops",
-		name: "Loops",
-		lessons: ["lesson-5", "lesson-6"],
-		completed: false,
-		progress: 0,
-	},
-	{
-		id: "conditionals",
-		name: "Conditionals",
-		lessons: ["lesson-7", "lesson-8"],
+		lessons: [],
 		completed: false,
 		progress: 0,
 	},
 ];
 
-export function createInitialProgress(): UserProgress {
+export function createInitialProgress(
+	lessonMetadata?: { id: string; skillNodeId: string }[]
+): UserProgress {
+	const skillTree = lessonMetadata
+		? buildSkillTreeFromLessons(lessonMetadata)
+		: defaultSkillTree;
+	const firstNodeId = skillTree[0]?.id || "variables";
+
 	return {
 		xp: 0,
 		level: 1,
-		currentSkillNodeId: "variables",
+		currentSkillNodeId: firstNodeId,
 		completedLessons: [],
-		skillNodes: defaultSkillTree.map((node) => ({ ...node })),
+		skillNodes: skillTree.map((node) => ({ ...node })),
 	};
 }
 

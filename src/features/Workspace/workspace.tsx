@@ -19,6 +19,7 @@ const Workspace = () => {
 	/* end of lesson data section */
 
 	const [code, setCode] = useState("");
+	const [showSkillTree, setShowSkillTree] = useState(false);
 
 	// Use our custom hook for all lesson streaming logic
 	const lessonStreaming = useLessonStreaming({
@@ -39,10 +40,10 @@ const Workspace = () => {
 	);
 
 	return (
-		<div className="w-screen h-screen max-h-screen flex flex-col bg-background-2">
-			<ProgressBar />
-			<div className="flfex-1 h-[calc(100%-68px)] flex items-start justify-center">
-				<div className="flex w-[80%] h-[99%] max-h-[99%] gap-4 pb-6">
+		<div className="w-screen h-screen max-h-screen flex flex-col bg-background-4">
+			<ProgressBar setShowSkillTree={setShowSkillTree} />
+			<div className="flfex-1 h-[calc(100%-68px)] flex items-start justify-center pb-6">
+				<div className="flex w-[80%] h-[99%] max-h-[99%] gap-6 roundfed-xl overflow-hidden">
 					<Chat lessonStreaming={lessonStreaming} />
 					<Editor
 						code={code}

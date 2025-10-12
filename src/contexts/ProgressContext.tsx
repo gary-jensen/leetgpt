@@ -241,11 +241,15 @@ function progressReducer(
 
 interface ProgressProviderProps {
 	children: ReactNode;
+	lessonMetadata?: { id: string; skillNodeId: string }[];
 }
 
-export function ProgressProvider({ children }: ProgressProviderProps) {
+export function ProgressProvider({
+	children,
+	lessonMetadata,
+}: ProgressProviderProps) {
 	const [state, dispatch] = useReducer(progressReducer, {
-		...createInitialProgress(),
+		...createInitialProgress(lessonMetadata),
 		isLevelUp: false,
 		xpGainQueue: [],
 		nodeCompleteQueue: [],

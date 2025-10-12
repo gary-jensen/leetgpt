@@ -294,6 +294,9 @@ export class CodeExecutor {
             // Clone the arguments to prevent reference issues
             const clonedArgs = deepClone(args);
             functionCalls.push({ name, args: clonedArgs });
+            
+            // Also track for old system compatibility
+            __bs.calls.push({ name, args: clonedArgs });
           }
 
           // Global cancellation flag

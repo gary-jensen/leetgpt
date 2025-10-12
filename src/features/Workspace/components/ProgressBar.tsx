@@ -1,19 +1,35 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, {
+	useState,
+	useEffect,
+	useRef,
+	Dispatch,
+	SetStateAction,
+} from "react";
 import { useProgress } from "../../../contexts/ProgressContext";
 import { getXPRequiredForLevel } from "../../../lib/progressionSystem";
 import { cn } from "@/lib/utils";
+import SkillNode from "./SkillNode";
+import SkillTreeDropdown from "./SkillTreeDropdown";
 
 interface ProgressBarProps {
 	className?: string;
+	setShowSkillTree: Dispatch<SetStateAction<boolean>>;
 }
 
-export const ProgressBar: React.FC<ProgressBarProps> = ({ className = "" }) => {
+export const ProgressBar: React.FC<ProgressBarProps> = ({
+	className = "",
+	setShowSkillTree,
+}) => {
+	const [showSkillTree, setShowSkillTreeLocal] = useState(false);
 	const {
 		progress,
 		getCurrentSkillNode,
 		getXPProgress,
 		justLeveledUp,
 		clearJustLeveledUp,
+		animationQueue,
+		isAnimationPlaying,
+		completeCurrentAnimation,
 	} = useProgress();
 
 	const [displayProgress, setDisplayProgress] = useState(0);
@@ -30,6 +46,18 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ className = "" }) => {
 
 	const currentSkillNode = getCurrentSkillNode();
 	const xpProgress = getXPProgress();
+
+	// Check if skill tree animation is queued
+	const currentAnimation = animationQueue[0];
+	const shouldShowSkillTree =
+		currentAnimation?.type === "skillTree" && !isAnimationPlaying;
+
+	// Show skill tree when animation is queued
+	useEffect(() => {
+		if (shouldShowSkillTree) {
+			setShowSkillTreeLocal(true);
+		}
+	}, [shouldShowSkillTree]);
 
 	// Handle level up animation sequence
 	useEffect(() => {
@@ -149,56 +177,27 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ className = "" }) => {
 			className={`flex justify-center items-center w-full gap-4 relative ${className}`}
 		>
 			<div className="flex justify-center items-center w-[80%] relative">
-				{/* Skill Node Progress */}
-				<div className="flex items-center gap-3 mb-2 absolute left-4">
-					<div className="w-8 h-8 relative">
-						<svg
-							className="w-8 h-8 transform -rotate-90"
-							viewBox="0 0 32 32"
-						>
-							<circle
-								cx="16"
-								cy="16"
-								r="14"
-								fill="none"
-								stroke="currentColor"
-								strokeWidth="2"
-								className="text-gray-600"
-							/>
-							<circle
-								cx="16"
-								cy="16"
-								r="14"
-								fill="none"
-								stroke="currentColor"
-								strokeWidth="2"
-								strokeDasharray={`${2 * Math.PI * 14}`}
-								strokeDashoffset={`${
-									2 *
-									Math.PI *
-									14 *
-									(1 - (currentSkillNode?.progress || 0))
-								}`}
-								className={`text-blue-400 transition-all duration-500 ease-out ${
-									showSkillNodeAnimation
-										? "animate-pulse"
-										: ""
-								}`}
-							/>
-						</svg>
-					</div>
-					<div className="text-sm">
-						<div className="text-white font-medium">
-							{currentSkillNode?.name || "Variables"}
-						</div>
-						<div className="text-gray-400 text-xs">
-							{Math.round(
-								(currentSkillNode?.progress || 0) * 100
-							)}
-							% complete
-						</div>
-					</div>
-				</div>
+				{/* Skill Node Section */}
+				<SkillNode
+					currentSkillNode={currentSkillNode}
+					showSkillNodeAnimation={showSkillNodeAnimation}
+					setShowSkillTree={setShowSkillTreeLocal}
+				/>
+
+				{/* Skill Tree Dropdown */}
+				<SkillTreeDropdown
+					isVisible={showSkillTree}
+					onClose={() => {
+						setShowSkillTreeLocal(false);
+						if (shouldShowSkillTree) {
+							completeCurrentAnimation();
+						}
+					}}
+					autoCloseDuration={currentAnimation?.data?.duration || 1500}
+					currentSkillNode={currentSkillNode}
+					showSkillNodeAnimation={showSkillNodeAnimation}
+					completedNodeId={currentAnimation?.data?.completedNodeId}
+				/>
 				{/* Curved Progress Bar with Central Level Circle */}
 				<div className="relative w-[69%] h-20 flex items-center justify-center">
 					<svg

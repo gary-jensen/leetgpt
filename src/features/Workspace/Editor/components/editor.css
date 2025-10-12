@@ -1,6 +1,7 @@
 .editor {
 	background-color: transparent !important;
 	color: var(--foreground) !important;
+	border-radius: 0;
 }
 .monaco-editor {
 	outline: none !important;
@@ -26,6 +27,10 @@
 		/* Hides a black bar at the top of scrollbar */
 		top: -5px !important;
 	}
+}
+
+.monaco-editor .scroll-decoration {
+	box-shadow: none !important;
 }
 /* .suggest-widget {
 	display: none !important;

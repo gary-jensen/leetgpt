@@ -4,7 +4,6 @@ import React from "react";
 import { useProgress } from "../../contexts/ProgressContext";
 import XPGainAnimation from "./XPGainAnimation";
 import NodeCompleteAnimation from "./NodeCompleteAnimation";
-import SkillTreePopup from "../SkillTree/SkillTreePopup";
 
 export const AnimationManager: React.FC = () => {
 	const {
@@ -46,15 +45,8 @@ export const AnimationManager: React.FC = () => {
 						/>
 					)}
 					{currentAnimation.type === "skillTree" && (
-						<SkillTreePopup
-							onClose={() => {
-								closeSkillTree();
-								completeCurrentAnimation();
-							}}
-							autoCloseDuration={
-								currentAnimation.data?.duration || 1500
-							}
-						/>
+						// Skill tree is now handled directly in ProgressBar
+						<div style={{ display: "none" }} />
 					)}
 				</>
 			)}

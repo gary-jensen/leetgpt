@@ -7,6 +7,7 @@
 	--color-background: var(--background);
 	--color-background-2: var(--background-2);
 	--color-background-3: var(--background-3);
+	--color-background-4: var(--background-4);
 	--color-foreground: var(--foreground);
 	--font-sans: var(--font-inter);
 	/* --font-mono: "'SF Mono', Monaco, Menlo, Consolas, 'Ubuntu Mono', 'Liberation Mono', 'DejaVu Sans Mono','Courier New', monospace"; */
@@ -47,9 +48,14 @@
 
 :root {
 	--radius: 0.625rem;
-	--background: #2d2d2d;
-	--background-2: #202020;
-	--background-3: #222222;
+	--background: #262626;
+	--background-2: #232323;
+	--background-3: #212121;
+	--background-4: #1f1f1f;
+	/* --background: #252525;
+	--background-2: #212121;
+	--background-3: #212121;
+	--background-4: #292929; */
 	--foreground: oklch(0.985 0 0);
 	--card: #303030;
 	--card-foreground: oklch(0.985 0 0);
@@ -64,7 +70,7 @@
 	--accent: #181818;
 	--accent-foreground: oklch(0.985 0 0);
 	--destructive: oklch(0.704 0.191 22.216);
-	--border: oklch(1 0 0 / 10%);
+	--border: #2f2f2f;
 	--input: oklch(1 0 0 / 15%);
 	--ring: oklch(0.556 0 0);
 	--chart-1: oklch(0.488 0.243 264.376);
@@ -100,7 +106,7 @@
 	--accent: #181818;
 	--accent-foreground: oklch(0.985 0 0);
 	--destructive: oklch(0.704 0.191 22.216);
-	--border: oklch(1 0 0 / 10%);
+	--border: #2f2f2f
 	--input: oklch(1 0 0 / 15%);
 	--ring: oklch(0.556 0 0);
 	--chart-1: oklch(0.488 0.243 264.376);
@@ -152,4 +158,8 @@
 
 .animate-quick-pulse {
 	animation: quick-pulse 1s ease-in-out infinite;
+}
+
+.shadow-inset {
+	box-shadow: inset 20px 20px 5px -20px rgba(0, 0, 0, 0.4);
 }

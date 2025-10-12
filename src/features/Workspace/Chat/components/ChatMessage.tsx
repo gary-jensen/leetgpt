@@ -24,9 +24,9 @@ export const ChatMessage = ({
 
 		switch (message.messageType) {
 			case "error":
-				return `${baseClasses} border-l-4 border-red-500 pl-4 bg-red-500/10 rounded-r-lg py-2`;
+				return `${baseClasses} border-l-4 border-red-500 pl-4 bg-red-500/10 rounded-r-lg py-2 error-message`;
 			case "success":
-				return `${baseClasses} border-l-4 border-green-500 pl-4 bg-green-500/10 rounded-r-lg py-2`;
+				return `${baseClasses} border-l-4 border-green-500 pl-4 bg-green-500/10 rounded-r-lg py-2 success-message`;
 			case "info":
 			default:
 				return baseClasses;

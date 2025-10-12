@@ -32,57 +32,57 @@ export const mockLessons: Lesson[] = [
 			},
 		],
 	},
-	{
-		id: "lesson-2",
-		title: "Variables and Math",
-		skillNodeId: "variables",
-		xpReward: 50,
-		stepXpReward: 50,
-		steps: [
-			{
-				id: "step-1",
-				stepType: "overview",
-				content:
-					"Variables store data that you can use later. Create a variable called `favNumber` and set it to `300`:\n```js\nlet favNumber = 300\n```",
-				tests: [
-					{
-						type: "variableAssignment",
-						variableName: "favNumber",
-						expectedValue: { expected: 300 },
-					},
-				],
-			},
-			{
-				id: "step-2",
-				stepType: "explanation",
-				content:
-					"Great work!\nNow, Initialize a variable `minutes` to `300`\n\nDivide the value by `50` using the division assignment operator `/=`\n\nFinally, log the variable",
-				tests: [
-					{
-						type: "variableAssignment",
-						variableName: "minutes",
-						expectedValue: {
-							expected: 300,
-						},
-					},
-					{
-						type: "variableReassignment",
-						method: {
-							operand: 50,
-							operator: "/=",
-						},
-						variable: "minutes",
-						expectedValue: 6,
-					},
-					{
-						type: "consoleLogVariable",
-						variableName: "minutes",
-						expectedOutput: "6",
-					},
-				],
-			},
-		],
-	},
+	// {
+	// 	id: "lesson-2",
+	// 	title: "Variables and Math",
+	// 	skillNodeId: "variables",
+	// 	xpReward: 50,
+	// 	stepXpReward: 50,
+	// 	steps: [
+	// 		{
+	// 			id: "step-1",
+	// 			stepType: "overview",
+	// 			content:
+	// 				"Variables store data that you can use later. Create a variable called `favNumber` and set it to `300`:\n```js\nlet favNumber = 300\n```",
+	// 			tests: [
+	// 				{
+	// 					type: "variableAssignment",
+	// 					variableName: "favNumber",
+	// 					expectedValue: { expected: 300 },
+	// 				},
+	// 			],
+	// 		},
+	// 		{
+	// 			id: "step-2",
+	// 			stepType: "explanation",
+	// 			content:
+	// 				"Great work!\nNow, Initialize a variable `minutes` to `300`\n\nDivide the value by `50` using the division assignment operator `/=`\n\nFinally, log the variable",
+	// 			tests: [
+	// 				{
+	// 					type: "variableAssignment",
+	// 					variableName: "minutes",
+	// 					expectedValue: {
+	// 						expected: 300,
+	// 					},
+	// 				},
+	// 				{
+	// 					type: "variableReassignment",
+	// 					method: {
+	// 						operand: 50,
+	// 						operator: "/=",
+	// 					},
+	// 					variable: "minutes",
+	// 					expectedValue: 6,
+	// 				},
+	// 				{
+	// 					type: "consoleLogVariable",
+	// 					variableName: "minutes",
+	// 					expectedOutput: "6",
+	// 				},
+	// 			],
+	// 		},
+	// 	],
+	// },
 	{
 		id: "lesson-3",
 		title: "Functions Basics",
@@ -109,6 +109,9 @@ export const mockLessons: Lesson[] = [
 				stepType: "explanation",
 				content:
 					'Now call your function with the name "Alice":\n```js\ngreet("Alice")\n```',
+				startingCode: `function greet(name) {
+  console.log("Hello, " + name);
+}\n`,
 				tests: [
 					{
 						type: "functionCall",
@@ -150,6 +153,7 @@ export const mockLessons: Lesson[] = [
 				stepType: "explanation",
 				content:
 					"Now call your function with the numbers 5 and 3, and log the result:\n```js\nconsole.log(add(5, 3))\n```",
+				startingCode: `const add = (a, b) => a + b\n`,
 				tests: [
 					{
 						type: "functionCall",

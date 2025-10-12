@@ -207,14 +207,24 @@
 		color: #d1d5db;
 	}
 
-	.chat-markdown-display .markdown-content code {
-		background-color: #1f2937;
+	.chat-markdown-display .markdown-content code,
+	.chat-markdown-display .markdown-content pre {
+		background-color: #00000026;
 		color: #e5e7eb;
 	}
 
-	.chat-markdown-display .markdown-content pre {
-		background-color: #1f2937;
+	.error-message .chat-markdown-display .markdown-content code,
+	.error-message .chat-markdown-display .markdown-content pre {
+		background-color: #1d1d1d52;
+		color: #e5e7eb;
 	}
+
+	/* Will never happen, keep anyways */
+	/* .success-message .chat-markdown-display .markdown-content code,
+	.success-message .chat-markdown-display .markdown-content pre {
+		background-color: #00000026;
+		color: #e5e7eb;
+	} */
 
 	.chat-markdown-display .markdown-content a {
 		color: #60a5fa;

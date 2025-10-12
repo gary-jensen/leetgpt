@@ -6,7 +6,7 @@ interface ChatHeaderProps {
 
 export const ChatHeader = ({ title = "Chat" }: ChatHeaderProps) => {
 	return (
-		<div className="px-3 h-[40px] flex items-center gap-2 border-b">
+		<div className="px-3 py-3.5 maxf-h-[40px] hf-[45px] flex items-center gap-2 border-b">
 			<MessageSquareIcon size={18} />
 			{title}
 		</div>

@@ -117,7 +117,8 @@
 			monospace;
 
 		position: relative;
-		background: var(--glass-bg) !important;
+		/* background: var(--glass-bg) !important; */
+		background-color: red;
 		opacity: var(--glass-opacity);
 		border-radius: 8px;
 		box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);

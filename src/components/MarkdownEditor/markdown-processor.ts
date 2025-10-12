@@ -3,6 +3,9 @@ import { processContentForStorage } from "./code-highlighter";
 
 // Monaco color mapping - from dark-plus to Monaco colors
 const monacoColorMap: { [key: string]: string } = {
+	// Code block grey to custom
+	"#1e1e1e": "",
+
 	// Dark-plus blues to Monaco green (keywords)
 	"#569cd6": "#8aff00", // keywords
 	"#4fc1ff": "#44fffa", // numbers

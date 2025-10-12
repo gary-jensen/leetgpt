@@ -62,9 +62,10 @@ export const useLessonStreaming = ({
 
 			// If node just became completed, show skill tree
 			if (!wasCompleted && isNowCompleted) {
-				setTimeout(() => {
-					queueAnimation("skillTree", { duration: 1500 });
-				}, 500); // Small delay to let XP animation finish
+				queueAnimation("skillTree", {
+					duration: 1500,
+					completedNodeId: node.id,
+				});
 			}
 		});
 
@@ -193,7 +194,11 @@ export const useLessonStreaming = ({
 						// Stream the next step content after success message streams
 
 						streamStep(currentLessonIndex, currentStepIndex + 1);
-						setCode("");
+						setCode(
+							lessons[currentLessonIndex].steps[
+								currentStepIndex + 1
+							].startingCode ?? ""
+						);
 					}, 300);
 					// else if there is a next lesson, go to it
 				} else if (lessons.length > currentLessonIndex + 1) {
@@ -208,7 +213,10 @@ export const useLessonStreaming = ({
 					setTimeout(() => {
 						// Clear chat messages for new lesson
 						clearMessages();
-						setCode("");
+						setCode(
+							lessons[currentLessonIndex + 1].steps[0]
+								.startingCode ?? ""
+						);
 
 						setCurrentLessonIndex(currentLessonIndex + 1);
 						setCurrentStepIndex(0);

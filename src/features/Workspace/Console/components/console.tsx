@@ -12,18 +12,18 @@ const Console = ({
 	handleRun: () => void;
 }) => {
 	return (
-		<div className="w-full h-[400px] bg-background border-t border-border flex flex-col px-3 pt-2 pb-4">
-			<div className="w-full h-[40px] flex items-center gap-2 cursor-pointer justify-between">
+		<div className="w-full h-[400px] bg-background borderf-t border-border flex flex-col pb-4 rounded-2xl border-1">
+			<div className="w-full hf-[40px] flex items-center gap-2 cursor-pointer justify-between px-3 border-b-1 py-3.5">
 				{/* <Image src="/js.svg" alt="js" width={24} height={24} /> */}
 				<div className="flex items-center gap-2">
 					<SquareChevronRightIcon size={20} />
 					Console
 				</div>
-				<Button onClick={handleRun}>Run</Button>
+				{/* <Button onClick={handleRun}>Run</Button> */}
 			</div>
 
 			{/* Console Output */}
-			<div className="flex-1 bg-transparent">
+			<div className="flex-1 bg-transparent px-3">
 				<iframe
 					ref={iframeRef}
 					sandbox="allow-scripts"
