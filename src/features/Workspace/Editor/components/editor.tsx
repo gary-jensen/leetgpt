@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import EditorWrapper from "./EditorWrapper";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Console from "../../Console/components/console";
 import { Button } from "@/components/ui/button";
 import { useProgress } from "@/contexts/ProgressContext";
@@ -16,13 +16,18 @@ const Editor = ({
 	setCode,
 	iframeRef,
 	handleRun,
+	isExecuting,
+	isThinking,
 }: {
 	code: string;
 	setCode: (code: string) => void;
 	iframeRef: React.RefObject<HTMLIFrameElement | null>;
 	handleRun: () => void;
+	isExecuting: boolean;
+	isThinking: boolean;
 }) => {
 	const { addStepXP } = useProgress();
+	const [isDebouncing, setIsDebouncing] = useState(false);
 
 	const handleDebugLevelUp = () => {
 		// Add enough XP to trigger a level up (this will set justLeveledUp flag)
@@ -38,6 +43,30 @@ const Editor = ({
 		// Add 250 XP to test level up animation (should trigger level up)
 		addStepXP(3);
 	};
+
+	const handleRunClick = () => {
+		// Don't run if already executing, thinking, or debouncing
+		if (isExecuting || isThinking || isDebouncing) return;
+
+		// Start debounce
+		setIsDebouncing(true);
+
+		// Call the actual run handler
+		handleRun();
+
+		// Clear debounce after 500ms
+		setTimeout(() => {
+			setIsDebouncing(false);
+		}, 500);
+	};
+
+	// Reset debounce if AI starts thinking (to keep button disabled)
+	useEffect(() => {
+		if (isThinking) {
+			setIsDebouncing(false);
+		}
+	}, [isThinking]);
+
 	return (
 		<div className="flex-65 h-full flex">
 			{/* <Sidebar /> */}
@@ -62,7 +91,13 @@ const Editor = ({
 							focusOnLoad={false}
 						/>
 						<div className="w-full h-[64px] px-3 bg-background-2 flex items-center gap-2 border-t-1">
-							<Button onClick={handleRun} variant="run">
+							<Button
+								onClick={handleRunClick}
+								variant="run"
+								disabled={
+									isExecuting || isThinking || isDebouncing
+								}
+							>
 								Run
 							</Button>
 							{/* <Button

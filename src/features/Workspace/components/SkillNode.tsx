@@ -1,23 +1,31 @@
 import { SkillNode as SkillNodeType } from "@/lib/progressionSystem";
 import { cn } from "@/lib/utils";
-import { Dispatch, SetStateAction, useState } from "react";
+import { forwardRef } from "react";
 
-const SkillNode = ({
-	currentSkillNode,
-	showSkillNodeAnimation,
-	setShowSkillTree,
-}: {
-	currentSkillNode: SkillNodeType | undefined;
-	showSkillNodeAnimation: boolean;
-	setShowSkillTree: Dispatch<SetStateAction<boolean>>;
-}) => {
+const SkillNode = forwardRef<
+	HTMLDivElement,
+	{
+		currentSkillNode: SkillNodeType | undefined;
+		showSkillNodeAnimation: boolean;
+		onOpenSkillTree?: (position: { x: number; y: number }) => void;
+	}
+>(({ currentSkillNode, showSkillNodeAnimation, onOpenSkillTree }, ref) => {
 	const openSkillTree = () => {
-		setShowSkillTree((prev) => !prev);
+		// Get the position of this element
+		if (ref && typeof ref !== "function" && ref.current) {
+			const rect = ref.current.getBoundingClientRect();
+			const position = {
+				x: rect.left + rect.width / 2,
+				y: rect.top + rect.height / 2,
+			};
+			onOpenSkillTree?.(position);
+		}
 	};
 
 	return (
 		<>
 			<div
+				ref={ref}
 				className="flex items-center gap-3 mb-2 absolute left-0 hover:bg-background/80 px-4 py-3 rounded-lg cursor-pointer"
 				onClick={openSkillTree}
 			>
@@ -75,5 +83,8 @@ const SkillNode = ({
 			</div>
 		</>
 	);
-};
+});
+
+SkillNode.displayName = "SkillNode";
+
 export default SkillNode;

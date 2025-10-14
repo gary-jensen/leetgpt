@@ -10,6 +10,8 @@ import { getXPRequiredForLevel } from "../../../lib/progressionSystem";
 import { cn } from "@/lib/utils";
 import SkillNode from "./SkillNode";
 import SkillTreeDropdown from "./SkillTreeDropdown";
+// import SkillTreeOverlay from "./SkillTreeOverlay"; // Keeping for future use
+import SkillTreeOverlayVertical from "./SkillTreeOverlayVertical";
 
 interface ProgressBarProps {
 	className?: string;
@@ -20,7 +22,11 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 	className = "",
 	setShowSkillTree,
 }) => {
-	const [showSkillTree, setShowSkillTreeLocal] = useState(false);
+	const [showSkillTreeDropdown, setShowSkillTreeDropdown] = useState(false);
+	const [showSkillTreeOverlay, setShowSkillTreeOverlay] = useState(false);
+	const [originPosition, setOriginPosition] = useState<
+		{ x: number; y: number } | undefined
+	>(undefined);
 	const {
 		progress,
 		getCurrentSkillNode,
@@ -43,6 +49,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 	>("idle");
 	const progressBarRef = useRef<HTMLDivElement>(null);
 	const progressPathRef = useRef<SVGPathElement>(null);
+	const skillNodeRef = useRef<HTMLDivElement>(null);
 
 	const currentSkillNode = getCurrentSkillNode();
 	const xpProgress = getXPProgress();
@@ -52,12 +59,17 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 	const shouldShowSkillTree =
 		currentAnimation?.type === "skillTree" && !isAnimationPlaying;
 
-	// Show skill tree when animation is queued
+	// Show skill tree dropdown when animation is queued (completion animation)
 	useEffect(() => {
 		if (shouldShowSkillTree) {
-			setShowSkillTreeLocal(true);
+			setShowSkillTreeDropdown(true);
 		}
 	}, [shouldShowSkillTree]);
+
+	const handleOpenSkillTreeOverlay = (position: { x: number; y: number }) => {
+		setOriginPosition(position);
+		setShowSkillTreeOverlay(true);
+	};
 
 	// Handle level up animation sequence
 	useEffect(() => {
@@ -179,16 +191,17 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 			<div className="flex justify-center items-center w-[80%] relative">
 				{/* Skill Node Section */}
 				<SkillNode
+					ref={skillNodeRef}
 					currentSkillNode={currentSkillNode}
 					showSkillNodeAnimation={showSkillNodeAnimation}
-					setShowSkillTree={setShowSkillTreeLocal}
+					onOpenSkillTree={handleOpenSkillTreeOverlay}
 				/>
 
-				{/* Skill Tree Dropdown */}
+				{/* Skill Tree Dropdown - for completion animations */}
 				<SkillTreeDropdown
-					isVisible={showSkillTree}
+					isVisible={showSkillTreeDropdown}
 					onClose={() => {
-						setShowSkillTreeLocal(false);
+						setShowSkillTreeDropdown(false);
 						if (shouldShowSkillTree) {
 							completeCurrentAnimation();
 						}
@@ -197,6 +210,15 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 					currentSkillNode={currentSkillNode}
 					showSkillNodeAnimation={showSkillNodeAnimation}
 					completedNodeId={currentAnimation?.data?.completedNodeId}
+				/>
+
+				{/* Skill Tree Overlay - for manual click */}
+				<SkillTreeOverlayVertical
+					isOpen={showSkillTreeOverlay}
+					onClose={() => {
+						setShowSkillTreeOverlay(false);
+					}}
+					originPosition={originPosition}
 				/>
 				{/* Curved Progress Bar with Central Level Circle */}
 				<div className="relative w-[69%] h-20 flex items-center justify-center">

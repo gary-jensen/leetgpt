@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { SquareChevronRightIcon } from "lucide-react";
-import { useRef } from "react";
+import { useRef, useEffect, useState } from "react";
 
 const Console = ({
 	iframeRef,
@@ -11,9 +11,36 @@ const Console = ({
 	iframeRef: React.RefObject<HTMLIFrameElement | null>;
 	handleRun: () => void;
 }) => {
+	const [isGlowing, setIsGlowing] = useState(false);
+
+	useEffect(() => {
+		// Listen for messages from the iframe that indicate console activity
+		const handleMessage = (event: MessageEvent) => {
+			if (!event.data || typeof event.data !== "object") {
+				return;
+			}
+
+			const { type, logs } = event.data;
+
+			// Trigger glow effect when execution completes with logs
+			if (type === "execution-complete" && logs && logs.length > 0) {
+				setIsGlowing(true);
+				// Remove glow after animation completes
+				setTimeout(() => setIsGlowing(false), 1000);
+			}
+		};
+
+		window.addEventListener("message", handleMessage);
+		return () => window.removeEventListener("message", handleMessage);
+	}, []);
+
 	return (
-		<div className="w-full h-[400px] bg-background borderf-t border-border flex flex-col pb-4 rounded-2xl border-1">
-			<div className="w-full hf-[40px] flex items-center gap-2 cursor-pointer justify-between px-3 border-b-1 py-3.5">
+		<div
+			className={`w-full h-[400px] bg-background borderf-t border-border flex flex-col pb-4 rounded-2xl border-1 transition-all duration-300 ${
+				isGlowing ? "console-glow" : ""
+			}`}
+		>
+			<div className="w-full hf-[40px] flex items-center gap-2 cursor-pointer justify-between px-3 border-b-1 py-3.5 shadow-md">
 				{/* <Image src="/js.svg" alt="js" width={24} height={24} /> */}
 				<div className="flex items-center gap-2">
 					<SquareChevronRightIcon size={20} />
@@ -26,7 +53,7 @@ const Console = ({
 			<div className="flex-1 bg-transparent px-3">
 				<iframe
 					ref={iframeRef}
-					sandbox="allow-scripts"
+					sandbox="allow-scripts allow-modals"
 					style={{
 						width: "100%",
 						height: "100%",
@@ -36,6 +63,26 @@ const Console = ({
 					className="bg-transparent"
 				/>
 			</div>
+
+			<style jsx>{`
+				@keyframes console-pulse {
+					0%,
+					100% {
+						box-shadow: 0 0 3px rgba(59, 130, 246, 0.5),
+							0 0 6px rgba(59, 130, 246, 0.3);
+						border-color: rgba(59, 130, 246, 0.6);
+					}
+					50% {
+						box-shadow: 0 0 10px rgba(59, 130, 246, 0.8),
+							0 0 15px rgba(59, 130, 246, 0.5);
+						border-color: rgba(59, 130, 246, 1);
+					}
+				}
+
+				.console-glow {
+					animation: console-pulse 0.6s ease-in-out;
+				}
+			`}</style>
 		</div>
 	);
 };

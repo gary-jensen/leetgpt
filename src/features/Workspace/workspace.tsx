@@ -32,7 +32,7 @@ const Workspace = () => {
 		setCode,
 	});
 
-	const { iframeRef, handleTest } = useConsole(
+	const { iframeRef, handleTest, isExecuting } = useConsole(
 		code,
 		currentLesson,
 		currentStepIndex,
@@ -42,7 +42,7 @@ const Workspace = () => {
 	return (
 		<div className="w-screen h-screen max-h-screen flex flex-col bg-background-4">
 			<ProgressBar setShowSkillTree={setShowSkillTree} />
-			<div className="flfex-1 h-[calc(100%-68px)] flex items-start justify-center pb-6">
+			<div className="flfex-1 h-[calc(100vh-80px)] flex items-start justify-center pb-6">
 				<div className="flex w-[80%] h-[99%] max-h-[99%] gap-6 roundfed-xl overflow-hidden">
 					<Chat lessonStreaming={lessonStreaming} />
 					<Editor
@@ -50,6 +50,8 @@ const Workspace = () => {
 						setCode={setCode}
 						iframeRef={iframeRef}
 						handleRun={handleTest}
+						isExecuting={isExecuting}
+						isThinking={lessonStreaming.isThinking}
 					/>
 				</div>
 			</div>

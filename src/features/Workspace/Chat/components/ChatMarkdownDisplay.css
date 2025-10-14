@@ -78,6 +78,7 @@
 	/* font-size: 0.75rem; */
 	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas,
 		"Liberation Mono", Menlo, monospace;
+	white-space: nowrap;
 }
 
 .chat-markdown-display .markdown-content pre {
