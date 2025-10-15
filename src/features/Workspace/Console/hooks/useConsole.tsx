@@ -1,9 +1,16 @@
 import { useEffect, useRef, useState } from "react";
+import { useSession } from "next-auth/react";
 import { CodeExecutor } from "../lib/codeExecutor";
 // import { TestValidator } from "../lib/testValidator";
 import { Lesson, TestResult } from "../../temp-types";
 import { ExecutionResult } from "../lib/types";
 import { questionTestDetailed } from "../lib/questionTest";
+import { saveCodeSubmission } from "@/lib/actions/submissions";
+import {
+	trackCodeRun,
+	trackCodeSubmitCorrect,
+	trackCodeSubmitIncorrect,
+} from "@/lib/analytics";
 
 // interface UseConsoleProps {
 // 	code: string;
@@ -21,6 +28,7 @@ const useConsole = (
 	// onTestResults,
 	// onUsePassingCode,
 ) => {
+	const { data: session } = useSession();
 	const currentQuestion = currentLesson.steps[currentStepIndex];
 
 	const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -52,6 +60,9 @@ const useConsole = (
 		try {
 			const result = await executorRef.current.executeCode(code, false);
 			setLastResult(result);
+
+			// Track code run
+			trackCodeRun(currentLesson.id, currentQuestion.id);
 		} catch (error) {
 			console.error("Execution failed:", error);
 			setLastResult({
@@ -70,7 +81,6 @@ const useConsole = (
 		setIsExecuting(true);
 		try {
 			const result = await executorRef.current.executeCode(code, true);
-			// console.log(code, currentQuestion);
 			setLastResult(result);
 
 			// Run tests
@@ -120,6 +130,41 @@ const useConsole = (
 			// ): [];
 
 			// const testResults = currentQuestion.tests;
+
+			// Check if all tests passed
+			const allTestsPassed = testResults.every((result) => result.passed);
+
+			// Track analytics
+			trackCodeRun(currentLesson.id, currentQuestion.id);
+			if (allTestsPassed) {
+				trackCodeSubmitCorrect(
+					currentLesson.id,
+					currentQuestion.id,
+					1 // Could track actual attempts in the future
+				);
+			} else {
+				const firstFailedTest = testResults.find((r) => !r.passed);
+				trackCodeSubmitIncorrect(
+					currentLesson.id,
+					currentQuestion.id,
+					firstFailedTest?.error || "Test failed"
+				);
+			}
+
+			// Save submission to database (only if user is authenticated)
+			if (session?.user?.id) {
+				await saveCodeSubmission(
+					session.user.id,
+					currentLesson.id,
+					currentQuestion.id,
+					code,
+					allTestsPassed,
+					{
+						lessonTitle: currentLesson.title,
+						stepType: currentQuestion.stepType,
+					}
+				);
+			}
 
 			if (handleTestResults) {
 				handleTestResults(testResults);

@@ -1,0 +1,57 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+model User {
+    id          String           @id @default(uuid())
+    email       String           @unique
+    name        String?
+    image       String?
+    createdAt   DateTime         @default(now())
+    updatedAt   DateTime         @updatedAt
+    progress    UserProgress?
+    submissions CodeSubmission[]
+    sessions    UserSession[]
+}
+
+model UserProgress {
+    id               String   @id @default(uuid())
+    userId           String   @unique
+    user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    xp               Int      @default(0)
+    level            Int      @default(1)
+    completedLessons Json     @default("[]")
+    updatedAt        DateTime @updatedAt
+}
+
+model CodeSubmission {
+    id          String   @id @default(uuid())
+    userId      String
+    user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    lessonId    String
+    stepId      String
+    code        String
+    isCorrect   Boolean
+    submittedAt DateTime @default(now())
+    lessonData  Json?
+
+    @@index([userId, lessonId])
+}
+
+model UserSession {
+    id               String    @id @default(uuid())
+    userId           String
+    user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+    sessionStart     DateTime  @default(now())
+    sessionEnd       DateTime?
+    durationSeconds  Int?
+    lessonsCompleted Int       @default(0)
+}

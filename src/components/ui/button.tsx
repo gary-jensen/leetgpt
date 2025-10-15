@@ -12,6 +12,9 @@ const buttonVariants = cva(
 				default:
 					"bg-primary text-primary-foreground hover:bg-primary/90",
 				run: "bg-green-600 text-white hover:bg-green-600/70",
+				correct:
+					"bg-green-600 disabled:opacity-100 text-white hover:bg-green-600/70 button-glow-green",
+				wrong: "bg-red-600 disabled:opacity-100 text-white hover:bg-red-600/70 button-glow-red",
 				destructive:
 					"bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
 				outline:

@@ -2,7 +2,7 @@ import React from "react";
 
 const ThinkingAnimation = () => {
 	return (
-		<div className="flex items-center gap-2 text-gray-500 text-sm">
+		<div className="flex items-center gap-2 text-gray-500 text-[0.925rem] leading-[2]">
 			<span>thinking</span>
 			<div className="flex gap-1">
 				<div

@@ -2,14 +2,11 @@
 
 import React from "react";
 import { useProgress } from "../../contexts/ProgressContext";
-import XPGainAnimation from "./XPGainAnimation";
 import NodeCompleteAnimation from "./NodeCompleteAnimation";
 
 export const AnimationManager: React.FC = () => {
 	const {
-		xpGainQueue,
 		nodeCompleteQueue,
-		removeXPGain,
 		removeNodeComplete,
 		progress,
 		animationQueue,
@@ -23,14 +20,7 @@ export const AnimationManager: React.FC = () => {
 
 	return (
 		<>
-			{/* XP Gain Animations - These run independently */}
-			{xpGainQueue.map(({ xp, id }) => (
-				<XPGainAnimation
-					key={id}
-					xp={xp}
-					onComplete={() => removeXPGain(id)}
-				/>
-			))}
+			{/* XP Gain Animations are now rendered in ProgressBar */}
 
 			{/* Queued Animations - Only one at a time */}
 			{currentAnimation && !isAnimationPlaying && (

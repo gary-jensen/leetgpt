@@ -75,6 +75,38 @@ export function isSkillNodeCompleted(
 	);
 }
 
+// Recalculate progress and completed status for all skill nodes
+export function recalculateSkillNodes(
+	skillNodes: SkillNode[],
+	completedLessons: string[]
+): SkillNode[] {
+	return skillNodes.map((node) => ({
+		...node,
+		progress: calculateSkillNodeProgress(completedLessons, node),
+		completed: isSkillNodeCompleted(completedLessons, node),
+	}));
+}
+
+// Calculate current skill node ID from completed lessons and lesson metadata
+export function calculateCurrentSkillNodeId(
+	completedLessons: string[],
+	lessonMetadata: { id: string; skillNodeId: string }[]
+): string {
+	// Find the first incomplete lesson
+	const firstIncompleteLesson = lessonMetadata.find(
+		(lesson) => !completedLessons.includes(lesson.id)
+	);
+
+	// If found, return its skill node
+	if (firstIncompleteLesson) {
+		return firstIncompleteLesson.skillNodeId;
+	}
+
+	// If all lessons are complete, return the last skill node
+	const lastLesson = lessonMetadata[lessonMetadata.length - 1];
+	return lastLesson?.skillNodeId || "variables";
+}
+
 // Build skill tree dynamically from lesson metadata
 export function buildSkillTreeFromLessons(
 	lessonMetadata: { id: string; skillNodeId: string }[]
@@ -194,25 +226,9 @@ export function updateProgressAfterStep(
 	};
 }
 
-// Local storage helpers
-const PROGRESS_STORAGE_KEY = "bitschool-progress";
-
-export function saveProgressToStorage(progress: UserProgress): void {
-	try {
-		localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(progress));
-	} catch (error) {
-		console.error("Failed to save progress to localStorage:", error);
-	}
-}
-
-export function loadProgressFromStorage(): UserProgress | null {
-	try {
-		const stored = localStorage.getItem(PROGRESS_STORAGE_KEY);
-		if (stored) {
-			return JSON.parse(stored) as UserProgress;
-		}
-	} catch (error) {
-		console.error("Failed to load progress from localStorage:", error);
-	}
-	return null;
-}
+// Export secure storage functions from storage.ts
+export {
+	saveProgressToStorage,
+	loadProgressFromStorage,
+	clearProgressFromStorage,
+} from "./storage";

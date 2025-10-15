@@ -1,62 +1,56 @@
 "use client";
 
-import Editor from "./Editor/components/editor";
-import Chat from "./Chat/components/chat";
-import useConsole from "./Console/hooks/useConsole";
-import { useState } from "react";
-import { useLessonStreaming } from "./hooks/useLessonStreaming";
-import { ProgressBar } from "./components/ProgressBar";
-import AnimationManager from "../../components/Rewards/AnimationManager";
-
+import { useState, useEffect, useRef } from "react";
+import { useProgress } from "../../contexts/ProgressContext";
+import WorkspaceContent from "./WorkspaceContent";
 import { mockLessons as lessons } from "./mock-lessons";
 
 const Workspace = () => {
-	/* lesson data section */
-
+	const { progress, isProgressLoading } = useProgress();
 	const [currentLessonIndex, setCurrentLessonIndex] = useState(0);
-	const [currentStepIndex, setCurrentStepIndex] = useState(0);
-	const currentLesson = lessons[currentLessonIndex];
-	/* end of lesson data section */
+	const [isInitialized, setIsInitialized] = useState(false);
+	const lastProcessedLessons = useRef<string[]>([]);
 
-	const [code, setCode] = useState("");
-	const [showSkillTree, setShowSkillTree] = useState(false);
+	// Initialize lesson based on progress
+	useEffect(() => {
+		if (!isProgressLoading) {
+			// Check if progress has changed (for migration case)
+			const lessonsChanged =
+				JSON.stringify(lastProcessedLessons.current) !==
+				JSON.stringify(progress.completedLessons);
 
-	// Use our custom hook for all lesson streaming logic
-	const lessonStreaming = useLessonStreaming({
-		currentLesson,
-		currentStepIndex,
-		setCurrentStepIndex,
-		setCurrentLessonIndex,
-		lessons,
-		currentLessonIndex,
-		setCode,
-	});
+			// Initialize on first load, or recalculate if progress changed after init
+			if (!isInitialized || (isInitialized && lessonsChanged)) {
+				lastProcessedLessons.current = [...progress.completedLessons];
 
-	const { iframeRef, handleTest, isExecuting } = useConsole(
-		code,
-		currentLesson,
-		currentStepIndex,
-		lessonStreaming.handleTestResults
-	);
+				// Find the first lesson that hasn't been completed
+				const firstIncompleteIndex = lessons.findIndex(
+					(lesson) => !progress.completedLessons.includes(lesson.id)
+				);
+
+				// If all lessons are completed, stay on last lesson
+				// Otherwise, go to first incomplete lesson
+				const startingIndex =
+					firstIncompleteIndex === -1
+						? lessons.length - 1
+						: firstIncompleteIndex;
+
+				setCurrentLessonIndex(startingIndex);
+
+				if (!isInitialized) {
+					setIsInitialized(true);
+				}
+			}
+		}
+	}, [isProgressLoading, progress.completedLessons]);
 
 	return (
-		<div className="w-screen h-screen max-h-screen flex flex-col bg-background-4">
-			<ProgressBar setShowSkillTree={setShowSkillTree} />
-			<div className="flfex-1 h-[calc(100vh-80px)] flex items-start justify-center pb-6">
-				<div className="flex w-[80%] h-[99%] max-h-[99%] gap-6 roundfed-xl overflow-hidden">
-					<Chat lessonStreaming={lessonStreaming} />
-					<Editor
-						code={code}
-						setCode={setCode}
-						iframeRef={iframeRef}
-						handleRun={handleTest}
-						isExecuting={isExecuting}
-						isThinking={lessonStreaming.isThinking}
-					/>
-				</div>
-			</div>
-			<AnimationManager />
-		</div>
+		<WorkspaceContent
+			lessons={lessons}
+			currentLessonIndex={currentLessonIndex}
+			setCurrentLessonIndex={setCurrentLessonIndex}
+			isInitialized={isInitialized}
+		/>
 	);
 };
 export default Workspace;

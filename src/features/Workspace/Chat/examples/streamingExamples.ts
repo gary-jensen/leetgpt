@@ -12,6 +12,9 @@ import { createLessonStreamer } from "../utils/lessonStreamer";
 const exampleLesson: Lesson = {
 	id: "lesson-1",
 	title: "Introduction to JavaScript",
+	skillNodeId: "variables",
+	xpReward: 100,
+	stepXpReward: 10,
 	steps: [
 		{
 			id: "step-1",
@@ -97,7 +100,7 @@ export const streamIndividualSteps = async (
 
 	// Stream each step individually with delays
 	for (let i = 0; i < lesson.steps.length; i++) {
-		await lessonStreamer.streamStep(lesson.steps[i], i + 1, {
+		await lessonStreamer.streamStep(lesson.steps[i], {
 			streamingSpeed: 40,
 		});
 
@@ -135,7 +138,7 @@ export const streamProgressiveLesson = async (
 
 	// Step 3: Stream first step
 	if (lesson.steps.length > 0) {
-		await lessonStreamer.streamStep(lesson.steps[0], 1);
+		await lessonStreamer.streamStep(lesson.steps[0]);
 	}
 
 	// Step 4: Ask for user interaction

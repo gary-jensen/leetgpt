@@ -22,13 +22,11 @@ export const NodeCompleteAnimation: React.FC<NodeCompleteAnimationProps> = ({
 		// Enter animation
 		const enterTimer = setTimeout(() => {
 			setAnimationPhase("celebrate");
-			console.log("NodeCompleteAnimation celebrating");
 		}, 500);
 
 		// Celebrate for a moment
 		const celebrateTimer = setTimeout(() => {
 			setAnimationPhase("exit");
-			console.log("NodeCompleteAnimation exiting");
 		}, 2500);
 
 		// Exit animation

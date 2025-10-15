@@ -1,43 +1,37 @@
 import { Lesson } from "./temp-types";
 
 export const mockLessons: Lesson[] = [
-	// {
-	// 	id: "lesson-1",
-	// 	title: "Hello World",
-	// 	skillNodeId: "variables",
-	// 	xpReward: 50,
-	// 	stepXpReward: 50,
-	// 	steps: [
-	// 		{
-	// 			id: "step-1",
-	// 			stepType: "overview",
-	// 			content:
-	// 				'## 🚀 Ready to write your first line of real JavaScript code?\n \nIn 5 minutes, you&apos;ll understand topics most beginners spend days confused about.\n\n`console.log()` is used to print text to the console.\n---\n✅ Try typing this code into the editor and hit run to see the output:\n```js\nconsole.log("Hello, world!")\n```',
-	// 			tests: [
-	// 				{ type: "consoleLogs", expectedOutput: [`Hello, world!`] },
-	// 			],
-	// 		},
-	// 		{
-	// 			id: "step-2",
-	// 			stepType: "explanation",
-	// 			content:
-	// 				'That line of code tells JavaScript to *log* the message `"Hello, world!"` to the console.\nYou can see the message in the console now!\n---\nNext, log `"Testing"` followed by a comma and the number `123` like this:\n```js\nconsole.log("Testing", 123)```',
-	// 			tests: [
-	// 				{
-	// 					type: "consoleLogPattern",
-	// 					expectedOutput: `Testing 123`,
-	// 					pattern: /(["'])Testing\1\s*,\s*123/,
-	// 				},
-	// 			],
-	// 		},
-	// 		// {
-	// 		// 	id: "step-3",
-	// 		// 	stepType: "explanation",
-	// 		// 	content:
-	// 		// 		"As you can see, when you use a comma in a console.log statement, it separates the arguments and prints them out one after another seperated by a space.",
-	// 		// },
-	// 	],
-	// },
+	{
+		id: "lesson-1",
+		title: "Hello World",
+		skillNodeId: "variables",
+		xpReward: 50,
+		stepXpReward: 50,
+		steps: [
+			{
+				id: "step-1",
+				stepType: "overview",
+				content:
+					'## 🎉 Welcome to BitSchool \n\n BitSchool is a fun and fast way to learn JavaScript.\n\nIn 5 minutes, you&apos;ll understand topics most beginners spend days confused about.\n\n## 🚀 Ready to write your first line of real JavaScript code?\n \n\n\n`console.log()` is used to print text to the console.\n---\n✅ Try typing this code into the editor and hit run to see the output:\n\n```\nconsole.log("Hello, world!")\n```',
+				tests: [
+					{ type: "consoleLogs", expectedOutput: [`Hello, world!`] },
+				],
+			},
+			{
+				id: "step-2",
+				stepType: "explanation",
+				content:
+					'That line of code tells JavaScript to *log* the message `"Hello, world!"` to the console.\n\nYou can see the message in the console now!\n---\nNext, log `"Testing"` followed by a comma and the number `123` like this:\n```js\nconsole.log("Testing", 123)```',
+				tests: [
+					{
+						type: "consoleLogPattern",
+						expectedOutput: `Testing 123`,
+						pattern: /(["'])Testing\1\s*,\s*123/,
+					},
+				],
+			},
+		],
+	},
 	{
 		id: "lesson-2",
 		title: "Variables and Math",
@@ -49,7 +43,7 @@ export const mockLessons: Lesson[] = [
 				id: "step-1",
 				stepType: "overview",
 				content:
-					"## 🔥 You finished your first lesson!\n\nAs you saw, when you use a comma in a `console.log()` statement, it prints the arguments (strings/numbers) seperated by a space.\n## ⭐ Next up, Variables!\n\nVariables store data that you can use later. Create a variable called `favoriteNumber` and set it to `300` by running this code:\n```js\nlet favoriteNumber = 300\n```",
+					"## 🔥 You finished your first lesson!\n\nComplete all X lessons in this chapter to unlock the next topic.\n\nAs you saw, when you use a comma in a `console.log()` statement, it prints the data (called arguments) seperated by a space.\n## ⭐ Let&apos;s Learn Variables!\n\nVariables store data that you can use later. Create a variable called `favoriteNumber` and set it to `300` by running this code:\n```js\nlet favoriteNumber = 300\n```",
 				tests: [
 					{
 						type: "variableAssignment",
@@ -85,7 +79,7 @@ export const mockLessons: Lesson[] = [
 				id: "step-3",
 				stepType: "explanation",
 				content:
-					"# 🎉 Last but not least\n\nOn the third line: log `greeting` and then `favoriteNumber` to the console, seperated by a comma so it prints a complete sentence",
+					"# 🎉 Last but not least\n\nOn the *third* line: log `greeting` and then `favoriteNumber` to the console, seperated by a comma so it prints a complete sentence like this:\n\n```\nconsole.log(greeting, favoriteNumber)```",
 				startingCode: `let favoriteNumber = 300\nlet greeting = "My favorite number is"\n`,
 				tests: [
 					{
@@ -122,7 +116,7 @@ export const mockLessons: Lesson[] = [
 				id: "step-1",
 				stepType: "overview",
 				content:
-					'Functions are reusable blocks of code. Create a function called `greet` that takes a name and logs "Hello, " + name:\n```js\nfunction greet(name) {\n  console.log("Hello, " + name);\n}\n```',
+					'Functions are reusable blocks of code. Create a function called `greet` that takes a name and logs `"Hello, " + name`:\n```js\nfunction greet(name) {\n  console.log("Hello, " + name);\n}\n```',
 				tests: [
 					{
 						type: "functionDeclaration",

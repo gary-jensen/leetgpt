@@ -18,6 +18,8 @@ const Editor = ({
 	handleRun,
 	isExecuting,
 	isThinking,
+	isInitialized = true,
+	hasJustPassed = false,
 }: {
 	code: string;
 	setCode: (code: string) => void;
@@ -25,6 +27,8 @@ const Editor = ({
 	handleRun: () => void;
 	isExecuting: boolean;
 	isThinking: boolean;
+	isInitialized?: boolean;
+	hasJustPassed?: boolean;
 }) => {
 	const { addStepXP } = useProgress();
 	const [isDebouncing, setIsDebouncing] = useState(false);
@@ -45,8 +49,8 @@ const Editor = ({
 	};
 
 	const handleRunClick = () => {
-		// Don't run if already executing, thinking, or debouncing
-		if (isExecuting || isThinking || isDebouncing) return;
+		// Don't run if already executing, thinking, debouncing, or not initialized
+		if (isExecuting || isThinking || isDebouncing || !isInitialized) return;
 
 		// Start debounce
 		setIsDebouncing(true);
@@ -93,13 +97,23 @@ const Editor = ({
 						<div className="w-full h-[64px] px-3 bg-background-2 flex items-center gap-2 border-t-1">
 							<Button
 								onClick={handleRunClick}
-								variant="run"
+								variant={
+									hasJustPassed
+										? "correct"
+										: isThinking
+										? "wrong"
+										: "run"
+								}
 								disabled={
-									isExecuting || isThinking || isDebouncing
+									!isInitialized ||
+									isExecuting ||
+									isThinking ||
+									isDebouncing
 								}
 							>
 								Run
 							</Button>
+
 							{/* <Button
 								onClick={handleDebugLevelUp}
 								variant="outline"

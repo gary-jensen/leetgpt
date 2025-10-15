@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { Lesson, LessonStreaming, TestResult } from "../temp-types";
 import { useChat } from "../Chat/hooks/useChat";
 import { createLessonStreamer } from "../Chat/utils/lessonStreamer";
@@ -7,6 +7,7 @@ import {
 	formatAIFeedback,
 } from "../Chat/services/aiFeedbackService";
 import { useProgress } from "../../../contexts/ProgressContext";
+import { trackLessonStart } from "@/lib/analytics";
 
 interface UseLessonStreamingProps {
 	currentLesson: Lesson;
@@ -16,6 +17,7 @@ interface UseLessonStreamingProps {
 	lessons: Lesson[];
 	currentLessonIndex: number;
 	setCode: (code: string) => void;
+	isInitialized?: boolean;
 }
 
 export const useLessonStreaming = ({
@@ -26,6 +28,7 @@ export const useLessonStreaming = ({
 	lessons,
 	currentLessonIndex,
 	setCode,
+	isInitialized = true,
 }: UseLessonStreamingProps): LessonStreaming => {
 	// Chat state and functionality
 	const {
@@ -49,33 +52,62 @@ export const useLessonStreaming = ({
 	const { progress, addStepXP, addLessonXP, showXPGain, queueAnimation } =
 		useProgress();
 
+	// Track when tests just passed for button glow effect
+	const [hasJustPassed, setHasJustPassed] = useState(false);
+
 	// Track previous skill node completion status
 	const [previousNodeCompletion, setPreviousNodeCompletion] = useState<
 		Record<string, boolean>
 	>({});
+	const hasInitializedNodeTracking = useRef(false);
+
+	// Track lesson starts
+	const trackedLessonsRef = useRef<Set<string>>(new Set());
+
+	useEffect(() => {
+		// Track lesson start (only once per lesson)
+		if (!trackedLessonsRef.current.has(currentLesson.id)) {
+			trackLessonStart(currentLesson.id, currentLesson.title);
+			trackedLessonsRef.current.add(currentLesson.id);
+		}
+	}, [currentLesson.id, currentLesson.title]);
 
 	// Check for skill node completion after state updates
 	useEffect(() => {
-		progress.skillNodes.forEach((node) => {
-			const wasCompleted = previousNodeCompletion[node.id] || false;
-			const isNowCompleted = node.completed;
+		// On first run, just initialize the tracking without triggering animations
+		if (!hasInitializedNodeTracking.current && isInitialized) {
+			const initialCompletionStatus: Record<string, boolean> = {};
+			progress.skillNodes.forEach((node) => {
+				initialCompletionStatus[node.id] = node.completed;
+			});
+			setPreviousNodeCompletion(initialCompletionStatus);
+			hasInitializedNodeTracking.current = true;
+			return;
+		}
 
-			// If node just became completed, show skill tree
-			if (!wasCompleted && isNowCompleted) {
-				queueAnimation("skillTree", {
-					duration: 1500,
-					completedNodeId: node.id,
-				});
-			}
-		});
+		// Only check for changes after initialization
+		if (hasInitializedNodeTracking.current) {
+			progress.skillNodes.forEach((node) => {
+				const wasCompleted = previousNodeCompletion[node.id] || false;
+				const isNowCompleted = node.completed;
 
-		// Update the previous completion status
-		const newCompletionStatus: Record<string, boolean> = {};
-		progress.skillNodes.forEach((node) => {
-			newCompletionStatus[node.id] = node.completed;
-		});
-		setPreviousNodeCompletion(newCompletionStatus);
-	}, [progress.skillNodes, queueAnimation]);
+				// If node just became completed, show skill tree
+				if (!wasCompleted && isNowCompleted) {
+					queueAnimation("skillTree", {
+						duration: 1500,
+						completedNodeId: node.id,
+					});
+				}
+			});
+
+			// Update the previous completion status
+			const newCompletionStatus: Record<string, boolean> = {};
+			progress.skillNodes.forEach((node) => {
+				newCompletionStatus[node.id] = node.completed;
+			});
+			setPreviousNodeCompletion(newCompletionStatus);
+		}
+	}, [progress.skillNodes, queueAnimation, isInitialized]);
 
 	// Create lesson streamer instance
 	const lessonStreamer = createLessonStreamer(
@@ -83,12 +115,16 @@ export const useLessonStreaming = ({
 		addSystemMessage
 	);
 
-	// Stream the first step when component mounts
+	// Stream the first step when component mounts and is initialized
 	useEffect(() => {
-		if (messages.length === 0 && currentLesson.steps[currentStepIndex]) {
+		if (
+			isInitialized &&
+			messages.length === 0 &&
+			currentLesson.steps[currentStepIndex]
+		) {
 			streamCurrentStep();
 		}
-	}, []); // Only run once on mount
+	}, [isInitialized]); // Run when isInitialized becomes true
 
 	// Imperative streaming functions
 	const streamCurrentStep = useCallback(async () => {
@@ -174,9 +210,13 @@ export const useLessonStreaming = ({
 
 	const handleTestResults = useCallback(
 		async (results: TestResult[]) => {
-			console.log(results);
 			// Go to next step in lesson, if all results are passed: show next step's content
 			if (results.every((result) => result.passed)) {
+				// Trigger button glow effect
+				setHasJustPassed(true);
+				// Clear glow after animation completes (1s animation duration)
+				setTimeout(() => setHasJustPassed(false), 1000);
+
 				// Show success message
 				await lessonStreamer.streamCustomLessonMessage(
 					"✅ Great job! You got it right!",
@@ -263,6 +303,7 @@ export const useLessonStreaming = ({
 		streamingMessageId,
 		displayedWords,
 		isThinking,
+		hasJustPassed,
 		messagesEndRef,
 		// Chat handlers
 		handleSendMessage,

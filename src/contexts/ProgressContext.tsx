@@ -7,7 +7,10 @@ import React, {
 	useEffect,
 	useCallback,
 	ReactNode,
+	useRef,
+	useState,
 } from "react";
+import { useSession } from "next-auth/react";
 import {
 	UserProgress,
 	SkillNode,
@@ -17,10 +20,24 @@ import {
 	saveProgressToStorage,
 	loadProgressFromStorage,
 	getXPProgressForLevel,
+	recalculateSkillNodes,
+	calculateCurrentSkillNodeId,
 } from "../lib/progressionSystem";
+import {
+	saveUserProgress,
+	loadUserProgress,
+	migrateLocalStorageData,
+} from "@/lib/actions/progress";
+import {
+	trackLevelUp,
+	trackSkillNodeComplete,
+	trackLessonComplete,
+	trackStepComplete,
+} from "@/lib/analytics";
 
 interface ProgressContextType {
 	progress: UserProgress;
+	isProgressLoading: boolean;
 	addStepXP: (xp: number) => void;
 	addLessonXP: (lessonId: string, skillNodeId: string, xp: number) => void;
 	getCurrentSkillNode: () => SkillNode | undefined;
@@ -248,6 +265,7 @@ export function ProgressProvider({
 	children,
 	lessonMetadata,
 }: ProgressProviderProps) {
+	const { data: session, status } = useSession();
 	const [state, dispatch] = useReducer(progressReducer, {
 		...createInitialProgress(lessonMetadata),
 		isLevelUp: false,
@@ -259,18 +277,112 @@ export function ProgressProvider({
 		justLeveledUp: false,
 	});
 
-	// Load progress from localStorage on mount
-	useEffect(() => {
-		// const savedProgress = loadProgressFromStorage();
-		// if (savedProgress) {
-		// 	dispatch({ type: "LOAD_PROGRESS", progress: savedProgress });
-		// }
-	}, []);
+	const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+	const hasMigratedRef = useRef(false);
+	const prevLevelRef = useRef(state.level);
+	const [isProgressLoading, setIsProgressLoading] = useState(true);
 
-	// Save progress to localStorage whenever it changes
+	// Load progress from database or localStorage on mount
 	useEffect(() => {
-		// saveProgressToStorage(state);
-	}, [state]);
+		const loadProgress = async () => {
+			if (status === "loading") return;
+
+			setIsProgressLoading(true);
+
+			if (session?.user?.id) {
+				// User is authenticated - check for localStorage data to merge
+				const localProgress = await loadProgressFromStorage();
+
+				// Always check if there's guest data to merge (whether new user or existing)
+				if (localProgress && !hasMigratedRef.current) {
+					hasMigratedRef.current = true;
+
+					// Migrate/merge localStorage data with database
+					// Server handles both new users and merging with existing data
+					await migrateLocalStorageData(
+						session.user.id,
+						localProgress
+					);
+
+					// Clear localStorage after migration
+					localStorage.removeItem("bitschool-progress");
+					localStorage.removeItem("bitschool-progress-checksum");
+				}
+
+				// Load the merged/existing progress from database (skillNodes calculated server-side)
+				const dbProgress = await loadUserProgress(
+					session.user.id,
+					lessonMetadata || []
+				);
+
+				if (dbProgress) {
+					dispatch({ type: "LOAD_PROGRESS", progress: dbProgress });
+				}
+			} else {
+				// Guest user - load from localStorage and calculate skill nodes client-side
+				const savedProgress = await loadProgressFromStorage();
+				if (savedProgress) {
+					// Calculate current skill node from completed lessons
+					const currentSkillNodeId = calculateCurrentSkillNodeId(
+						savedProgress.completedLessons,
+						lessonMetadata || []
+					);
+
+					// Recalculate skill nodes based on completed lessons
+					const updatedSkillNodes = recalculateSkillNodes(
+						savedProgress.skillNodes,
+						savedProgress.completedLessons
+					);
+
+					dispatch({
+						type: "LOAD_PROGRESS",
+						progress: {
+							...savedProgress,
+							currentSkillNodeId,
+							skillNodes: updatedSkillNodes,
+						},
+					});
+				}
+			}
+
+			setIsProgressLoading(false);
+		};
+
+		loadProgress();
+	}, [session, status, lessonMetadata]);
+
+	// Save progress (debounced)
+	useEffect(() => {
+		// Clear existing timeout
+		if (saveTimeoutRef.current) {
+			clearTimeout(saveTimeoutRef.current);
+		}
+
+		// Set new timeout for saving
+		saveTimeoutRef.current = setTimeout(async () => {
+			if (session?.user?.id) {
+				// Authenticated: save to database
+				await saveUserProgress(session.user.id, state);
+			} else {
+				// Guest: save to localStorage (encrypted)
+				await saveProgressToStorage(state);
+			}
+		}, 1000); // Debounce for 1 second
+
+		return () => {
+			if (saveTimeoutRef.current) {
+				clearTimeout(saveTimeoutRef.current);
+			}
+		};
+	}, [state, session]);
+
+	// Track level ups
+	useEffect(() => {
+		if (state.level > prevLevelRef.current) {
+			trackLevelUp(state.level);
+		}
+		prevLevelRef.current = state.level;
+	}, [state.level]);
 
 	const addStepXP = useCallback((xp: number) => {
 		dispatch({ type: "ADD_STEP_XP", xp });
@@ -279,9 +391,19 @@ export function ProgressProvider({
 	const addLessonXP = useCallback(
 		(lessonId: string, skillNodeId: string, xp: number) => {
 			dispatch({ type: "ADD_LESSON_XP", lessonId, skillNodeId, xp });
+			// Track lesson completion (can be used as Google Ads conversion)
+			trackLessonComplete(lessonId, `Lesson ${lessonId}`, xp);
 		},
 		[]
 	);
+
+	const addStepXPWithTracking = useCallback((xp: number, stepId?: string) => {
+		dispatch({ type: "ADD_STEP_XP", xp });
+		// Track step completion if stepId provided
+		if (stepId) {
+			trackStepComplete("current", stepId, xp);
+		}
+	}, []);
 
 	const getCurrentSkillNode = (): SkillNode | undefined => {
 		return state.skillNodes.find(
@@ -300,12 +422,13 @@ export function ProgressProvider({
 	const showXPGain = useCallback((xp: number) => {
 		const id = crypto.randomUUID();
 		dispatch({ type: "SHOW_XP_GAIN", xp, id });
-		console.log("Showing XP gain: ", xp);
 	}, []);
 
 	const showNodeComplete = useCallback((nodeName: string) => {
 		const id = crypto.randomUUID();
 		dispatch({ type: "SHOW_NODE_COMPLETE", nodeName, id });
+		// Track skill node completion
+		trackSkillNodeComplete(nodeName);
 	}, []);
 
 	const removeXPGain = useCallback((id: string) => {
@@ -348,6 +471,7 @@ export function ProgressProvider({
 
 	const value: ProgressContextType = {
 		progress: state,
+		isProgressLoading,
 		addStepXP,
 		addLessonXP,
 		getCurrentSkillNode,

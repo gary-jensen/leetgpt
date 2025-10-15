@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import {
 	processMarkdown,
 	MarkdownProcessorOptions,
-} from "@/lib/markdown-processor";
+} from "./markdown-processor";
 import "./MarkdownEditor.scss";
 import "./MarkdownDisplay.css";
 import MarkdownDisplay from "./MarkdownDisplay";

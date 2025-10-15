@@ -10,16 +10,6 @@ interface ChatMessageListProps {
 export const ChatMessageList = ({ lessonStreaming }: ChatMessageListProps) => {
 	return (
 		<div className="fflex-1 max-h-[calc(100%-40px)] h-[calc(100%-40px)] overflow-y-auto px-3 pt-3 pb-2 space-y-2">
-			{lessonStreaming.messages.length === 0 && (
-				<div className="text-center text-gray-500 mt-8">
-					<p>Start a conversation with the AI assistant!</p>
-					<p className="text-sm mt-1">
-						Ask questions about coding, get help with your projects,
-						or just chat.
-					</p>
-				</div>
-			)}
-
 			{lessonStreaming.messages.map((message) => {
 				const isStreaming =
 					lessonStreaming.streamingMessageId === message.id;
@@ -36,8 +26,15 @@ export const ChatMessageList = ({ lessonStreaming }: ChatMessageListProps) => {
 				);
 			})}
 			{lessonStreaming.isThinking && (
-				<div className="px-4 py-2">
-					<ThinkingAnimation />
+				// <div className="px-4 py-2">
+				// 	<ThinkingAnimation />
+				// </div>
+				<div className="space-y-1 border-l-4 border-red-500 pl-4 bg-red-500/10 rounded-r-lg py-2 error-message">
+					<div className="text-base leading-[1.75]">
+						<div className="whitespace-pre-wrap">
+							<ThinkingAnimation />
+						</div>
+					</div>
 				</div>
 			)}
 

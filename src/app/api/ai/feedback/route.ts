@@ -76,17 +76,6 @@ The user should log a variable (not hardcode the value). Check if they're loggin
 						const actualLogs = failedTest.actualLogs || [];
 						const actualPatternLogsStr = actualLogs.join(", ");
 
-						// Debug logging to see what we're actually getting
-						console.log("DEBUG - test.pattern:", test.pattern);
-						console.log(
-							"DEBUG - typeof test.pattern:",
-							typeof test.pattern
-						);
-						console.log(
-							"DEBUG - test.pattern constructor:",
-							test.pattern?.constructor?.name
-						);
-
 						// Handle pattern conversion more robustly
 						let patternStr;
 						if (typeof test.pattern === "string") {
@@ -385,13 +374,13 @@ Give one sentence hint about what needs to be fixed.`;
 		// Call OpenAI API with optimizations for speed
 		const completion = await openai.chat.completions.create(
 			{
-				// model: "gpt-5-nano-2025-08-07", // Faster than gpt-4o-mini
+				// model: "gpt-5-nano-2025-08-07",
 				model: "gpt-4o-mini",
 				messages: [
 					{
 						role: "system",
 						content:
-							"Coding tutor. Give specific and brief instructions",
+							"JavaScript coding tutor. Give specific and brief instructions",
 					},
 					{
 						role: "user",

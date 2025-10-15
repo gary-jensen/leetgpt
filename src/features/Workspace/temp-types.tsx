@@ -33,6 +33,7 @@ export interface LessonStreaming {
 	streamingMessageId: string | null;
 	displayedWords: { [messageId: string]: string[] };
 	isThinking: boolean;
+	hasJustPassed: boolean;
 	messagesEndRef: React.RefObject<HTMLDivElement | null>;
 	handleSendMessage: () => Promise<void>;
 	handleKeyPress: (e: React.KeyboardEvent) => void;

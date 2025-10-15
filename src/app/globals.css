@@ -163,3 +163,35 @@
 .shadow-inset {
 	box-shadow: inset 20px 20px 5px -20px rgba(0, 0, 0, 0.4);
 }
+
+@keyframes button-pulse-red {
+	0%,
+	100% {
+		box-shadow: 0 0 3px rgba(220, 38, 38, 0.5),
+			0 0 6px rgba(220, 38, 38, 0.3);
+	}
+	50% {
+		box-shadow: 0 0 10px rgba(220, 38, 38, 0.8),
+			0 0 15px rgba(220, 38, 38, 0.5);
+	}
+}
+
+.button-glow-red {
+	animation: button-pulse-red 1s ease-in-out;
+}
+
+@keyframes button-pulse-green {
+	0%,
+	100% {
+		box-shadow: 0 0 3px rgba(22, 163, 74, 0.5),
+			0 0 6px rgba(22, 163, 74, 0.3);
+	}
+	50% {
+		box-shadow: 0 0 10px rgba(22, 163, 74, 0.8),
+			0 0 15px rgba(22, 163, 74, 0.5);
+	}
+}
+
+.button-glow-green {
+	animation: button-pulse-green 1s ease-in-out;
+}

@@ -12,6 +12,8 @@ import SkillNode from "./SkillNode";
 import SkillTreeDropdown from "./SkillTreeDropdown";
 // import SkillTreeOverlay from "./SkillTreeOverlay"; // Keeping for future use
 import SkillTreeOverlayVertical from "./SkillTreeOverlayVertical";
+import AuthButton from "@/components/AuthButton";
+import XPGainAnimation from "@/components/Rewards/XPGainAnimation";
 
 interface ProgressBarProps {
 	className?: string;
@@ -29,6 +31,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 	>(undefined);
 	const {
 		progress,
+		isProgressLoading,
 		getCurrentSkillNode,
 		getXPProgress,
 		justLeveledUp,
@@ -36,6 +39,8 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 		animationQueue,
 		isAnimationPlaying,
 		completeCurrentAnimation,
+		xpGainQueue,
+		removeXPGain,
 	} = useProgress();
 
 	const [displayProgress, setDisplayProgress] = useState(0);
@@ -101,7 +106,6 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 				setIsResetting(true);
 				setLevelUpAnimationPhase("completing");
 				setDisplayProgress(0);
-				console.log("setting progress to 0");
 
 				// After reset, animate to new progress immediately
 				setTimeout(() => {
@@ -156,12 +160,6 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 			// Stop animation after progress completes
 			setTimeout(() => {
 				setIsAnimating(false);
-				console.log(
-					"Animation ended, displayProgress:",
-					displayProgress,
-					"xpProgress:",
-					xpProgress
-				);
 			}, calculatedDuration + 100);
 		}
 	}, [xpProgress, justLeveledUp, isResetting, displayProgress]);
@@ -195,6 +193,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 					currentSkillNode={currentSkillNode}
 					showSkillNodeAnimation={showSkillNodeAnimation}
 					onOpenSkillTree={handleOpenSkillTreeOverlay}
+					isProgressLoading={isProgressLoading}
 				/>
 
 				{/* Skill Tree Dropdown - for completion animations */}
@@ -459,15 +458,33 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 							</div>
 						</div>
 					</div>
-					{/* XP Display */}
-					<div className="text-sm text-gray-300 absolute right-0 translate-x-[calc(100%+20px)]">
-						<span className="font-mono">{xpInCurrentLevel}</span>
-						<span className="text-gray-500">/</span>
-						<span className="font-mono">
-							{xpNeededForNextLevel}
-						</span>
-						<span className="text-gray-500 ml-1">XP</span>
+					{/* XP Display Container */}
+					<div className="absolute right-0 translate-x-[calc(100%+20px)]">
+						{/* XP Display Text */}
+						<div className="text-sm text-gray-300">
+							<span className="font-mono">
+								{xpInCurrentLevel}
+							</span>
+							<span className="text-gray-500">/</span>
+							<span className="font-mono">
+								{xpNeededForNextLevel}
+							</span>
+							<span className="text-gray-500 ml-1">XP</span>
+						</div>
+
+						{/* XP Gain Animations positioned below XP Display */}
+						{xpGainQueue.map(({ xp, id }) => (
+							<XPGainAnimation
+								key={id}
+								xp={xp}
+								onComplete={() => removeXPGain(id)}
+								className="!absolute !top-8 !left-1/2 !-translate-x-1/2 !right-auto"
+							/>
+						))}
 					</div>
+				</div>
+				<div className="text-sm text-gray-300 absolute right-4">
+					<AuthButton />
 				</div>
 			</div>
 		</div>
