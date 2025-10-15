@@ -1,6 +1,30 @@
 "use client";
 
 import ReactGA from "react-ga4";
+import { saveAnalyticsEvent } from "@/lib/actions/analytics";
+import { getGuestId, clearGuestId } from "@/lib/guestId";
+
+// Session ID for tracking related events
+let currentSessionId: string | null = null;
+
+/**
+ * Generate a new session ID
+ */
+function generateSessionId(): string {
+	return (
+		"session_" + Date.now() + "_" + Math.random().toString(36).substring(2)
+	);
+}
+
+/**
+ * Get current session ID
+ */
+export function getSessionId(): string {
+	if (!currentSessionId) {
+		currentSessionId = generateSessionId();
+	}
+	return currentSessionId;
+}
 
 // Initialize GA4
 export const initGA = () => {
@@ -10,20 +34,48 @@ export const initGA = () => {
 	} else {
 		console.warn("GA4 Measurement ID not found");
 	}
+
+	// Initialize session ID
+	getSessionId();
 };
 
-// Custom event tracking
+// Custom event tracking - sends to both GA4 and database
 export const trackEvent = (
 	category: string,
 	action: string,
 	label?: string,
-	value?: number
+	value?: number,
+	metadata?: Record<string, any>
 ) => {
+	// Send to GA4
 	ReactGA.event({
 		category,
 		action,
 		label,
 		value,
+	});
+
+	// Detect if we're running on localhost (local machine)
+	const isDev =
+		typeof window !== "undefined" &&
+		(window.location.hostname === "localhost" ||
+			window.location.hostname === "127.0.0.1" ||
+			window.location.hostname.startsWith("192.168.") ||
+			window.location.hostname.startsWith("10.") ||
+			window.location.hostname.startsWith("172."));
+
+	// Send to database (async, don't wait)
+	saveAnalyticsEvent({
+		eventCategory: category,
+		eventAction: action,
+		eventLabel: label,
+		eventValue: value,
+		metadata,
+		sessionId: getSessionId(),
+		guestId: getGuestId(),
+		isDev,
+	}).catch((error) => {
+		console.error("Failed to save event to database:", error);
 	});
 };
 
@@ -34,12 +86,16 @@ export const trackSessionStart = () => {
 
 // Lesson tracking
 export const trackLessonStart = (lessonId: string, lessonTitle: string) => {
-	trackEvent("Lesson", "lesson_start", lessonTitle);
-	ReactGA.event({
-		category: "Lesson",
-		action: "lesson_start",
-		label: lessonTitle,
-	} as any);
+	trackEvent(
+		"Lesson",
+		"lesson_start",
+		`${lessonId} - ${lessonTitle}`,
+		undefined,
+		{
+			lessonId,
+			lessonTitle,
+		}
+	);
 };
 
 export const trackLessonComplete = (
@@ -47,13 +103,17 @@ export const trackLessonComplete = (
 	lessonTitle: string,
 	xpGained: number
 ) => {
-	trackEvent("Lesson", "lesson_complete", lessonTitle, xpGained);
-	ReactGA.event({
-		category: "Lesson",
-		action: "lesson_complete",
-		label: lessonTitle,
-		value: xpGained,
-	} as any);
+	trackEvent(
+		"Lesson",
+		"lesson_complete",
+		`${lessonId} - ${lessonTitle}`,
+		xpGained,
+		{
+			lessonId,
+			lessonTitle,
+			xpGained,
+		}
+	);
 };
 
 export const trackStepComplete = (
@@ -61,12 +121,19 @@ export const trackStepComplete = (
 	stepId: string,
 	xpGained: number
 ) => {
-	trackEvent("Step", "step_complete", `${lessonId}-${stepId}`, xpGained);
+	trackEvent("Step", "step_complete", `${lessonId}-${stepId}`, xpGained, {
+		lessonId,
+		stepId,
+		xpGained,
+	});
 };
 
 // Code execution tracking
 export const trackCodeRun = (lessonId: string, stepId: string) => {
-	trackEvent("Code", "code_run", `${lessonId}-${stepId}`);
+	trackEvent("Code", "code_run", `${lessonId}-${stepId}`, undefined, {
+		lessonId,
+		stepId,
+	});
 };
 
 export const trackCodeSubmitCorrect = (
@@ -78,7 +145,12 @@ export const trackCodeSubmitCorrect = (
 		"Code",
 		"code_submit_correct",
 		`${lessonId}-${stepId}`,
-		attempts
+		attempts,
+		{
+			lessonId,
+			stepId,
+			attempts,
+		}
 	);
 };
 
@@ -87,37 +159,58 @@ export const trackCodeSubmitIncorrect = (
 	stepId: string,
 	errorType?: string
 ) => {
-	trackEvent("Code", "code_submit_incorrect", errorType || "unknown");
+	trackEvent(
+		"Code",
+		"code_submit_incorrect",
+		errorType || "unknown",
+		undefined,
+		{
+			lessonId,
+			stepId,
+			errorType,
+		}
+	);
 };
 
 // Progress tracking
 export const trackLevelUp = (newLevel: number) => {
-	trackEvent("Progress", "level_up", `Level ${newLevel}`, newLevel);
-	ReactGA.event({
-		category: "Progress",
-		action: "level_up",
-		value: newLevel,
-	} as any);
+	trackEvent("Progress", "level_up", `Level ${newLevel}`, newLevel, {
+		newLevel,
+	});
 };
 
 export const trackSkillNodeComplete = (nodeName: string) => {
-	trackEvent("Progress", "skill_node_complete", nodeName);
+	trackEvent("Progress", "skill_node_complete", nodeName, undefined, {
+		nodeName,
+	});
 };
 
 // Auth tracking
 export const trackAuthSignup = () => {
-	trackEvent("Auth", "auth_signup");
-	ReactGA.event({
-		category: "Auth",
-		action: "auth_signup",
+	const guestId = getGuestId();
+	trackEvent("Auth", "auth_signup", undefined, undefined, {
+		previousGuestId: guestId || null,
 	});
 };
 
 export const trackAuthSignin = () => {
-	trackEvent("Auth", "auth_signin");
-	ReactGA.event({
-		category: "Auth",
-		action: "auth_signin",
+	const guestId = getGuestId();
+	trackEvent(
+		"Auth",
+		"auth_signin",
+		undefined,
+		undefined,
+		guestId
+			? {
+					previousGuestId: guestId || null,
+			  }
+			: undefined
+	);
+};
+
+export const trackAuthSignout = () => {
+	trackEvent("Auth", "auth_signout", undefined, undefined, {
+		timestamp: new Date().toISOString(),
 	});
 };
 
@@ -160,7 +253,13 @@ export const startTimeTracking = () => {
 	// Send session data on page unload
 	window.addEventListener("beforeunload", () => {
 		clearInterval(heartbeatInterval);
-		sendSessionData();
+		sendSessionData("page_unload");
+	});
+
+	// Track page hide (more reliable than beforeunload on mobile)
+	window.addEventListener("pagehide", () => {
+		clearInterval(heartbeatInterval);
+		sendSessionData("page_hide");
 	});
 };
 
@@ -171,16 +270,36 @@ const handleVisibilityChange = () => {
 	}
 };
 
-const sendSessionData = () => {
+const sendSessionData = (reason: string = "unknown") => {
 	if (sessionStartTime) {
 		const totalTime = Math.floor((Date.now() - sessionStartTime) / 1000);
+		const timeSinceLastActivity = lastActivityTime
+			? Math.floor((Date.now() - lastActivityTime) / 1000)
+			: 0;
 
+		// Send to GA4
 		ReactGA.event({
 			category: "Session",
 			action: "session_end",
 			value: activeTime,
 		} as any);
+
+		// Send to database
+		trackEvent("Session", "session_end", reason, activeTime, {
+			totalTime,
+			activeTime,
+			endReason: reason,
+			timeSinceLastActivity,
+			wasVisible: isPageVisible,
+		});
 	}
+};
+
+/**
+ * Manually end session (e.g., on logout)
+ */
+export const endSession = (reason: string = "manual") => {
+	sendSessionData(reason);
 };
 
 export const getActiveTime = () => activeTime;

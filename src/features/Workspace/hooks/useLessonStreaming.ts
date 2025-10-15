@@ -18,6 +18,7 @@ interface UseLessonStreamingProps {
 	currentLessonIndex: number;
 	setCode: (code: string) => void;
 	isInitialized?: boolean;
+	setAttemptsCount: (count: number) => void;
 }
 
 export const useLessonStreaming = ({
@@ -29,6 +30,7 @@ export const useLessonStreaming = ({
 	currentLessonIndex,
 	setCode,
 	isInitialized = true,
+	setAttemptsCount,
 }: UseLessonStreamingProps): LessonStreaming => {
 	// Chat state and functionality
 	const {
@@ -49,8 +51,14 @@ export const useLessonStreaming = ({
 	} = useChat();
 
 	// Progress system
-	const { progress, addStepXP, addLessonXP, showXPGain, queueAnimation } =
-		useProgress();
+	const {
+		progress,
+		addStepXP,
+		addLessonXP,
+		showXPGain,
+		queueAnimation,
+		isProgressLoading,
+	} = useProgress();
 
 	// Track when tests just passed for button glow effect
 	const [hasJustPassed, setHasJustPassed] = useState(false);
@@ -65,12 +73,22 @@ export const useLessonStreaming = ({
 	const trackedLessonsRef = useRef<Set<string>>(new Set());
 
 	useEffect(() => {
-		// Track lesson start (only once per lesson)
+		// Wait until progress has finished loading and component is initialized
+		if (isProgressLoading || !isInitialized) {
+			return;
+		}
+
+		// Track lesson start only if we haven't tracked this lesson yet
 		if (!trackedLessonsRef.current.has(currentLesson.id)) {
 			trackLessonStart(currentLesson.id, currentLesson.title);
 			trackedLessonsRef.current.add(currentLesson.id);
 		}
-	}, [currentLesson.id, currentLesson.title]);
+	}, [
+		currentLesson.id,
+		currentLesson.title,
+		isInitialized,
+		isProgressLoading,
+	]);
 
 	// Check for skill node completion after state updates
 	useEffect(() => {
@@ -231,6 +249,7 @@ export const useLessonStreaming = ({
 					showXPGain(currentLesson.stepXpReward);
 					setTimeout(() => {
 						setCurrentStepIndex(currentStepIndex + 1);
+						setAttemptsCount(0); // Reset attempts counter when moving to next step
 						// Stream the next step content after success message streams
 
 						streamStep(currentLessonIndex, currentStepIndex + 1);
@@ -245,6 +264,7 @@ export const useLessonStreaming = ({
 					// Award lesson completion XP and show animation
 					addLessonXP(
 						currentLesson.id,
+						currentLesson.title,
 						currentLesson.skillNodeId,
 						currentLesson.xpReward
 					);
@@ -260,6 +280,7 @@ export const useLessonStreaming = ({
 
 						setCurrentLessonIndex(currentLessonIndex + 1);
 						setCurrentStepIndex(0);
+						setAttemptsCount(0); // Reset attempts counter when moving to new lesson
 						// Stream the first step of the new lesson
 						streamStep(currentLessonIndex + 1, 0);
 					}, 1000); // Standard delay
@@ -267,6 +288,7 @@ export const useLessonStreaming = ({
 					// Award final lesson completion XP and show animation
 					addLessonXP(
 						currentLesson.id,
+						currentLesson.title,
 						currentLesson.skillNodeId,
 						currentLesson.xpReward
 					);

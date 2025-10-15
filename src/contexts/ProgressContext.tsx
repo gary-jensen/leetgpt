@@ -33,13 +33,20 @@ import {
 	trackSkillNodeComplete,
 	trackLessonComplete,
 	trackStepComplete,
+	trackAuthSignin,
 } from "@/lib/analytics";
+import { clearGuestId } from "@/lib/guestId";
 
 interface ProgressContextType {
 	progress: UserProgress;
 	isProgressLoading: boolean;
 	addStepXP: (xp: number) => void;
-	addLessonXP: (lessonId: string, skillNodeId: string, xp: number) => void;
+	addLessonXP: (
+		lessonId: string,
+		lessonTitle: string,
+		skillNodeId: string,
+		xp: number
+	) => void;
 	getCurrentSkillNode: () => SkillNode | undefined;
 	getXPProgress: () => number;
 	isLevelUp: boolean;
@@ -280,6 +287,7 @@ export function ProgressProvider({
 	const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 	const hasMigratedRef = useRef(false);
 	const prevLevelRef = useRef(state.level);
+	const hasInitializedLevelTracking = useRef(false);
 	const [isProgressLoading, setIsProgressLoading] = useState(true);
 
 	// Load progress from database or localStorage on mount
@@ -290,6 +298,23 @@ export function ProgressProvider({
 			setIsProgressLoading(true);
 
 			if (session?.user?.id) {
+				// Track sign-in only when transitioning from unauthenticated to authenticated
+				// Use sessionStorage to persist the last status across page refreshes
+				const lastAuthStatus = sessionStorage.getItem(
+					"bitschool-last-auth-status"
+				);
+				const wasUnauthenticated =
+					lastAuthStatus === "unauthenticated" ||
+					lastAuthStatus === null;
+				const isNowAuthenticated = status === "authenticated";
+
+				if (wasUnauthenticated && isNowAuthenticated) {
+					trackAuthSignin();
+				}
+
+				// Update the stored status
+				sessionStorage.setItem("bitschool-last-auth-status", status);
+
 				// User is authenticated - check for localStorage data to merge
 				const localProgress = await loadProgressFromStorage();
 
@@ -307,6 +332,9 @@ export function ProgressProvider({
 					// Clear localStorage after migration
 					localStorage.removeItem("bitschool-progress");
 					localStorage.removeItem("bitschool-progress-checksum");
+
+					// Clear guest ID after tracking and migration
+					clearGuestId();
 				}
 
 				// Load the merged/existing progress from database (skillNodes calculated server-side)
@@ -320,6 +348,9 @@ export function ProgressProvider({
 				}
 			} else {
 				// Guest user - load from localStorage and calculate skill nodes client-side
+				// Update the stored status to track unauthenticated state
+				sessionStorage.setItem("bitschool-last-auth-status", status);
+
 				const savedProgress = await loadProgressFromStorage();
 				if (savedProgress) {
 					// Calculate current skill node from completed lessons
@@ -376,23 +407,43 @@ export function ProgressProvider({
 		};
 	}, [state, session]);
 
-	// Track level ups
+	// Track level ups (only after initial load completes)
 	useEffect(() => {
+		// During initial load, just initialize the ref without tracking
+		if (isProgressLoading) {
+			prevLevelRef.current = state.level;
+			hasInitializedLevelTracking.current = false;
+			return;
+		}
+
+		// On first run after loading completes, just set the initialized flag
+		if (!hasInitializedLevelTracking.current) {
+			hasInitializedLevelTracking.current = true;
+			prevLevelRef.current = state.level;
+			return;
+		}
+
+		// Only track if level actually increased after initialization
 		if (state.level > prevLevelRef.current) {
 			trackLevelUp(state.level);
 		}
 		prevLevelRef.current = state.level;
-	}, [state.level]);
+	}, [state.level, isProgressLoading]);
 
 	const addStepXP = useCallback((xp: number) => {
 		dispatch({ type: "ADD_STEP_XP", xp });
 	}, []);
 
 	const addLessonXP = useCallback(
-		(lessonId: string, skillNodeId: string, xp: number) => {
+		(
+			lessonId: string,
+			lessonTitle: string,
+			skillNodeId: string,
+			xp: number
+		) => {
 			dispatch({ type: "ADD_LESSON_XP", lessonId, skillNodeId, xp });
 			// Track lesson completion (can be used as Google Ads conversion)
-			trackLessonComplete(lessonId, `Lesson ${lessonId}`, xp);
+			trackLessonComplete(lessonId, lessonTitle, xp);
 		},
 		[]
 	);

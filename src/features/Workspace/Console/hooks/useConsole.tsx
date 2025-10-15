@@ -23,10 +23,9 @@ const useConsole = (
 	code: string,
 	currentLesson: Lesson,
 	currentStepIndex: number,
-	// currentQuestion,
-	handleTestResults: (results: TestResult[]) => void
-	// onTestResults,
-	// onUsePassingCode,
+	handleTestResults: (results: TestResult[]) => void,
+	attemptsCount: number,
+	setAttemptsCount: (count: number) => void
 ) => {
 	const { data: session } = useSession();
 	const currentQuestion = currentLesson.steps[currentStepIndex];
@@ -77,6 +76,10 @@ const useConsole = (
 
 	const handleTest = async () => {
 		if (!executorRef.current || !currentQuestion || isExecuting) return;
+
+		// Increment attempts for this step
+		const currentAttempt = attemptsCount + 1;
+		setAttemptsCount(currentAttempt);
 
 		setIsExecuting(true);
 		try {
@@ -140,14 +143,16 @@ const useConsole = (
 				trackCodeSubmitCorrect(
 					currentLesson.id,
 					currentQuestion.id,
-					1 // Could track actual attempts in the future
+					currentAttempt
 				);
 			} else {
 				const firstFailedTest = testResults.find((r) => !r.passed);
 				trackCodeSubmitIncorrect(
 					currentLesson.id,
 					currentQuestion.id,
-					firstFailedTest?.error || "Test failed"
+					firstFailedTest?.error
+						? `Code error - ${firstFailedTest?.error}`
+						: `Code failed - ${currentLesson.id}`
 				);
 			}
 

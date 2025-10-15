@@ -17,13 +17,9 @@ import XPGainAnimation from "@/components/Rewards/XPGainAnimation";
 
 interface ProgressBarProps {
 	className?: string;
-	setShowSkillTree: Dispatch<SetStateAction<boolean>>;
 }
 
-export const ProgressBar: React.FC<ProgressBarProps> = ({
-	className = "",
-	setShowSkillTree,
-}) => {
+export const ProgressBar: React.FC<ProgressBarProps> = ({ className = "" }) => {
 	const [showSkillTreeDropdown, setShowSkillTreeDropdown] = useState(false);
 	const [showSkillTreeOverlay, setShowSkillTreeOverlay] = useState(false);
 	const [originPosition, setOriginPosition] = useState<

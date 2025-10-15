@@ -11,15 +11,16 @@ generator client {
 }
 
 model User {
-    id          String           @id @default(uuid())
-    email       String           @unique
-    name        String?
-    image       String?
-    createdAt   DateTime         @default(now())
-    updatedAt   DateTime         @updatedAt
-    progress    UserProgress?
-    submissions CodeSubmission[]
-    sessions    UserSession[]
+    id              String           @id @default(uuid())
+    email           String           @unique
+    name            String?
+    image           String?
+    createdAt       DateTime         @default(now())
+    updatedAt       DateTime         @updatedAt
+    progress        UserProgress?
+    submissions     CodeSubmission[]
+    sessions        UserSession[]
+    analyticsEvents AnalyticsEvent[]
 }
 
 model UserProgress {
@@ -54,4 +55,25 @@ model UserSession {
     sessionEnd       DateTime?
     durationSeconds  Int?
     lessonsCompleted Int       @default(0)
+}
+
+model AnalyticsEvent {
+    id            String   @id @default(uuid())
+    userId        String?
+    user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+    guestId       String?
+    eventCategory String
+    eventAction   String
+    eventLabel    String?
+    eventValue    Int?
+    metadata      Json?
+    sessionId     String?
+    isDev         Boolean  @default(false)
+    createdAt     DateTime @default(now())
+
+    @@index([userId, createdAt])
+    @@index([guestId, createdAt])
+    @@index([eventCategory, eventAction])
+    @@index([sessionId])
+    @@index([isDev])
 }

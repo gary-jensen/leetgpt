@@ -10,26 +10,24 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import { trackAuthSignin, trackAuthSignup } from "@/lib/analytics";
-import { useEffect, useRef } from "react";
+import { trackAuthSignout, endSession } from "@/lib/analytics";
 
 export default function AuthButton() {
 	const { data: session, status } = useSession();
-	const hasTrackedRef = useRef(false);
 
-	// Track sign in/sign up when user becomes authenticated
-	useEffect(() => {
-		if (
-			session?.user &&
-			status === "authenticated" &&
-			!hasTrackedRef.current
-		) {
-			hasTrackedRef.current = true;
-			// We can't easily distinguish between signup and signin in NextAuth
-			// For MVP, we'll track as signin. Could enhance later with database check
-			trackAuthSignin();
-		}
-	}, [session, status]);
+	// Note: Sign-in tracking is handled in ProgressContext to avoid duplicates
+	// and to properly capture guest ID before migration
+
+	// Handle sign out with tracking
+	const handleSignOut = async () => {
+		// Track the signout event
+		trackAuthSignout();
+		// End the session with explicit reason
+		endSession("sign_out");
+		// Perform the actual sign out
+		await signOut();
+		// Note: ProgressContext will detect the auth status change and track next signin
+	};
 
 	if (status === "loading") {
 		return (
@@ -72,7 +70,7 @@ export default function AuthButton() {
 					</DropdownMenuLabel>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem
-						onClick={() => signOut()}
+						onClick={handleSignOut}
 						className="cursor-pointer text-red-600"
 					>
 						Sign Out
