@@ -5,6 +5,7 @@ import { ProgressProvider } from "@/contexts/ProgressContext";
 import { mockLessons } from "@/features/Workspace/mock-lessons";
 import SessionProvider from "@/components/SessionProvider";
 import Analytics from "@/components/Analytics";
+import { getSession } from "@/lib/auth";
 
 const inter = Inter({
 	variable: "--font-inter",
@@ -50,15 +51,17 @@ const lessonMetadata = mockLessons.map((lesson) => ({
 	skillNodeId: lesson.skillNodeId,
 }));
 
-export default function RootLayout({
+export default async function RootLayout({
 	children,
 }: Readonly<{
 	children: React.ReactNode;
 }>) {
+	const session = await getSession();
+
 	return (
 		<html lang="en">
 			<body className={`${inter.variable} antialiased`}>
-				<SessionProvider>
+				<SessionProvider session={session}>
 					<ProgressProvider lessonMetadata={lessonMetadata}>
 						<Analytics />
 						{children}
