@@ -1,4 +1,5 @@
 import { TestResult } from "../../temp-types";
+import { getAIFeedback as getAIFeedbackServer } from "@/lib/actions/aiFeedback";
 
 interface AIFeedbackRequest {
 	stepContent: string;
@@ -11,31 +12,13 @@ interface AIFeedbackResponse {
 	feedback: string;
 }
 
-const API_ENDPOINT = "/api/ai/feedback";
-
 export const getAIFeedback = async (
 	request: AIFeedbackRequest
 ): Promise<AIFeedbackResponse> => {
 	try {
-		const response = await fetch(API_ENDPOINT, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({
-				stepContent: request.stepContent,
-				stepType: request.stepType,
-				testResults: request.testResults,
-				userCode: request.userCode,
-			}),
-		});
-
-		if (!response.ok) {
-			throw new Error(`HTTP error! status: ${response.status}`);
-		}
-
-		const data = await response.json();
-		return data;
+		// Use server function instead of API call
+		const response = await getAIFeedbackServer(request);
+		return response;
 	} catch (error) {
 		console.error("Error getting AI feedback:", error);
 		// Check if there's a syntax error in the test results

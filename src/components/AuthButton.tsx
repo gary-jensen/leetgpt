@@ -10,13 +10,23 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import { trackAuthSignout, endSession } from "@/lib/analytics";
+import {
+	trackAuthSignout,
+	endSession,
+	trackSignInButtonClick,
+} from "@/lib/analytics";
 
 export default function AuthButton() {
 	const { data: session, status } = useSession();
 
 	// Note: Sign-in tracking is handled in ProgressContext to avoid duplicates
 	// and to properly capture guest ID before migration
+
+	const handleSignIn = async () => {
+		// Track the signin button click event
+		trackSignInButtonClick();
+		await signIn();
+	};
 
 	// Handle sign out with tracking
 	const handleSignOut = async () => {
@@ -84,7 +94,7 @@ export default function AuthButton() {
 	}
 
 	return (
-		<Button variant="run" onClick={() => signIn()}>
+		<Button variant="run" onClick={handleSignIn}>
 			Sign In
 		</Button>
 	);

@@ -621,3 +621,12 @@ export const mockLessons: Lesson[] = [
 	// 	],
 	// },
 ];
+
+// Export lesson metadata for validation
+export const lessonMetadata = mockLessons.map((lesson) => ({
+	id: lesson.id,
+	skillNodeId: lesson.skillNodeId,
+}));
+
+// Export valid lesson IDs set for O(1) lookup
+export const validLessonIds = new Set(mockLessons.map((l) => l.id));

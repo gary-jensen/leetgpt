@@ -1,6 +1,19 @@
-import { TestResult } from "@/features/Workspace/temp-types";
-import { NextRequest, NextResponse } from "next/server";
+"use server";
+
 import OpenAI from "openai";
+import { TestResult } from "@/features/Workspace/temp-types";
+import {
+	validateJsonPayloadSize,
+	sanitizeUserCode,
+	validateCodeLength,
+} from "@/lib/validation";
+import {
+	checkRateLimit,
+	getRateLimitKey,
+	getIPRateLimitKey,
+	RATE_LIMITS,
+} from "@/lib/rateLimit";
+import { getClientIP } from "@/lib/serverUtils";
 
 const openai = new OpenAI({
 	apiKey: process.env.OPENAI_API_KEY,
@@ -13,10 +26,91 @@ interface AIFeedbackRequest {
 	userCode: string;
 }
 
-export async function POST(request: NextRequest) {
+interface AIFeedbackResponse {
+	feedback: string;
+}
+
+/**
+ * Get AI feedback for user code based on test results
+ * Allows both authenticated users and guests
+ */
+export async function getAIFeedback(
+	request: AIFeedbackRequest
+): Promise<AIFeedbackResponse> {
 	try {
-		const body: AIFeedbackRequest = await request.json();
-		const { stepContent, stepType, testResults, userCode } = body;
+		// Rate limiting - get user info for rate limiting
+		const { getSession } = await import("@/lib/auth");
+		const session = await getSession();
+		const userId = session?.user?.id;
+		const clientIP = await getClientIP();
+
+		// Rate limiting - user/guest based
+		const userKey = getRateLimitKey(userId || null, null, "ai_feedback");
+		const userRateLimit = checkRateLimit(
+			userKey,
+			RATE_LIMITS.AI_FEEDBACK.limit,
+			RATE_LIMITS.AI_FEEDBACK.windowMs
+		);
+
+		if (!userRateLimit.allowed) {
+			return {
+				feedback: `Rate limit exceeded. Please try again in ${Math.ceil(
+					(userRateLimit.resetTime - Date.now()) / 1000
+				)} seconds.`,
+			};
+		}
+
+		// Rate limiting - IP based
+		if (clientIP) {
+			const ipKey = getIPRateLimitKey(clientIP, "ai_feedback");
+			const ipRateLimit = checkRateLimit(
+				ipKey,
+				RATE_LIMITS.AI_FEEDBACK_IP.limit,
+				RATE_LIMITS.AI_FEEDBACK_IP.windowMs
+			);
+
+			if (!ipRateLimit.allowed) {
+				return {
+					feedback: `Rate limit exceeded. Please try again in ${Math.ceil(
+						(ipRateLimit.resetTime - Date.now()) / 1000
+					)} seconds.`,
+				};
+			}
+		}
+
+		// Check if code exists
+		if (!request.userCode) {
+			return {
+				feedback:
+					"No code provided. Please check the editor and try again!",
+			};
+		}
+
+		// Validate code length
+		if (!validateCodeLength(request.userCode)) {
+			return {
+				feedback:
+					"Code is too long. Please keep it under 5000 characters.",
+			};
+		}
+
+		// Validate payload size
+		const payload = JSON.stringify(request);
+		if (!validateJsonPayloadSize(payload)) {
+			return {
+				feedback: "Request too large. Please try with shorter code.",
+			};
+		}
+
+		// Sanitize user code
+		const sanitizedCode = sanitizeUserCode(request.userCode);
+		if (!sanitizedCode) {
+			return {
+				feedback: "Invalid code provided. Please check your input.",
+			};
+		}
+
+		const { stepContent, stepType, testResults } = request;
 
 		// Check if there's a syntax error
 		const hasSyntaxError =
@@ -26,7 +120,7 @@ export async function POST(request: NextRequest) {
 		// Create a prompt based on error type
 		let prompt;
 		if (hasSyntaxError) {
-			prompt = `Code: ${userCode}
+			prompt = `Code: ${sanitizedCode}
 Error: ${testResults[0]?.error}
 
 Give one sentence hint about the syntax error`;
@@ -358,43 +452,34 @@ Expected final value: ${JSON.stringify(test.expectedValue)}${
 			prompt = `${testInfo}
 
 User Code:
-${userCode}
+${sanitizedCode}
 
 Give one sentence hint about what needs to be fixed.`;
 		}
 
 		// Check if OpenAI API key is configured
 		if (!process.env.OPENAI_API_KEY) {
-			return NextResponse.json(
-				{ error: "OpenAI API key is not configured" },
-				{ status: 500 }
-			);
+			return {
+				feedback:
+					"AI feedback service is not available. Please try again later.",
+			};
 		}
 
 		// Call OpenAI API with optimizations for speed
-		const completion = await openai.chat.completions.create(
-			{
-				// model: "gpt-5-nano-2025-08-07",
-				model: "gpt-4o-mini",
-				messages: [
-					{
-						role: "system",
-						content:
-							"JavaScript coding tutor. Give specific and brief instructions",
-					},
-					{
-						role: "user",
-						content: prompt,
-					},
-				],
-				// max_tokens: 30, // Even shorter for faster response
-				// temperature: 0.1, // Lower temperature for more focused, faster responses
-				// stream: false, // Explicitly set to false for faster single response
-			}
-			// {
-			// 	timeout: 5000, // 5 second timeout
-			// }
-		);
+		const completion = await openai.chat.completions.create({
+			model: "gpt-4o-mini",
+			messages: [
+				{
+					role: "system",
+					content:
+						"JavaScript coding tutor. Give specific and brief instructions",
+				},
+				{
+					role: "user",
+					content: prompt,
+				},
+			],
+		});
 
 		const aiResponse = completion.choices[0]?.message?.content;
 
@@ -411,12 +496,12 @@ Give one sentence hint about what needs to be fixed.`;
 				aiResponse || "Your code needs some adjustments. Try again!";
 		}
 
-		return NextResponse.json({ feedback });
+		return { feedback };
 	} catch (error) {
 		console.error("Error processing AI feedback request:", error);
-		return NextResponse.json(
-			{ error: "Failed to process feedback request" },
-			{ status: 500 }
-		);
+		return {
+			feedback:
+				"I'm sorry, I encountered an error while processing your request. Please try again.",
+		};
 	}
 }

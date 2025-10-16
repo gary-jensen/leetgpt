@@ -43,4 +43,8 @@ export interface LessonStreaming {
 	streamStep: (lessonIndex: number, stepIndex: number) => Promise<void>;
 	streamCustomLessonMessage: (message: string) => Promise<void>;
 	handleTestResults: (results: TestResult[]) => Promise<void>;
+	addSystemMessage: (
+		content: string,
+		messageType?: "error" | "success" | "info"
+	) => void;
 }

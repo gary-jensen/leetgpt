@@ -207,6 +207,12 @@ export const trackAuthSignin = () => {
 	);
 };
 
+export const trackSignInButtonClick = () => {
+	trackEvent("Auth", "sign_in_button_click", undefined, undefined, {
+		timestamp: new Date().toISOString(),
+	});
+};
+
 export const trackAuthSignout = () => {
 	trackEvent("Auth", "auth_signout", undefined, undefined, {
 		timestamp: new Date().toISOString(),

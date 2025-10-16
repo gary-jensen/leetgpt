@@ -47,7 +47,8 @@ export default function WorkspaceContent({
 		currentStepIndex,
 		lessonStreaming.handleTestResults,
 		attemptsCount,
-		setAttemptsCount
+		setAttemptsCount,
+		lessonStreaming.addSystemMessage
 	);
 
 	return (

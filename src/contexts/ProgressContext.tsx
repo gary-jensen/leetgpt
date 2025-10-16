@@ -366,6 +366,10 @@ export function ProgressProvider({
 			activeSession.progress.completedLessons.length > 0
 		) {
 			setIsProgressLoading(false);
+			// clear local storage
+			localStorage.removeItem("bitschool-progress");
+			localStorage.removeItem("bitschool-progress-checksum");
+			clearGuestId();
 			return;
 		}
 

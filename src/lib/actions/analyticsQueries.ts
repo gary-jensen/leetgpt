@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 
 /**
  * Get analytics events for a specific user
@@ -12,15 +12,9 @@ export async function getUserEvents(
 	category?: string
 ) {
 	try {
-		const session = await getSession();
-		const userId = session?.user?.id;
-
-		if (!userId) {
-			return { success: false, error: "User not authenticated" };
-		}
+		await requireAdmin();
 
 		const where = {
-			userId,
 			...(category && { eventCategory: category }),
 		};
 
@@ -54,16 +48,10 @@ export async function getEventsByCategory(
 	limit: number = 100
 ) {
 	try {
-		const session = await getSession();
-		const userId = session?.user?.id;
-
-		if (!userId) {
-			return { success: false, error: "User not authenticated" };
-		}
+		await requireAdmin();
 
 		const events = await prisma.analyticsEvent.findMany({
 			where: {
-				userId,
 				eventCategory: category,
 				...(action && { eventAction: action }),
 			},
@@ -83,15 +71,9 @@ export async function getEventsByCategory(
  */
 export async function getEventStats(dateFrom?: Date, dateTo?: Date) {
 	try {
-		const session = await getSession();
-		const userId = session?.user?.id;
-
-		if (!userId) {
-			return { success: false, error: "User not authenticated" };
-		}
+		await requireAdmin();
 
 		const where = {
-			userId,
 			...(dateFrom && { createdAt: { gte: dateFrom } }),
 			...(dateTo && { createdAt: { lte: dateTo } }),
 		};
@@ -161,16 +143,10 @@ export async function getEventStats(dateFrom?: Date, dateTo?: Date) {
  */
 export async function getSessionAnalytics(sessionId: string) {
 	try {
-		const session = await getSession();
-		const userId = session?.user?.id;
-
-		if (!userId) {
-			return { success: false, error: "User not authenticated" };
-		}
+		await requireAdmin();
 
 		const events = await prisma.analyticsEvent.findMany({
 			where: {
-				userId,
 				sessionId,
 			},
 			orderBy: { createdAt: "asc" },
@@ -197,6 +173,8 @@ export async function getSessionAnalytics(sessionId: string) {
  */
 export async function getGuestEvents(guestId: string, limit: number = 100) {
 	try {
+		await requireAdmin();
+
 		const events = await prisma.analyticsEvent.findMany({
 			where: {
 				guestId,

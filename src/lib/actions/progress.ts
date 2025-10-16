@@ -1,6 +1,10 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/auth";
+import { validateUUID } from "@/lib/validation";
+import { checkRateLimit, getRateLimitKey, RATE_LIMITS } from "@/lib/rateLimit";
+import { validateLessonIds } from "@/lib/lessonValidation";
 import {
 	UserProgress as UserProgressType,
 	buildSkillTreeFromLessons,
@@ -13,24 +17,71 @@ export async function saveUserProgress(
 	progress: UserProgressType
 ) {
 	try {
-		// Only save xp, level, and completedLessons
+		// Verify ownership - user can only save their own progress
+		const session = await requireAuth();
+		if (session.id !== userId) {
+			return { success: false, error: "Unauthorized" };
+		}
+
+		// Validate userId format
+		if (!validateUUID(userId)) {
+			return { success: false, error: "Invalid user ID" };
+		}
+
+		// Rate limiting - 10 saves per minute per user
+		const rateLimitKey = getRateLimitKey(userId, null, "progress_save");
+		const rateLimit = checkRateLimit(
+			rateLimitKey,
+			RATE_LIMITS.PROGRESS_SAVE.limit,
+			RATE_LIMITS.PROGRESS_SAVE.windowMs
+		);
+
+		if (!rateLimit.allowed) {
+			return {
+				success: false,
+				error: `Rate limit exceeded. Please try again in ${Math.ceil(
+					(rateLimit.resetTime - Date.now()) / 1000
+				)} seconds.`,
+			};
+		}
+
+		// Validate and filter lesson IDs
+		const lessonValidation = validateLessonIds(progress.completedLessons);
+
+		if (!lessonValidation.allValid) {
+			console.warn(
+				`Invalid lesson IDs filtered out:`,
+				lessonValidation.invalid
+			);
+		}
+
+		// Only save xp, level, and validated completedLessons
 		// skillNodes and currentSkillNodeId will be calculated on load
 		await prisma.userProgress.upsert({
 			where: { userId },
 			update: {
 				xp: progress.xp,
 				level: progress.level,
-				completedLessons: progress.completedLessons as any,
+				completedLessons: lessonValidation.valid as any,
 			},
 			create: {
 				userId,
 				xp: progress.xp,
 				level: progress.level,
-				completedLessons: progress.completedLessons as any,
+				completedLessons: lessonValidation.valid as any,
 			},
 		});
 
-		return { success: true };
+		return {
+			success: true,
+			filteredLessons:
+				lessonValidation.invalid.length > 0
+					? {
+							invalid: lessonValidation.invalid,
+							valid: lessonValidation.valid.length,
+					  }
+					: undefined,
+		};
 	} catch (error) {
 		console.error("Failed to save user progress:", error);
 		return { success: false, error: "Failed to save progress" };
@@ -42,6 +93,17 @@ export async function loadUserProgress(
 	lessonMetadata: { id: string; skillNodeId: string }[]
 ): Promise<UserProgressType | null> {
 	try {
+		// Verify ownership - user can only load their own progress
+		const session = await requireAuth();
+		if (session.id !== userId) {
+			throw new Error("Unauthorized");
+		}
+
+		// Validate userId format
+		if (!validateUUID(userId)) {
+			throw new Error("Invalid user ID");
+		}
+
 		const progress = await prisma.userProgress.findUnique({
 			where: { userId },
 		});
@@ -53,9 +115,13 @@ export async function loadUserProgress(
 		const completedLessons =
 			progress.completedLessons as unknown as string[];
 
-		// Calculate current skill node from completed lessons
+		// Validate and filter lesson IDs from loaded data
+		const lessonValidation = validateLessonIds(completedLessons);
+		const validCompletedLessons = lessonValidation.valid;
+
+		// Calculate current skill node from validated completed lessons
 		const currentSkillNodeId = calculateCurrentSkillNodeId(
-			completedLessons,
+			validCompletedLessons,
 			lessonMetadata
 		);
 
@@ -63,14 +129,14 @@ export async function loadUserProgress(
 		const skillNodes = buildSkillTreeFromLessons(lessonMetadata);
 		const calculatedSkillNodes = recalculateSkillNodes(
 			skillNodes,
-			completedLessons
+			validCompletedLessons
 		);
 
 		return {
 			xp: progress.xp,
 			level: progress.level,
 			currentSkillNodeId,
-			completedLessons,
+			completedLessons: validCompletedLessons,
 			skillNodes: calculatedSkillNodes,
 		};
 	} catch (error) {
@@ -96,58 +162,124 @@ export async function migrateLocalStorageData(
 	localProgress: UserProgressType
 ) {
 	try {
-		// Ensure user exists in database first
-		const user = await prisma.user.findUnique({
-			where: { id: userId },
-		});
-
-		if (!user) {
-			console.error(
-				"User not found in database during migration:",
-				userId
-			);
-			return { success: false, error: "User not found" };
+		// Verify ownership - user can only migrate their own data
+		const session = await requireAuth();
+		if (session.id !== userId) {
+			return { success: false, error: "Unauthorized" };
 		}
 
-		// Check if user already has progress in the database
-		const existingProgress = await prisma.userProgress.findUnique({
-			where: { userId },
-		});
+		// Validate userId format
+		if (!validateUUID(userId)) {
+			return { success: false, error: "Invalid user ID" };
+		}
 
-		// NEW USER: Create database record with guest data
-		if (!existingProgress) {
-			await prisma.userProgress.create({
-				data: {
-					userId,
-					xp: localProgress.xp,
-					level: localProgress.level,
-					completedLessons: localProgress.completedLessons as any,
-				},
+		// Rate limiting - 5 migrations per minute per user
+		const rateLimitKey = getRateLimitKey(
+			userId,
+			null,
+			"progress_migration"
+		);
+		const rateLimit = checkRateLimit(
+			rateLimitKey,
+			RATE_LIMITS.PROGRESS_MIGRATION.limit,
+			RATE_LIMITS.PROGRESS_MIGRATION.windowMs
+		);
+
+		if (!rateLimit.allowed) {
+			return {
+				success: false,
+				error: `Rate limit exceeded. Please try again in ${Math.ceil(
+					(rateLimit.resetTime - Date.now()) / 1000
+				)} seconds.`,
+			};
+		}
+
+		// Validate lesson IDs in local progress
+		const localLessonValidation = validateLessonIds(
+			localProgress.completedLessons
+		);
+
+		// Use transaction to prevent race conditions
+		const result = await prisma.$transaction(async (tx) => {
+			// Ensure user exists in database first
+			const user = await tx.user.findUnique({
+				where: { id: userId },
 			});
 
-			return { success: true, migrated: true };
-		}
+			if (!user) {
+				throw new Error("User not found");
+			}
 
-		// EXISTING USER: Merge guest data with database data
-		// Take the most advanced progress from both sources
-		const mergedProgress = {
-			xp: Math.max(existingProgress.xp, localProgress.xp),
-			level: Math.max(existingProgress.level, localProgress.level),
-			// Merge completed lessons (union of both arrays)
-			completedLessons: Array.from(
-				new Set([
-					...(existingProgress.completedLessons as unknown as string[]),
-					...localProgress.completedLessons,
-				])
-			) as any,
-		};
+			// Check if user already has progress in the database
+			const existingProgress = await tx.userProgress.findUnique({
+				where: { userId },
+			});
 
-		await prisma.userProgress.update({
-			where: { userId },
-			data: mergedProgress,
+			// NEW USER: Create database record with validated guest data
+			if (!existingProgress) {
+				await tx.userProgress.create({
+					data: {
+						userId,
+						xp: localProgress.xp,
+						level: localProgress.level,
+						completedLessons: localLessonValidation.valid as any,
+					},
+				});
+
+				return {
+					success: true,
+					migrated: true,
+					filteredLessons:
+						localLessonValidation.invalid.length > 0
+							? {
+									invalid: localLessonValidation.invalid,
+									valid: localLessonValidation.valid.length,
+							  }
+							: undefined,
+				};
+			}
+
+			// EXISTING USER: Merge guest data with database data
+			const existingLessons =
+				existingProgress.completedLessons as unknown as string[];
+			const existingLessonValidation = validateLessonIds(existingLessons);
+
+			// Take the most advanced progress from both sources
+			const mergedProgress = {
+				xp: Math.max(existingProgress.xp, localProgress.xp),
+				level: Math.max(existingProgress.level, localProgress.level),
+				// Merge completed lessons (union of both arrays, only valid ones)
+				completedLessons: Array.from(
+					new Set([
+						...existingLessonValidation.valid,
+						...localLessonValidation.valid,
+					])
+				) as any,
+			};
+
+			await tx.userProgress.update({
+				where: { userId },
+				data: mergedProgress,
+			});
+
+			return {
+				success: true,
+				migrated: true,
+				merged: true,
+				filteredLessons:
+					localLessonValidation.invalid.length > 0 ||
+					existingLessonValidation.invalid.length > 0
+						? {
+								localInvalid: localLessonValidation.invalid,
+								existingInvalid:
+									existingLessonValidation.invalid,
+								valid: mergedProgress.completedLessons.length,
+						  }
+						: undefined,
+			};
 		});
 
-		return { success: true, migrated: true, merged: true };
+		return result;
 	} catch (error) {
 		console.error("Failed to migrate localStorage data:", error);
 		return { success: false, error: "Failed to migrate data" };

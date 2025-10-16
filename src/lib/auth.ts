@@ -40,13 +40,14 @@ export const authOptions: AuthOptions = {
 			});
 
 			if (!existingUser) {
-				// New user - create in database
+				// New user - create in database with default USER role
 				await prisma.user.create({
 					data: {
 						id: user.id,
 						email: user.email,
 						name: user.name,
 						image: user.image,
+						role: "BASIC",
 					},
 				});
 			} else {
@@ -63,8 +64,17 @@ export const authOptions: AuthOptions = {
 			return true;
 		},
 		async session({ session, token }) {
+			// If token.role is null, it means the user was deleted
+			// Don't set user ID, which will make the session appear as not logged in
+			if (token.role === null) {
+				// Don't set user ID, making the session appear as not logged in
+				session.progress = null;
+				return session;
+			}
+
 			if (session.user && token.sub) {
 				session.user.id = token.sub;
+				session.user.role = token.role || "BASIC";
 			}
 			// Include progress in the session
 			if (token.progress) {
@@ -77,10 +87,33 @@ export const authOptions: AuthOptions = {
 				token.sub = user.id;
 			}
 
-			// Load progress and attach to token
-			// Always load fresh progress from database to ensure consistency
+			// Load user role and progress, attach to token
+			// Always load fresh data from database to ensure consistency
 			if (token.sub) {
 				try {
+					// FIRST: Check if user still exists in database
+					const user = await prisma.user.findUnique({
+						where: { id: token.sub },
+						select: { role: true },
+					});
+
+					// If user deleted, invalidate token by setting it to expire immediately
+					if (!user) {
+						console.warn(
+							`JWT token for deleted user: ${token.sub}`
+						);
+						return {
+							...token,
+							role: null,
+							progress: null,
+							exp: Math.floor(Date.now() / 1000) - 1,
+						};
+					}
+
+					// User exists, set role
+					token.role = user.role || "BASIC";
+
+					// Now safe to load progress
 					const progress = await prisma.userProgress.findUnique({
 						where: { userId: token.sub },
 					});
@@ -114,8 +147,9 @@ export const authOptions: AuthOptions = {
 						token.progress = null;
 					}
 				} catch (error) {
-					console.error("Failed to load progress in JWT:", error);
-					token.progress = null;
+					console.error("Failed to load user data in JWT:", error);
+					// On error, invalidate token to force re-authentication
+					return { ...token, role: null, progress: null };
 				}
 			}
 
@@ -143,6 +177,22 @@ export async function requireAuth() {
 	const session = await getSession();
 	if (!session?.user) {
 		throw new Error("Unauthorized");
+	}
+	return session.user;
+}
+
+export async function isAdmin(): Promise<boolean> {
+	const session = await getSession();
+	return session?.user?.role === "ADMIN";
+}
+
+export async function requireAdmin() {
+	const session = await getSession();
+	if (!session?.user) {
+		throw new Error("Unauthorized");
+	}
+	if (session.user.role !== "ADMIN") {
+		throw new Error("Admin access required");
 	}
 	return session.user;
 }

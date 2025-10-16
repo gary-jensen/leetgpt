@@ -23,7 +23,11 @@ const useConsole = (
 	currentStepIndex: number,
 	handleTestResults: (results: TestResult[]) => void,
 	attemptsCount: number,
-	setAttemptsCount: (count: number) => void
+	setAttemptsCount: (count: number) => void,
+	addSystemMessage?: (
+		content: string,
+		messageType?: "error" | "success" | "info"
+	) => void
 ) => {
 	const { data: session } = useSession();
 	const currentQuestion = currentLesson.steps[currentStepIndex];
@@ -71,6 +75,18 @@ const useConsole = (
 
 	const handleTest = async () => {
 		if (!executorRef.current || !currentQuestion || isExecuting) return;
+
+		// Client-side code length validation
+		if (code.length > 5000) {
+			// Send error message to chat if available
+			if (addSystemMessage) {
+				addSystemMessage(
+					"❌ **Code Length Error**\n\nYour code is too long! The maximum allowed length is 5,000 characters. Please shorten your code and try again.",
+					"error"
+				);
+			}
+			return;
+		}
 
 		// Increment attempts for this step
 		const currentAttempt = attemptsCount + 1;
@@ -129,28 +145,28 @@ const useConsole = (
 
 			// const testResults = currentQuestion.tests;
 
-		// Check if all tests passed
-		const allTestsPassed = testResults.every((result) => result.passed);
+			// Check if all tests passed
+			const allTestsPassed = testResults.every((result) => result.passed);
 
-		// Track analytics with code
-		if (allTestsPassed) {
-			trackCodeSubmitCorrect(
-				currentLesson.id,
-				currentQuestion.id,
-				currentAttempt,
-				code
-			);
-		} else {
-			const firstFailedTest = testResults.find((r) => !r.passed);
-			trackCodeSubmitIncorrect(
-				currentLesson.id,
-				currentQuestion.id,
-				code,
-				firstFailedTest?.error
-					? `Code error - ${firstFailedTest?.error}`
-					: `Code failed - ${currentLesson.id}`
-			);
-		}
+			// Track analytics with code
+			if (allTestsPassed) {
+				trackCodeSubmitCorrect(
+					currentLesson.id,
+					currentQuestion.id,
+					currentAttempt,
+					code
+				);
+			} else {
+				const firstFailedTest = testResults.find((r) => !r.passed);
+				trackCodeSubmitIncorrect(
+					currentLesson.id,
+					currentQuestion.id,
+					code,
+					firstFailedTest?.error
+						? `Code error - ${firstFailedTest?.error}`
+						: `Code failed - ${currentLesson.id}`
+				);
+			}
 
 			if (handleTestResults) {
 				handleTestResults(testResults);

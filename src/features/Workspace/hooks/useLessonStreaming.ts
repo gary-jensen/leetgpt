@@ -343,6 +343,7 @@ export const useLessonStreaming = ({
 		handleKeyPress,
 		setInputValue,
 		clearMessages,
+		addSystemMessage,
 		// Streaming functions
 		streamCurrentStep,
 		streamStep,
