@@ -116,7 +116,6 @@ export async function migrateLocalStorageData(
 
 		// NEW USER: Create database record with guest data
 		if (!existingProgress) {
-			console.log("Creating new user progress record...");
 			await prisma.userProgress.create({
 				data: {
 					userId,
@@ -125,14 +124,12 @@ export async function migrateLocalStorageData(
 					completedLessons: localProgress.completedLessons as any,
 				},
 			});
-			console.log("Successfully created user progress record");
 
 			return { success: true, migrated: true };
 		}
 
 		// EXISTING USER: Merge guest data with database data
 		// Take the most advanced progress from both sources
-		console.log("Merging with existing progress...");
 		const mergedProgress = {
 			xp: Math.max(existingProgress.xp, localProgress.xp),
 			level: Math.max(existingProgress.level, localProgress.level),
@@ -144,13 +141,11 @@ export async function migrateLocalStorageData(
 				])
 			) as any,
 		};
-		console.log("Merged progress:", mergedProgress);
 
 		await prisma.userProgress.update({
 			where: { userId },
 			data: mergedProgress,
 		});
-		console.log("Successfully updated user progress record");
 
 		return { success: true, migrated: true, merged: true };
 	} catch (error) {

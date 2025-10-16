@@ -18,7 +18,6 @@ model User {
     createdAt       DateTime         @default(now())
     updatedAt       DateTime         @updatedAt
     progress        UserProgress?
-    submissions     CodeSubmission[]
     sessions        UserSession[]
     analyticsEvents AnalyticsEvent[]
 }
@@ -31,20 +30,6 @@ model UserProgress {
     level            Int      @default(1)
     completedLessons Json     @default("[]")
     updatedAt        DateTime @updatedAt
-}
-
-model CodeSubmission {
-    id          String   @id @default(uuid())
-    userId      String
-    user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-    lessonId    String
-    stepId      String
-    code        String
-    isCorrect   Boolean
-    submittedAt DateTime @default(now())
-    lessonData  Json?
-
-    @@index([userId, lessonId])
 }
 
 model UserSession {

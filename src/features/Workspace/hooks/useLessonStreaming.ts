@@ -63,6 +63,9 @@ export const useLessonStreaming = ({
 	// Track when tests just passed for button glow effect
 	const [hasJustPassed, setHasJustPassed] = useState(false);
 
+	// Track lesson start time
+	const [startTime, setStartTime] = useState(new Date().getTime());
+
 	// Track previous skill node completion status
 	const [previousNodeCompletion, setPreviousNodeCompletion] = useState<
 		Record<string, boolean>
@@ -262,12 +265,15 @@ export const useLessonStreaming = ({
 					// else if there is a next lesson, go to it
 				} else if (lessons.length > currentLessonIndex + 1) {
 					// Award lesson completion XP and show animation
+					const now = new Date().getTime();
 					addLessonXP(
 						currentLesson.id,
 						currentLesson.title,
 						currentLesson.skillNodeId,
-						currentLesson.xpReward
+						currentLesson.xpReward,
+						now - startTime
 					);
+					setStartTime(now);
 					showXPGain(currentLesson.xpReward);
 
 					setTimeout(() => {
@@ -278,6 +284,8 @@ export const useLessonStreaming = ({
 								.startingCode ?? ""
 						);
 
+						// set timeTaken for lesson to 0
+
 						setCurrentLessonIndex(currentLessonIndex + 1);
 						setCurrentStepIndex(0);
 						setAttemptsCount(0); // Reset attempts counter when moving to new lesson
@@ -286,12 +294,15 @@ export const useLessonStreaming = ({
 					}, 1000); // Standard delay
 				} else {
 					// Award final lesson completion XP and show animation
+					const now = new Date().getTime();
 					addLessonXP(
 						currentLesson.id,
 						currentLesson.title,
 						currentLesson.skillNodeId,
-						currentLesson.xpReward
+						currentLesson.xpReward,
+						now - startTime
 					);
+					setStartTime(now);
 					showXPGain(currentLesson.xpReward);
 					// Finished
 				}

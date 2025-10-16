@@ -101,17 +101,19 @@ export const trackLessonStart = (lessonId: string, lessonTitle: string) => {
 export const trackLessonComplete = (
 	lessonId: string,
 	lessonTitle: string,
-	xpGained: number
+	xpGained: number,
+	timeTaken: number
 ) => {
 	trackEvent(
 		"Lesson",
 		"lesson_complete",
 		`${lessonId} - ${lessonTitle}`,
-		xpGained,
+		timeTaken / 1000,
 		{
 			lessonId,
 			lessonTitle,
 			xpGained,
+			timeTaken: timeTaken / 1000,
 		}
 	);
 };
@@ -129,17 +131,11 @@ export const trackStepComplete = (
 };
 
 // Code execution tracking
-export const trackCodeRun = (lessonId: string, stepId: string) => {
-	trackEvent("Code", "code_run", `${lessonId}-${stepId}`, undefined, {
-		lessonId,
-		stepId,
-	});
-};
-
 export const trackCodeSubmitCorrect = (
 	lessonId: string,
 	stepId: string,
-	attempts: number
+	attempts: number,
+	code: string
 ) => {
 	trackEvent(
 		"Code",
@@ -150,6 +146,7 @@ export const trackCodeSubmitCorrect = (
 			lessonId,
 			stepId,
 			attempts,
+			code,
 		}
 	);
 };
@@ -157,6 +154,7 @@ export const trackCodeSubmitCorrect = (
 export const trackCodeSubmitIncorrect = (
 	lessonId: string,
 	stepId: string,
+	code: string,
 	errorType?: string
 ) => {
 	trackEvent(
@@ -168,6 +166,7 @@ export const trackCodeSubmitIncorrect = (
 			lessonId,
 			stepId,
 			errorType,
+			code,
 		}
 	);
 };

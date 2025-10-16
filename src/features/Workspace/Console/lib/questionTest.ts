@@ -869,8 +869,6 @@ export const questionTestDetailed = (
 					const fullRegex = new RegExp(fullPattern, "ms"); // multiline and dotall flags
 					passed = fullRegex.test(currentCode);
 				} catch (e) {
-					// console.log("❌ ifStatement regex error:", e);
-					// console.log("🔄 Falling back to simple 'if' check");
 					// Fallback to simple string contains if regex fails
 					passed = currentCode.includes("if");
 				}

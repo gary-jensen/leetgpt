@@ -78,11 +78,8 @@ export const authOptions: AuthOptions = {
 			}
 
 			// Load progress and attach to token
-			// Refresh progress on sign-in, explicit update, or if not already in token
-			const shouldLoadProgress =
-				token.sub && (user || trigger === "update" || !token.progress);
-
-			if (shouldLoadProgress) {
+			// Always load fresh progress from database to ensure consistency
+			if (token.sub) {
 				try {
 					const progress = await prisma.userProgress.findUnique({
 						where: { userId: token.sub },
@@ -121,7 +118,6 @@ export const authOptions: AuthOptions = {
 					token.progress = null;
 				}
 			}
-			// If progress already exists in token and we don't need to refresh, keep it
 
 			return token;
 		},

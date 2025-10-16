@@ -45,7 +45,8 @@ interface ProgressContextType {
 		lessonId: string,
 		lessonTitle: string,
 		skillNodeId: string,
-		xp: number
+		xp: number,
+		timeTaken: number
 	) => void;
 	getCurrentSkillNode: () => SkillNode | undefined;
 	getXPProgress: () => number;
@@ -375,16 +376,8 @@ export function ProgressProvider({
 				const hasProgress =
 					!!activeSession.progress?.completedLessons?.length;
 
-				console.log("Migration check:", {
-					userId: activeSession.user.id,
-					hasProgress,
-					hasMigratedRef: hasMigratedRef.current,
-				});
-
 				if (!hasProgress && !hasMigratedRef.current) {
-					console.log("Checking for localStorage data to migrate...");
 					const localProgress = await loadProgressFromStorage();
-					console.log("Found localProgress:", localProgress);
 					if (localProgress) {
 						hasMigratedRef.current = true;
 
@@ -394,16 +387,10 @@ export function ProgressProvider({
 						const maxRetries = 3;
 
 						do {
-							console.log(
-								`Attempting migration (attempt ${retries + 1}/${
-									maxRetries + 1
-								})...`
-							);
 							migrationResult = await migrateLocalStorageData(
 								activeSession.user.id,
 								localProgress
 							);
-							console.log("Migration result:", migrationResult);
 
 							if (migrationResult.success) {
 								break;
@@ -411,9 +398,6 @@ export function ProgressProvider({
 
 							retries++;
 							if (retries < maxRetries) {
-								console.log(
-									`Migration failed, retrying in 500ms... (${retries}/${maxRetries})`
-								);
 								await new Promise((resolve) =>
 									setTimeout(resolve, 500)
 								);
@@ -429,24 +413,16 @@ export function ProgressProvider({
 								"bitschool-progress-checksum"
 							);
 							clearGuestId();
-							console.log("Migration completed successfully!");
 
 							// Update local state with migrated progress
 							dispatch({
 								type: "LOAD_PROGRESS",
 								progress: localProgress,
 							});
-						} else {
-							console.error(
-								"Migration failed after retries:",
-								migrationResult.error
-							);
 						}
 
 						setIsProgressLoading(false);
 						return;
-					} else {
-						console.log("No localStorage data found to migrate");
 					}
 				}
 			} else {
@@ -543,11 +519,12 @@ export function ProgressProvider({
 			lessonId: string,
 			lessonTitle: string,
 			skillNodeId: string,
-			xp: number
+			xp: number,
+			timeTaken: number
 		) => {
 			dispatch({ type: "ADD_LESSON_XP", lessonId, skillNodeId, xp });
 			// Track lesson completion (can be used as Google Ads conversion)
-			trackLessonComplete(lessonId, lessonTitle, xp);
+			trackLessonComplete(lessonId, lessonTitle, xp, timeTaken);
 		},
 		[]
 	);
