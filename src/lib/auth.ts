@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth/next";
 import { AuthOptions } from "next-auth";
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import GoogleProvider from "next-auth/providers/google";
 import GitHubProvider from "next-auth/providers/github";
 import { prisma } from "@/lib/prisma";
@@ -20,6 +21,7 @@ export function setLessonMetadata(
 }
 
 export const authOptions: AuthOptions = {
+	adapter: PrismaAdapter(prisma),
 	providers: [
 		GoogleProvider({
 			clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -31,136 +33,75 @@ export const authOptions: AuthOptions = {
 		}),
 	],
 	callbacks: {
-		async signIn({ user }) {
+		async signIn({ user, account, profile }) {
 			if (!user.email) return false;
-
-			// Create or update user in database
-			const existingUser = await prisma.user.findUnique({
-				where: { email: user.email },
-			});
-
-			if (!existingUser) {
-				// New user - create in database with default USER role
-				await prisma.user.create({
-					data: {
-						id: user.id,
-						email: user.email,
-						name: user.name,
-						image: user.image,
-						role: "BASIC",
-					},
-				});
-			} else {
-				// Existing user - update info if changed
-				await prisma.user.update({
-					where: { email: user.email },
-					data: {
-						name: user.name,
-						image: user.image,
-					},
-				});
-			}
-
-			return true;
+			return true; // Let the adapter handle user creation
 		},
-		async session({ session, token }) {
-			// If token.role is null, it means the user was deleted
-			// Don't set user ID, which will make the session appear as not logged in
-			if (token.role === null) {
-				// Don't set user ID, making the session appear as not logged in
-				session.progress = null;
-				return session;
-			}
+		async session({ session, user }) {
+			if (session.user && user) {
+				// Load fresh user data from database
+				const userWithProgress = await prisma.user.findUnique({
+					where: { id: user.id },
+					include: { progress: true },
+				});
 
-			if (session.user && token.sub) {
-				session.user.id = token.sub;
-				session.user.role = token.role || "BASIC";
-			}
-			// Include progress in the session
-			if (token.progress) {
-				session.progress = token.progress;
+				if (!userWithProgress) {
+					// User deleted - return session without user ID
+					session.user.id = "";
+					session.progress = null;
+					return session;
+				}
+
+				session.user.id = userWithProgress.id;
+				session.user.role = userWithProgress.role;
+
+				// Load and calculate progress
+				if (userWithProgress.progress) {
+					const completedLessons = userWithProgress.progress
+						.completedLessons as unknown as string[];
+
+					// Calculate current skill node from completed lessons
+					const currentSkillNodeId = calculateCurrentSkillNodeId(
+						completedLessons,
+						cachedLessonMetadata
+					);
+
+					// Build skill tree and calculate progress
+					const skillNodes =
+						buildSkillTreeFromLessons(cachedLessonMetadata);
+					const calculatedSkillNodes = recalculateSkillNodes(
+						skillNodes,
+						completedLessons
+					);
+
+					session.progress = {
+						xp: userWithProgress.progress.xp,
+						level: userWithProgress.progress.level,
+						currentSkillNodeId,
+						completedLessons,
+						skillNodes: calculatedSkillNodes,
+					};
+				} else {
+					session.progress = null;
+				}
 			}
 			return session;
 		},
-		async jwt({ token, user, trigger }) {
-			if (user) {
-				token.sub = user.id;
-			}
-
-			// Load user role and progress, attach to token
-			// Always load fresh data from database to ensure consistency
-			if (token.sub) {
-				try {
-					// FIRST: Check if user still exists in database
-					const user = await prisma.user.findUnique({
-						where: { id: token.sub },
-						select: { role: true },
-					});
-
-					// If user deleted, invalidate token by setting it to expire immediately
-					if (!user) {
-						console.warn(
-							`JWT token for deleted user: ${token.sub}`
-						);
-						return {
-							...token,
-							role: null,
-							progress: null,
-							exp: Math.floor(Date.now() / 1000) - 1,
-						};
-					}
-
-					// User exists, set role
-					token.role = user.role || "BASIC";
-
-					// Now safe to load progress
-					const progress = await prisma.userProgress.findUnique({
-						where: { userId: token.sub },
-					});
-
-					if (progress) {
-						const completedLessons =
-							progress.completedLessons as unknown as string[];
-
-						// Calculate current skill node from completed lessons
-						const currentSkillNodeId = calculateCurrentSkillNodeId(
-							completedLessons,
-							cachedLessonMetadata
-						);
-
-						// Build skill tree and calculate progress
-						const skillNodes =
-							buildSkillTreeFromLessons(cachedLessonMetadata);
-						const calculatedSkillNodes = recalculateSkillNodes(
-							skillNodes,
-							completedLessons
-						);
-
-						token.progress = {
-							xp: progress.xp,
-							level: progress.level,
-							currentSkillNodeId,
-							completedLessons,
-							skillNodes: calculatedSkillNodes,
-						};
-					} else {
-						token.progress = null;
-					}
-				} catch (error) {
-					console.error("Failed to load user data in JWT:", error);
-					// On error, invalidate token to force re-authentication
-					return { ...token, role: null, progress: null };
-				}
-			}
-
-			return token;
+	},
+	events: {
+		async createUser({ user }) {
+			// Set default role when user is created by adapter
+			await prisma.user.update({
+				where: { id: user.id },
+				data: { role: "BASIC" },
+			});
 		},
 	},
 	pages: {
 		signIn: "/login",
 	},
 	session: {
-		strategy: "jwt",
+		strategy: "database",
 	},
 };
 
