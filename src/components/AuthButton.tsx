@@ -42,19 +42,22 @@ export default function AuthButton() {
 		return (
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
-					<button className="focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full">
-						{session.user.image ? (
+					<button className="focus:outline-none focus:ring-0 focus:ring-transparent rounded-full">
+						<div className="w-10 h-10 rounded-full bg-[#455a64] flex items-center justify-center text-white text-xl font-medium cursor-pointer hover:bg-[#3d4e56]  transition-colors">
+							{session.user.name?.charAt(0).toUpperCase() || "U"}
+						</div>
+						{/* {session.user.image ? (
 							<img
 								src={session.user.image}
 								alt={session.user.name || "User"}
 								className="w-10 h-10 rounded-full cursor-pointer hover:opacity-80 transition-opacity"
 							/>
 						) : (
-							<div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium cursor-pointer hover:bg-blue-600 transition-colors">
+							<div className="w-10 h-10 rounded-full bg-[#455a64] flex items-center justify-center text-white font-medium cursor-pointer hover:bg-[#3d4e56] transition-colors">
 								{session.user.name?.charAt(0).toUpperCase() ||
 									"U"}
 							</div>
-						)}
+						)} */}
 					</button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-56">
@@ -81,7 +84,7 @@ export default function AuthButton() {
 	}
 
 	return (
-		<Button variant="run" onClick={() => signIn("google")}>
+		<Button variant="run" onClick={() => signIn()}>
 			Sign In
 		</Button>
 	);

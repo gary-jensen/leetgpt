@@ -22,6 +22,11 @@ NEXTAUTH_SECRET="your-generated-secret-here"
 GOOGLE_CLIENT_ID="your-google-client-id.apps.googleusercontent.com"
 GOOGLE_CLIENT_SECRET="your-google-client-secret"
 
+# GitHub OAuth
+# Get from: GitHub → Settings → Developer settings → OAuth Apps → New OAuth App
+GITHUB_CLIENT_ID="your-github-client-id"
+GITHUB_CLIENT_SECRET="your-github-client-secret"
+
 # Google Analytics 4
 # Get from: Google Analytics → Admin → Data Streams → Web → Measurement ID
 NEXT_PUBLIC_GA_MEASUREMENT_ID="G-XXXXXXXXXX"

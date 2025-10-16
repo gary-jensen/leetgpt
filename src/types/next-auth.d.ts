@@ -1,4 +1,5 @@
 import "next-auth";
+import { UserProgress } from "@/lib/progressionSystem";
 
 declare module "next-auth" {
 	interface Session {
@@ -8,6 +9,7 @@ declare module "next-auth" {
 			name?: string | null;
 			image?: string | null;
 		};
+		progress?: UserProgress | null;
 	}
 
 	interface User {
@@ -15,5 +17,11 @@ declare module "next-auth" {
 		email: string;
 		name?: string | null;
 		image?: string | null;
+	}
+}
+
+declare module "next-auth/jwt" {
+	interface JWT {
+		progress?: UserProgress | null;
 	}
 }

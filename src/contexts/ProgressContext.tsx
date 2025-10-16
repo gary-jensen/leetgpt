@@ -11,6 +11,7 @@ import React, {
 	useState,
 } from "react";
 import { useSession } from "next-auth/react";
+import { Session } from "next-auth";
 import {
 	UserProgress,
 	SkillNode,
@@ -25,7 +26,6 @@ import {
 } from "../lib/progressionSystem";
 import {
 	saveUserProgress,
-	loadUserProgress,
 	migrateLocalStorageData,
 } from "@/lib/actions/progress";
 import {
@@ -266,14 +266,37 @@ function progressReducer(
 interface ProgressProviderProps {
 	children: ReactNode;
 	lessonMetadata?: { id: string; skillNodeId: string }[];
+	session: Session | null;
 }
 
-export function ProgressProvider({
-	children,
-	lessonMetadata,
-}: ProgressProviderProps) {
-	const { data: session, status } = useSession();
-	const [state, dispatch] = useReducer(progressReducer, {
+function getInitialProgress(
+	session: Session | null,
+	lessonMetadata?: { id: string; skillNodeId: string }[]
+): ProgressState {
+	// Logged in with progress -> use it directly
+	if (
+		session?.progress &&
+		session.progress.completedLessons &&
+		session.progress.completedLessons.length > 0
+	) {
+		return {
+			xp: session.progress.xp,
+			level: session.progress.level,
+			currentSkillNodeId: session.progress.currentSkillNodeId,
+			completedLessons: session.progress.completedLessons,
+			skillNodes: session.progress.skillNodes,
+			isLevelUp: false,
+			xpGainQueue: [],
+			nodeCompleteQueue: [],
+			showSkillTree: false,
+			animationQueue: [],
+			isAnimationPlaying: false,
+			justLeveledUp: false,
+		};
+	}
+
+	// Otherwise use empty initial state
+	return {
 		...createInitialProgress(lessonMetadata),
 		isLevelUp: false,
 		xpGainQueue: [],
@@ -282,89 +305,165 @@ export function ProgressProvider({
 		animationQueue: [],
 		isAnimationPlaying: false,
 		justLeveledUp: false,
-	});
+	};
+}
+
+export function ProgressProvider({
+	children,
+	lessonMetadata,
+	session: serverSession,
+}: ProgressProviderProps) {
+	const { data: session, status } = useSession();
+	// Use server session for initial render, then client session after hydration
+	const activeSession = session ?? serverSession;
+
+	const [state, dispatch] = useReducer(
+		progressReducer,
+		getInitialProgress(activeSession, lessonMetadata)
+	);
 
 	const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 	const hasMigratedRef = useRef(false);
 	const prevLevelRef = useRef(state.level);
 	const hasInitializedLevelTracking = useRef(false);
-	const [isProgressLoading, setIsProgressLoading] = useState(true);
+
+	// Compute loading state based on whether we need to check migration/localStorage
+	const needsAsyncLoad = activeSession?.user?.id
+		? !(
+				activeSession.progress?.completedLessons &&
+				activeSession.progress.completedLessons.length > 0
+		  ) // Logged in, no progress -> check migration
+		: true; // Guest -> check localStorage
+
+	const [isProgressLoading, setIsProgressLoading] = useState(needsAsyncLoad);
 
 	// Load progress from database or localStorage on mount
 	useEffect(() => {
+		if (status === "loading") return;
+
+		// Track sign-in events
+		const lastAuthStatus = sessionStorage.getItem(
+			"bitschool-last-auth-status"
+		);
+		const wasUnauthenticated =
+			lastAuthStatus === "unauthenticated" || lastAuthStatus === null;
+		const isNowAuthenticated = status === "authenticated";
+
+		if (
+			wasUnauthenticated &&
+			isNowAuthenticated &&
+			activeSession?.user?.id
+		) {
+			trackAuthSignin();
+		}
+		sessionStorage.setItem("bitschool-last-auth-status", status);
+
+		// Skip if we already have progress loaded
+		if (
+			activeSession?.progress &&
+			activeSession.progress.completedLessons &&
+			activeSession.progress.completedLessons.length > 0
+		) {
+			setIsProgressLoading(false);
+			return;
+		}
+
 		const loadProgress = async () => {
-			if (status === "loading") return;
+			if (activeSession?.user?.id) {
+				// Logged in, no progress -> check for migration
+				// If user has progress in session, they're already migrated
+				const hasProgress =
+					!!activeSession.progress?.completedLessons?.length;
 
-			setIsProgressLoading(true);
+				console.log("Migration check:", {
+					userId: activeSession.user.id,
+					hasProgress,
+					hasMigratedRef: hasMigratedRef.current,
+				});
 
-			if (session?.user?.id) {
-				// Track sign-in only when transitioning from unauthenticated to authenticated
-				// Use sessionStorage to persist the last status across page refreshes
-				const lastAuthStatus = sessionStorage.getItem(
-					"bitschool-last-auth-status"
-				);
-				const wasUnauthenticated =
-					lastAuthStatus === "unauthenticated" ||
-					lastAuthStatus === null;
-				const isNowAuthenticated = status === "authenticated";
+				if (!hasProgress && !hasMigratedRef.current) {
+					console.log("Checking for localStorage data to migrate...");
+					const localProgress = await loadProgressFromStorage();
+					console.log("Found localProgress:", localProgress);
+					if (localProgress) {
+						hasMigratedRef.current = true;
 
-				if (wasUnauthenticated && isNowAuthenticated) {
-					trackAuthSignin();
-				}
+						// Retry migration with a small delay to ensure user is created
+						let migrationResult;
+						let retries = 0;
+						const maxRetries = 3;
 
-				// Update the stored status
-				sessionStorage.setItem("bitschool-last-auth-status", status);
+						do {
+							console.log(
+								`Attempting migration (attempt ${retries + 1}/${
+									maxRetries + 1
+								})...`
+							);
+							migrationResult = await migrateLocalStorageData(
+								activeSession.user.id,
+								localProgress
+							);
+							console.log("Migration result:", migrationResult);
 
-				// User is authenticated - check for localStorage data to merge
-				const localProgress = await loadProgressFromStorage();
+							if (migrationResult.success) {
+								break;
+							}
 
-				// Always check if there's guest data to merge (whether new user or existing)
-				if (localProgress && !hasMigratedRef.current) {
-					hasMigratedRef.current = true;
+							retries++;
+							if (retries < maxRetries) {
+								console.log(
+									`Migration failed, retrying in 500ms... (${retries}/${maxRetries})`
+								);
+								await new Promise((resolve) =>
+									setTimeout(resolve, 500)
+								);
+							}
+						} while (
+							retries < maxRetries &&
+							!migrationResult.success
+						);
 
-					// Migrate/merge localStorage data with database
-					// Server handles both new users and merging with existing data
-					await migrateLocalStorageData(
-						session.user.id,
-						localProgress
-					);
+						if (migrationResult.success) {
+							localStorage.removeItem("bitschool-progress");
+							localStorage.removeItem(
+								"bitschool-progress-checksum"
+							);
+							clearGuestId();
+							console.log("Migration completed successfully!");
 
-					// Clear localStorage after migration
-					localStorage.removeItem("bitschool-progress");
-					localStorage.removeItem("bitschool-progress-checksum");
+							// Update local state with migrated progress
+							dispatch({
+								type: "LOAD_PROGRESS",
+								progress: localProgress,
+							});
+						} else {
+							console.error(
+								"Migration failed after retries:",
+								migrationResult.error
+							);
+						}
 
-					// Clear guest ID after tracking and migration
-					clearGuestId();
-				}
-
-				// Load the merged/existing progress from database (skillNodes calculated server-side)
-				const dbProgress = await loadUserProgress(
-					session.user.id,
-					lessonMetadata || []
-				);
-
-				if (dbProgress) {
-					dispatch({ type: "LOAD_PROGRESS", progress: dbProgress });
+						setIsProgressLoading(false);
+						return;
+					} else {
+						console.log("No localStorage data found to migrate");
+					}
 				}
 			} else {
-				// Guest user - load from localStorage and calculate skill nodes client-side
-				// Update the stored status to track unauthenticated state
-				sessionStorage.setItem("bitschool-last-auth-status", status);
-
+				// Guest -> load from localStorage
 				const savedProgress = await loadProgressFromStorage();
-				if (savedProgress) {
-					// Calculate current skill node from completed lessons
+				if (
+					savedProgress &&
+					savedProgress.completedLessons.length > 0
+				) {
 					const currentSkillNodeId = calculateCurrentSkillNodeId(
 						savedProgress.completedLessons,
 						lessonMetadata || []
 					);
-
-					// Recalculate skill nodes based on completed lessons
 					const updatedSkillNodes = recalculateSkillNodes(
 						savedProgress.skillNodes,
 						savedProgress.completedLessons
 					);
-
 					dispatch({
 						type: "LOAD_PROGRESS",
 						progress: {
@@ -380,10 +479,13 @@ export function ProgressProvider({
 		};
 
 		loadProgress();
-	}, [session, status, lessonMetadata]);
+	}, [activeSession?.user?.id, status, lessonMetadata]);
 
 	// Save progress (debounced)
 	useEffect(() => {
+		// Skip saving during initial load
+		if (isProgressLoading) return;
+
 		// Clear existing timeout
 		if (saveTimeoutRef.current) {
 			clearTimeout(saveTimeoutRef.current);
@@ -391,9 +493,11 @@ export function ProgressProvider({
 
 		// Set new timeout for saving
 		saveTimeoutRef.current = setTimeout(async () => {
-			if (session?.user?.id) {
+			if (activeSession?.user?.id) {
 				// Authenticated: save to database
-				await saveUserProgress(session.user.id, state);
+				// State is source of truth - just save to DB
+				// On next page load, JWT will load fresh data from DB
+				await saveUserProgress(activeSession.user.id, state);
 			} else {
 				// Guest: save to localStorage (encrypted)
 				await saveProgressToStorage(state);
@@ -405,7 +509,7 @@ export function ProgressProvider({
 				clearTimeout(saveTimeoutRef.current);
 			}
 		};
-	}, [state, session]);
+	}, [state, activeSession?.user?.id, isProgressLoading]);
 
 	// Track level ups (only after initial load completes)
 	useEffect(() => {
