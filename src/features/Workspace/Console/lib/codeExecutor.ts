@@ -1,5 +1,6 @@
 import { ExecutionResult } from "./types";
 import { transformUserCode } from "./babelTransform";
+import { generateUUID } from "@/lib/cryptoUtils";
 
 // Promise-based code execution - no more useEffect chains!
 export class CodeExecutor {
@@ -31,7 +32,7 @@ export class CodeExecutor {
 		}
 
 		return new Promise((resolve, reject) => {
-			const messageId = crypto.randomUUID();
+			const messageId = generateUUID();
 
 			// Set up timeout
 			const timeout = setTimeout(() => {

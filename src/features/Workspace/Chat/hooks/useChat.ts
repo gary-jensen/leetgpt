@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { ChatMessage, ChatState, ChatHookReturn } from "../types/chat";
 import { streamMessage } from "../services/chatService";
+import { generateUUID } from "@/lib/cryptoUtils";
 
 const initialState: ChatState = {
 	messages: [],
@@ -27,7 +28,7 @@ export const useChat = (): ChatHookReturn => {
 		if (!state.inputValue.trim() || state.isLoading) return;
 
 		const userMessage: ChatMessage = {
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			role: "user",
 			content: state.inputValue.trim(),
 			timestamp: new Date(),
@@ -40,7 +41,7 @@ export const useChat = (): ChatHookReturn => {
 			isLoading: true,
 		}));
 
-		const aiMessageId = crypto.randomUUID();
+		const aiMessageId = generateUUID();
 		setState((prev) => ({
 			...prev,
 			streamingMessageId: aiMessageId,
@@ -135,7 +136,7 @@ export const useChat = (): ChatHookReturn => {
 			streamingSpeed: number = 50, // milliseconds between words
 			messageType: "error" | "success" | "info" = "info"
 		): Promise<void> => {
-			const messageId = crypto.randomUUID();
+			const messageId = generateUUID();
 			const words = content.split(" ");
 			let currentWordIndex = 0;
 
@@ -201,7 +202,7 @@ export const useChat = (): ChatHookReturn => {
 			messageType: "error" | "success" | "info" = "info"
 		) => {
 			const systemMessage: ChatMessage = {
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				role: "system",
 				content,
 				timestamp: new Date(),

@@ -1,5 +1,6 @@
 "use client";
 
+import { generateUUID } from "@/lib/cryptoUtils";
 import React, {
 	createContext,
 	useContext,
@@ -228,7 +229,7 @@ function progressReducer(
 			const newAnimation = {
 				type: action.animationType,
 				data: action.data,
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 			};
 			return {
 				...state,
@@ -556,12 +557,12 @@ export function ProgressProvider({
 	}, []);
 
 	const showXPGain = useCallback((xp: number) => {
-		const id = crypto.randomUUID();
+		const id = generateUUID();
 		dispatch({ type: "SHOW_XP_GAIN", xp, id });
 	}, []);
 
 	const showNodeComplete = useCallback((nodeName: string) => {
-		const id = crypto.randomUUID();
+		const id = generateUUID();
 		dispatch({ type: "SHOW_NODE_COMPLETE", nodeName, id });
 		// Track skill node completion
 		trackSkillNodeComplete(nodeName);

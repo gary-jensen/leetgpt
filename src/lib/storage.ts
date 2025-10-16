@@ -3,10 +3,16 @@
  */
 
 import { UserProgress } from "./progressionSystem";
+import { isCryptoSubtleAvailable } from "./cryptoUtils";
 
 // Encryption key derivation from environment variable
 // In production, this should be a proper secret management solution
-const getEncryptionKey = async (): Promise<CryptoKey> => {
+const getEncryptionKey = async (): Promise<CryptoKey | null> => {
+	// Check if crypto.subtle is available
+	if (!isCryptoSubtleAvailable()) {
+		console.warn("crypto.subtle not available, encryption disabled");
+		return null;
+	}
 	const secret =
 		process.env.LOCAL_STORAGE_SECRET ||
 		"bitschool-default-secret-change-in-production";
@@ -44,6 +50,10 @@ const getEncryptionKey = async (): Promise<CryptoKey> => {
 const encrypt = async (data: string): Promise<string> => {
 	try {
 		const key = await getEncryptionKey();
+		if (!key) {
+			// Fallback: use simple XOR encryption with a derived key
+			return encryptWithFallback(data);
+		}
 		const encoder = new TextEncoder();
 		const dataBuffer = encoder.encode(data);
 
@@ -76,6 +86,10 @@ const encrypt = async (data: string): Promise<string> => {
 const decrypt = async (encryptedData: string): Promise<string> => {
 	try {
 		const key = await getEncryptionKey();
+		if (!key) {
+			// Fallback: use simple XOR decryption
+			return decryptWithFallback(encryptedData);
+		}
 
 		// Convert from base64
 		const combined = Uint8Array.from(atob(encryptedData), (c) =>
@@ -286,3 +300,106 @@ export const clearProgressFromStorage = (): void => {
 	localStorage.removeItem("bitschool-progress");
 	localStorage.removeItem("bitschool-progress-checksum");
 };
+
+/**
+ * Fallback encryption using XOR with a derived key
+ * This provides basic obfuscation when crypto.subtle is not available
+ */
+function encryptWithFallback(data: string): string {
+	try {
+		// Create a simple key from the domain and a fixed salt
+		const key = createFallbackKey();
+		const keyBytes = new TextEncoder().encode(key);
+
+		// Generate a simple IV from current time and random data
+		const iv = createFallbackIV();
+		const ivBytes = new TextEncoder().encode(iv);
+
+		let encrypted = "";
+		for (let i = 0; i < data.length; i++) {
+			const dataChar = data.charCodeAt(i);
+			const keyChar = keyBytes[i % keyBytes.length];
+			const ivChar = ivBytes[i % ivBytes.length];
+			// XOR with both key and IV for better obfuscation
+			const encryptedChar = dataChar ^ keyChar ^ ivChar;
+			encrypted += encryptedChar.toString(16).padStart(2, "0");
+		}
+
+		// Prepend IV to the encrypted data
+		return iv + ":" + encrypted;
+	} catch (error) {
+		console.error("Fallback encryption failed:", error);
+		// Ultimate fallback: base64 encoding
+		return btoa(data);
+	}
+}
+
+/**
+ * Fallback decryption using XOR with a derived key
+ */
+function decryptWithFallback(encryptedData: string): string {
+	try {
+		// Check if it's the new format with IV
+		if (encryptedData.includes(":")) {
+			const [iv, encrypted] = encryptedData.split(":", 2);
+			const key = createFallbackKey();
+			const keyBytes = new TextEncoder().encode(key);
+			const ivBytes = new TextEncoder().encode(iv);
+
+			let decrypted = "";
+			for (let i = 0; i < encrypted.length; i += 2) {
+				const encryptedByte = parseInt(encrypted.substr(i, 2), 16);
+				const keyChar = keyBytes[(i / 2) % keyBytes.length];
+				const ivChar = ivBytes[(i / 2) % ivBytes.length];
+				// XOR with both key and IV
+				const decryptedChar = encryptedByte ^ keyChar ^ ivChar;
+				decrypted += String.fromCharCode(decryptedChar);
+			}
+			return decrypted;
+		} else {
+			// Legacy format: try to decode as base64
+			return atob(encryptedData);
+		}
+	} catch (error) {
+		console.error("Fallback decryption failed:", error);
+		// Ultimate fallback: return as-is
+		return encryptedData;
+	}
+}
+
+/**
+ * Create a fallback encryption key
+ */
+function createFallbackKey(): string {
+	// Use domain + a fixed salt + some browser fingerprinting
+	const domain =
+		typeof window !== "undefined" ? window.location.hostname : "localhost";
+	const userAgent =
+		typeof navigator !== "undefined" ? navigator.userAgent : "unknown";
+	const language =
+		typeof navigator !== "undefined" ? navigator.language : "en";
+
+	// Create a deterministic key from available data
+	const keyData = `${domain}:${userAgent}:${language}:bitschool_storage_key`;
+
+	// Simple hash function
+	let hash = 0;
+	for (let i = 0; i < keyData.length; i++) {
+		const char = keyData.charCodeAt(i);
+		hash = (hash << 5) - hash + char;
+		hash = hash & hash; // Convert to 32-bit integer
+	}
+
+	// Convert to a string and pad to 32 characters
+	return Math.abs(hash).toString(16).padStart(32, "0");
+}
+
+/**
+ * Create a fallback IV (Initialization Vector)
+ */
+function createFallbackIV(): string {
+	// Use current time + some randomness for IV
+	const timestamp = Date.now().toString(16);
+	const random = Math.random().toString(16).substring(2);
+	return (timestamp + random).substring(0, 16);
+}

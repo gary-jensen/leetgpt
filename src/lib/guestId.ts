@@ -1,5 +1,12 @@
 "use client";
 
+import {
+	generateUUID,
+	hashSHA256,
+	encryptData,
+	decryptData,
+} from "@/lib/cryptoUtils";
+
 const GUEST_ID_KEY = "bitschool_guest_id";
 const APP_SECRET = "bitschool-v1-secret-2025"; // Application secret for key derivation
 
@@ -11,15 +18,8 @@ let cacheInitialized = false;
  * Generate a secure guest ID
  */
 function generateGuestId(): string {
-	// Use crypto.randomUUID if available, otherwise fallback
-	if (typeof crypto !== "undefined" && crypto.randomUUID) {
-		return crypto.randomUUID();
-	}
-
-	// Fallback for older browsers
-	return (
-		"guest_" + Date.now() + "_" + Math.random().toString(36).substring(2)
-	);
+	// Use our crypto utility with fallback
+	return generateUUID();
 }
 
 /**
@@ -38,13 +38,7 @@ async function getBrowserFingerprint(): Promise<string> {
 	].join("|");
 
 	// Hash the fingerprint data
-	const encoder = new TextEncoder();
-	const dataBuffer = encoder.encode(data);
-	const hashBuffer = await crypto.subtle.digest("SHA-256", dataBuffer);
-	const hashArray = Array.from(new Uint8Array(hashBuffer));
-	const hashHex = hashArray
-		.map((b) => b.toString(16).padStart(2, "0"))
-		.join("");
+	const hashHex = await hashSHA256(data);
 
 	return hashHex;
 }
@@ -52,21 +46,9 @@ async function getBrowserFingerprint(): Promise<string> {
 /**
  * Derive an encryption key from browser fingerprint
  */
-async function deriveKey(): Promise<CryptoKey> {
+async function deriveKey(): Promise<string> {
 	const fingerprint = await getBrowserFingerprint();
-	const encoder = new TextEncoder();
-	const keyMaterial = encoder.encode(fingerprint);
-
-	// Import the key material
-	const key = await crypto.subtle.importKey(
-		"raw",
-		keyMaterial.slice(0, 32), // Use first 32 bytes for AES-256
-		{ name: "AES-GCM" },
-		false,
-		["encrypt", "decrypt"]
-	);
-
-	return key;
+	return fingerprint;
 }
 
 /**
@@ -75,27 +57,11 @@ async function deriveKey(): Promise<CryptoKey> {
 async function encryptGuestId(guestId: string): Promise<string> {
 	try {
 		const key = await deriveKey();
-		const encoder = new TextEncoder();
-		const data = encoder.encode(guestId);
+		const result = await encryptData(guestId, key);
 
-		// Generate a random IV (initialization vector)
-		const iv = crypto.getRandomValues(new Uint8Array(12));
-
-		// Encrypt the data
-		const encryptedBuffer = await crypto.subtle.encrypt(
-			{ name: "AES-GCM", iv },
-			key,
-			data
-		);
-
-		// Combine IV and encrypted data
-		const encryptedArray = new Uint8Array(encryptedBuffer);
-		const combined = new Uint8Array(iv.length + encryptedArray.length);
-		combined.set(iv);
-		combined.set(encryptedArray, iv.length);
-
-		// Convert to base64
-		return btoa(String.fromCharCode(...combined));
+		// Combine IV and encrypted data for compatibility
+		const combined = result.iv + ":" + result.encrypted;
+		return btoa(combined);
 	} catch (error) {
 		console.error("Encryption failed:", error);
 		// Fallback: return the plain guest ID
@@ -111,24 +77,16 @@ async function decryptGuestId(encryptedData: string): Promise<string | null> {
 		const key = await deriveKey();
 
 		// Decode from base64
-		const combined = Uint8Array.from(atob(encryptedData), (c) =>
-			c.charCodeAt(0)
-		);
+		const combined = atob(encryptedData);
+		const [iv, encrypted] = combined.split(":");
 
-		// Extract IV and encrypted data
-		const iv = combined.slice(0, 12);
-		const encryptedArray = combined.slice(12);
+		if (!iv || !encrypted) {
+			throw new Error("Invalid encrypted data format");
+		}
 
 		// Decrypt the data
-		const decryptedBuffer = await crypto.subtle.decrypt(
-			{ name: "AES-GCM", iv },
-			key,
-			encryptedArray
-		);
-
-		// Convert back to string
-		const decoder = new TextDecoder();
-		return decoder.decode(decryptedBuffer);
+		const decrypted = await decryptData(encrypted, iv, key);
+		return decrypted;
 	} catch (error) {
 		console.error("Decryption failed (possible tampering):", error);
 		return null; // Tampering detected or invalid data
