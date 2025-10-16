@@ -64,6 +64,8 @@ model AnalyticsEvent {
     metadata      Json?
     sessionId     String?
     isDev         Boolean  @default(false)
+    // All device/browser/location data in one JSON field
+    deviceData    Json? // Contains: userAgent, browser, os, deviceType, ipAddress, country, screenSize, etc.
     createdAt     DateTime @default(now())
 
     @@index([userId, createdAt])

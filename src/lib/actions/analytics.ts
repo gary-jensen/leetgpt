@@ -16,6 +16,7 @@ import {
 	RATE_LIMITS,
 } from "@/lib/rateLimit";
 import { getClientIP } from "@/lib/serverUtils";
+import { collectDeviceData } from "@/lib/deviceDetection";
 
 export interface AnalyticsEventData {
 	eventCategory: string;
@@ -111,6 +112,15 @@ export async function saveAnalyticsEvent(eventData: AnalyticsEventData) {
 			? sanitizeMetadata(eventData.metadata)
 			: null;
 
+		// Collect device data (with error handling)
+		let deviceData = null;
+		try {
+			deviceData = await collectDeviceData();
+		} catch (error) {
+			console.warn("Failed to collect device data:", error);
+			// Continue without device data rather than failing the entire request
+		}
+
 		await prisma.analyticsEvent.create({
 			data: {
 				userId: userId || null,
@@ -125,6 +135,7 @@ export async function saveAnalyticsEvent(eventData: AnalyticsEventData) {
 					: undefined,
 				sessionId: eventData.sessionId || null,
 				isDev: eventData.isDev ?? false,
+				deviceData: deviceData ? (deviceData as any) : undefined,
 			},
 		});
 
@@ -223,6 +234,15 @@ export async function saveAnalyticsEventBatch(events: AnalyticsEventData[]) {
 			}
 		}
 
+		// Collect device data once for the batch (with error handling)
+		let deviceData = null;
+		try {
+			deviceData = await collectDeviceData();
+		} catch (error) {
+			console.warn("Failed to collect device data for batch:", error);
+			// Continue without device data rather than failing the entire batch
+		}
+
 		// Validate and sanitize all events
 		const validatedEvents = events.map((event) => {
 			// Sanitize metadata
@@ -243,6 +263,7 @@ export async function saveAnalyticsEventBatch(events: AnalyticsEventData[]) {
 					: undefined,
 				sessionId: event.sessionId || null,
 				isDev: event.isDev ?? false,
+				deviceData: deviceData ? (deviceData as any) : undefined,
 			};
 		});
 
