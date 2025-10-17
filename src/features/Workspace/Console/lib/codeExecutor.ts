@@ -233,7 +233,9 @@ export class CodeExecutor {
             if (cancelled) {
               return; // Don't log anything if cancelled
             }
-            const msg = args.join(' ');
+            // Handle undefined values properly - convert them to "undefined" string
+            const processedArgs = args.map(arg => arg === undefined ? 'undefined' : arg);
+            const msg = processedArgs.join(' ');
             appendLog(msg, 'white');
             return originalLog.apply(console, args);
           };
@@ -243,7 +245,9 @@ export class CodeExecutor {
             if (cancelled) {
               return; // Don't log anything if cancelled
             }
-            const msg = "Error: " + args.join(' ');
+            // Handle undefined values properly - convert them to "undefined" string
+            const processedArgs = args.map(arg => arg === undefined ? 'undefined' : arg);
+            const msg = "Error: " + processedArgs.join(' ');
             appendLog(msg, '#ef4444');
             return originalError.apply(console, args);
           };
