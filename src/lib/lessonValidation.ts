@@ -3,19 +3,20 @@
  * Validates that lesson IDs exist in the lesson database
  */
 
-import { mockLessons } from "@/features/Workspace/mock-lessons";
+// import { mockLessons } from "@/features/Workspace/mock-lessons";
+import { lessons } from "@/features/Workspace/lessons";
 
 // Export lesson metadata for use in other modules
-export const lessonMetadata = mockLessons.map((lesson) => ({
+export const lessonMetadata = lessons.map((lesson) => ({
 	id: lesson.id,
 	skillNodeId: lesson.skillNodeId,
 }));
 
 // Create set of valid lesson IDs for O(1) lookup
-export const validLessonIds = new Set(mockLessons.map((l) => l.id));
+export const validLessonIds = new Set(lessons.map((l) => l.id));
 
 // Create set of valid skill node IDs
-export const validSkillNodeIds = new Set(mockLessons.map((l) => l.skillNodeId));
+export const validSkillNodeIds = new Set(lessons.map((l) => l.skillNodeId));
 
 /**
  * Validate that a single lesson ID exists
@@ -83,7 +84,7 @@ export function getLessonById(lessonId: string) {
 		return null;
 	}
 
-	return mockLessons.find((lesson) => lesson.id === lessonId) || null;
+	return lessons.find((lesson) => lesson.id === lessonId) || null;
 }
 
 /**
@@ -94,14 +95,14 @@ export function getLessonsBySkillNode(skillNodeId: string) {
 		return [];
 	}
 
-	return mockLessons.filter((lesson) => lesson.skillNodeId === skillNodeId);
+	return lessons.filter((lesson) => lesson.skillNodeId === skillNodeId);
 }
 
 /**
  * Get lesson count for validation
  */
 export function getTotalLessonCount(): number {
-	return mockLessons.length;
+	return lessons.length;
 }
 
 /**
@@ -115,4 +116,3 @@ export function validateLessonArraySize(lessonIds: string[]): boolean {
 	// Allow up to 1000 lessons (reasonable upper bound)
 	return lessonIds.length <= 1000;
 }
-

@@ -488,7 +488,8 @@ function processParagraphs(text: string): string {
 					.map((line) => line.trim())
 					.filter(Boolean);
 				return `<p class="markdown-paragraph">${lines.join(
-					"<br>"
+					// "<br>"
+					""
 				)}</p>`;
 			}
 

@@ -1,7 +1,7 @@
 "use server";
 
 import OpenAI from "openai";
-import { TestResult } from "@/features/Workspace/temp-types";
+import { TestResult } from "@/features/Workspace/lesson-types";
 import {
 	validateJsonPayloadSize,
 	sanitizeUserCode,
@@ -14,10 +14,55 @@ import {
 	RATE_LIMITS,
 } from "@/lib/rateLimit";
 import { getClientIP } from "@/lib/serverUtils";
+import { getSession } from "../auth";
 
 const openai = new OpenAI({
 	apiKey: process.env.OPENAI_API_KEY,
 });
+
+/**
+ * Safely convert a pattern (string or RegExp) to a string for display
+ */
+function safePatternToString(pattern: string | RegExp): string {
+	// Since patterns are converted to strings before reaching the server,
+	// this should always be a string, but we'll handle both cases for safety
+	if (typeof pattern === "string") {
+		return pattern;
+	} else if (pattern && typeof pattern === "object") {
+		try {
+			// Check if it's a RegExp-like object (fallback for safety)
+			if ("source" in pattern && typeof pattern.source === "string") {
+				const flags = "flags" in pattern ? pattern.flags : "";
+				return `/${pattern.source}/${flags}`;
+			} else {
+				// Try to extract from object properties
+				const patternObj = pattern as any;
+				if (patternObj.source) {
+					return `/${patternObj.source}/${patternObj.flags || ""}`;
+				} else if (patternObj.pattern) {
+					return patternObj.pattern;
+				} else if (
+					patternObj.toString &&
+					typeof patternObj.toString === "function"
+				) {
+					return patternObj.toString();
+				} else {
+					return JSON.stringify(pattern);
+				}
+			}
+		} catch (error) {
+			// Last resort - show what we can
+			try {
+				return `[Pattern: ${JSON.stringify(pattern)}]`;
+			} catch (jsonError) {
+				return `[Pattern object: ${Object.keys(pattern).join(", ")}]`;
+			}
+		}
+	} else {
+		// For primitive types, convert safely
+		return String(pattern);
+	}
+}
 
 interface AIFeedbackRequest {
 	stepContent: string;
@@ -38,7 +83,7 @@ export async function getAIFeedback(
 ): Promise<AIFeedbackResponse> {
 	try {
 		// Rate limiting - get user info for rate limiting
-		const { getSession } = await import("@/lib/auth");
+
 		const session = await getSession();
 		const userId = session?.user?.id;
 		const clientIP = await getClientIP();
@@ -119,7 +164,10 @@ export async function getAIFeedback(
 		// Create a prompt based on error type
 		let prompt;
 		if (hasSyntaxError) {
-			prompt = `Code: ${sanitizedCode}
+			prompt = `STEP CONTEXT:
+${stepContent}
+
+Code: ${sanitizedCode}
 Error: ${testResults[0]?.error}
 
 Give one sentence hint about the syntax error`;
@@ -173,47 +221,60 @@ The user should log a variable (not hardcode the value). Check if they're loggin
 						let patternStr;
 						if (typeof test.pattern === "string") {
 							patternStr = test.pattern;
-						} else if (test.pattern instanceof RegExp) {
-							patternStr = test.pattern.toString();
 						} else if (
 							test.pattern &&
 							typeof test.pattern === "object"
 						) {
-							// Try to extract from object properties
-							const patternObj = test.pattern as any;
-							patternStr =
-								patternObj.source ||
-								patternObj.pattern ||
-								JSON.stringify(test.pattern);
+							// Handle RegExp or other objects safely
+							try {
+								// Check if it's a RegExp-like object
+								if (
+									test.pattern.source &&
+									typeof test.pattern.source === "string"
+								) {
+									patternStr = `/${test.pattern.source}/${
+										test.pattern.flags || ""
+									}`;
+								} else {
+									// Try to extract from object properties
+									const patternObj = test.pattern as any;
+									patternStr =
+										patternObj.source ||
+										patternObj.pattern ||
+										JSON.stringify(test.pattern);
+								}
+							} catch (error) {
+								// If any conversion fails, use a safe fallback
+								patternStr =
+									"regex pattern (unable to display)";
+							}
 						} else {
-							patternStr = String(test.pattern);
+							// For primitive types, convert safely
+							try {
+								patternStr = String(test.pattern);
+							} catch (error) {
+								patternStr = "pattern (unable to display)";
+							}
 						}
 
 						// Final fallback
 						if (
 							patternStr === "[object Object]" ||
-							patternStr === "{}"
+							patternStr === "{}" ||
+							!patternStr
 						) {
 							patternStr = "regex pattern (unable to display)";
 						}
 
-						testInfo = `Test Type: Console Log Pattern
+						testInfo = `Test Type: Console Log and Regex Pattern
 TWO SEPARATE CHECKS:
 1. PATTERN vs CODE: The pattern ${patternStr} must match the console.log() expression in the user's code: ${failedTest.code}
 2. EXPECTED vs LOGS: The expected output "${test.expectedOutput}" must match the actual logged output: ${actualPatternLogsStr}
 
-PATTERN ANALYSIS: The pattern ${patternStr} shows the EXACT format required for the console.log() expression.
+IMPORTANT: The pattern ${patternStr} shows the regex pattern should be INSIDE the console.log() parentheses, not what should be logged. expectedOutput is what should be logged. If the pattern is not matching, break down the pattern and find what is wrong
 
-Break down the pattern:
-- (["']) means capture a quote (single or double)
-- \\1 means use the same quote type as captured
-- \\s*,\\s* means comma with optional spaces around it
-- 123 is literal text that must appear
 
-So if the pattern is /(["'])John Doe\\1\\s*,\\s*123/, the console.log() should look like:
-console.log("John Doe", 123) or console.log('John Doe', 123)
-
-Tell the user exactly what to change in their console.log() statement. Do not talk about the pattern. The user doesn't know what a pattern is, or what regex is. Give them specific dumbed down instructions only`;
+Break down the regex pattern into what it is actually checking, as the arguments in their console.log() statement. Do not tell the user the pattern, or say the words pattern or regex. They don't know what that is`;
 						break;
 					case "variableReassignment":
 						testInfo = `Test Type: Variable Reassignment
@@ -347,8 +408,14 @@ Expected final value: ${JSON.stringify(test.expectedValue)}${
 						break;
 					case "codeContains":
 						const codeContainsDetails = [];
-						codeContainsDetails.push(`Test Type: Code Pattern`);
-						codeContainsDetails.push(`Pattern: ${test.pattern}`);
+						codeContainsDetails.push(
+							`Test Type: Code Regex Pattern`
+						);
+						codeContainsDetails.push(
+							`Regex Pattern: The code should contain the regex pattern ${safePatternToString(
+								test.pattern
+							)}`
+						);
 
 						if (test.caseSensitive !== undefined) {
 							codeContainsDetails.push(
@@ -372,21 +439,27 @@ Expected final value: ${JSON.stringify(test.expectedValue)}${
 							`User's code: ${failedTest.code}`
 						);
 						codeContainsDetails.push(
-							`IMPORTANT: Use regex pattern matching to check if the pattern exists in the user's code. The pattern is a regular expression that must match the code structure.`
+							`IMPORTANT: Use regex pattern matching to check if the pattern exists in the user's code. The pattern is a regular expression that must match the code structure. Please understand how regex works before answering. Do not tell the user the pattern, or say the words pattern or regex. They don't know what that is`
 						);
 
 						testInfo = codeContainsDetails.join("\n");
 						break;
 					case "ifStatement":
 						const ifStatementDetails = [];
-						ifStatementDetails.push(`Test Type: If Statement`);
 						ifStatementDetails.push(
-							`Main condition pattern: ${test.pattern}`
+							`Test Type: If Statement Regex Pattern`
+						);
+						ifStatementDetails.push(
+							`Main condition regex pattern: ${safePatternToString(
+								test.pattern
+							)}`
 						);
 
 						if (test.bodyPattern) {
 							ifStatementDetails.push(
-								`Expected body pattern: ${test.bodyPattern}`
+								`Expected body regex pattern: ${safePatternToString(
+									test.bodyPattern
+								)}`
 							);
 						}
 
@@ -399,13 +472,17 @@ Expected final value: ${JSON.stringify(test.expectedValue)}${
 							);
 							test.elseIfPatterns.forEach((elseIf, index) => {
 								ifStatementDetails.push(
-									`  ${index + 1}. Condition: ${
+									`  ${
+										index + 1
+									}. Condition regex pattern: ${safePatternToString(
 										elseIf.condition
-									}`
+									)}`
 								);
 								if (elseIf.body) {
 									ifStatementDetails.push(
-										`     Body: ${elseIf.body}`
+										`     Body regex pattern: ${safePatternToString(
+											elseIf.body
+										)}`
 									);
 								}
 							});
@@ -414,11 +491,13 @@ Expected final value: ${JSON.stringify(test.expectedValue)}${
 						if (test.elsePattern !== undefined) {
 							if (test.elsePattern) {
 								ifStatementDetails.push(
-									`Expected else body pattern: ${test.elsePattern}`
+									`Expected else body regex pattern: ${safePatternToString(
+										test.elsePattern
+									)}`
 								);
 							} else {
 								ifStatementDetails.push(
-									`Expected else block (no specific body pattern)`
+									`Expected else block (no specific body regex pattern)`
 								);
 							}
 						}
@@ -427,18 +506,24 @@ Expected final value: ${JSON.stringify(test.expectedValue)}${
 							`User's code: ${failedTest.code}`
 						);
 						ifStatementDetails.push(
-							`IMPORTANT: This test validates the complete if-else-if-else structure using regex patterns. Check that the condition syntax, braces, and overall structure match the expected patterns.`
+							`IMPORTANT: This test validates the complete if-else-if-else structure using regex patterns. Check that the condition syntax, braces, and overall structure match the expected patterns. Please understand how regex works before answering. Do not tell the user the pattern, or say the words pattern or regex. They don't know what that is`
 						);
 
 						testInfo = ifStatementDetails.join("\n");
 						break;
 					case "forLoop":
 						const forLoopDetails = [];
-						forLoopDetails.push(`Test Type: For Loop`);
-						forLoopDetails.push(`Loop pattern: ${test.pattern}`);
+						forLoopDetails.push(
+							`Test Type: For Loop Regex Pattern`
+						);
+						forLoopDetails.push(
+							`Loop regex pattern: ${safePatternToString(
+								test.pattern
+							)}`
+						);
 						forLoopDetails.push(`User's code: ${failedTest.code}`);
 						forLoopDetails.push(
-							`IMPORTANT: Use regex pattern matching to validate the for loop structure. Check that the loop condition, initialization, and increment match the expected pattern.`
+							`IMPORTANT: Use regex pattern matching to validate the for loop structure. Check that the loop condition, initialization, and increment match the expected pattern. Please understand how regex works before answering. Do not tell the user the pattern, or say the words pattern or regex. They don't know what that is`
 						);
 
 						testInfo = forLoopDetails.join("\n");
@@ -450,10 +535,19 @@ Expected final value: ${JSON.stringify(test.expectedValue)}${
 
 			prompt = `${testInfo}
 
-User Code:
+STEP CONTEXT:
+${stepContent}${
+				test?.hintAdvice
+					? `
+
+HINT ADVICE: ${test.hintAdvice}
+
+`
+					: ""
+			}User Code:
 ${sanitizedCode}
 
-Give one sentence hint about what needs to be fixed.`;
+Give one sentence hint about what needs to be fixed. All code, numbers, data, etc should be wrapped in a backtick \` for markdown formatting`;
 		}
 
 		// Check if OpenAI API key is configured
@@ -464,6 +558,7 @@ Give one sentence hint about what needs to be fixed.`;
 			};
 		}
 
+		console.log(prompt);
 		// Call OpenAI API with optimizations for speed
 		const completion = await openai.chat.completions.create({
 			model: "gpt-4o-mini",

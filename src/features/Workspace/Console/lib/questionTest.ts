@@ -1,7 +1,20 @@
 // import { Question, HtmlCssTest } from "@/types/course";
 
-import { TestResult } from "../../temp-types";
+import { TestResult } from "../../lesson-types";
 import { Test } from "../../types/test-types";
+
+/**
+ * Safely convert a pattern (string or RegExp) to a string
+ */
+function safePatternToString(pattern: string | RegExp): string {
+	if (typeof pattern === "string") {
+		return pattern;
+	} else if (pattern && typeof pattern === "object" && pattern.source) {
+		return pattern.source;
+	} else {
+		return String(pattern);
+	}
+}
 
 const deepEqual = (a: any, b: any): boolean => {
 	if (a === undefined && b === undefined) return true;
@@ -583,10 +596,15 @@ export const questionTestDetailed = (
 					test.caseSensitive !== false
 						? currentCode
 						: currentCode.toLowerCase();
+				// Safely convert pattern to string
+				const patternStr =
+					typeof test.pattern === "string"
+						? test.pattern
+						: test.pattern.source;
 				const patternToUse =
 					test.caseSensitive !== false
-						? test.pattern
-						: test.pattern.toLowerCase();
+						? patternStr
+						: patternStr.toLowerCase();
 
 				try {
 					const regex = new RegExp(patternToUse);
@@ -665,16 +683,36 @@ export const questionTestDetailed = (
 					let patternMatches = true;
 					if (test.pattern) {
 						try {
-							const regex = new RegExp(test.pattern);
+							const regex = new RegExp(
+								safePatternToString(test.pattern)
+							);
 							patternMatches = regex.test(
 								consoleLogForTest.expression
 							);
 						} catch (e) {
 							// Fallback to simple string contains if regex fails
-							patternMatches =
-								consoleLogForTest.expression.includes(
-									String(test.pattern)
-								);
+							try {
+								// Safely convert pattern to string
+								let patternStr;
+								if (typeof test.pattern === "string") {
+									patternStr = test.pattern;
+								} else if (
+									test.pattern &&
+									typeof test.pattern === "object" &&
+									test.pattern.source
+								) {
+									patternStr = test.pattern.source;
+								} else {
+									patternStr = String(test.pattern);
+								}
+								patternMatches =
+									consoleLogForTest.expression.includes(
+										patternStr
+									);
+							} catch (stringError) {
+								// If even string conversion fails, assume no match
+								patternMatches = false;
+							}
 						}
 					}
 
@@ -805,19 +843,22 @@ export const questionTestDetailed = (
 					};
 
 					// Build the complete regex pattern
-					let fullPattern = `if\\s*\\([^)]*${test.pattern}[^)]*\\)\\s*\\{`;
-					let currentGroupCount = countCapturingGroups(test.pattern);
+					const patternStr = safePatternToString(test.pattern);
+					let fullPattern = `if\\s*\\([^)]*${patternStr}[^)]*\\)\\s*\\{`;
+					let currentGroupCount = countCapturingGroups(patternStr);
 
 					// Add if body pattern if provided
 					if (test.bodyPattern) {
+						const bodyPatternStr = safePatternToString(
+							test.bodyPattern
+						);
 						const adjustedBodyPattern = adjustBackreferences(
-							test.bodyPattern,
+							bodyPatternStr,
 							currentGroupCount
 						);
 						fullPattern += `[^}]*${adjustedBodyPattern}[^}]*`;
-						currentGroupCount += countCapturingGroups(
-							test.bodyPattern
-						);
+						currentGroupCount +=
+							countCapturingGroups(bodyPatternStr);
 					} else {
 						fullPattern += `[^}]*`;
 					}
@@ -826,24 +867,28 @@ export const questionTestDetailed = (
 					// Add else-if patterns
 					if (test.elseIfPatterns && test.elseIfPatterns.length > 0) {
 						for (const elseIf of test.elseIfPatterns) {
+							const conditionStr = safePatternToString(
+								elseIf.condition
+							);
 							const adjustedCondition = adjustBackreferences(
-								elseIf.condition,
+								conditionStr,
 								currentGroupCount
 							);
 							fullPattern += `\\s*else\\s+if\\s*\\([^)]*${adjustedCondition}[^)]*\\)\\s*\\{`;
-							currentGroupCount += countCapturingGroups(
-								elseIf.condition
-							);
+							currentGroupCount +=
+								countCapturingGroups(conditionStr);
 
 							if (elseIf.body) {
+								const bodyStr = safePatternToString(
+									elseIf.body
+								);
 								const adjustedElseIfBody = adjustBackreferences(
-									elseIf.body,
+									bodyStr,
 									currentGroupCount
 								);
 								fullPattern += `[^}]*${adjustedElseIfBody}[^}]*`;
-								currentGroupCount += countCapturingGroups(
-									elseIf.body
-								);
+								currentGroupCount +=
+									countCapturingGroups(bodyStr);
 							} else {
 								fullPattern += `[^}]*`;
 							}
@@ -855,8 +900,11 @@ export const questionTestDetailed = (
 					if (test.elsePattern !== undefined) {
 						fullPattern += `\\s*else\\s*\\{`;
 						if (test.elsePattern) {
+							const elsePatternStr = safePatternToString(
+								test.elsePattern
+							);
 							const adjustedElsePattern = adjustBackreferences(
-								test.elsePattern,
+								elsePatternStr,
 								currentGroupCount
 							);
 							fullPattern += `[^}]*${adjustedElsePattern}[^}]*`;
@@ -876,7 +924,7 @@ export const questionTestDetailed = (
 			case "forLoop":
 				// Pattern-based validation for for loops
 				try {
-					const regex = new RegExp(test.pattern);
+					const regex = new RegExp(safePatternToString(test.pattern));
 					passed = regex.test(currentCode);
 				} catch (e) {
 					// Fallback to simple string contains if regex fails

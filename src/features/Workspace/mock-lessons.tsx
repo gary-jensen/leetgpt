@@ -1,4 +1,4 @@
-import { Lesson } from "./temp-types";
+import { Lesson } from "./lesson-types";
 
 export const mockLessons: Lesson[] = [
 	{
@@ -623,10 +623,10 @@ export const mockLessons: Lesson[] = [
 ];
 
 // Export lesson metadata for validation
-export const lessonMetadata = mockLessons.map((lesson) => ({
-	id: lesson.id,
-	skillNodeId: lesson.skillNodeId,
-}));
+// export const lessonMetadata = mockLessons.map((lesson) => ({
+// 	id: lesson.id,
+// 	skillNodeId: lesson.skillNodeId,
+// }));
 
-// Export valid lesson IDs set for O(1) lookup
-export const validLessonIds = new Set(mockLessons.map((l) => l.id));
+// // Export valid lesson IDs set for O(1) lookup
+// export const validLessonIds = new Set(mockLessons.map((l) => l.id));

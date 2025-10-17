@@ -5,9 +5,14 @@ interface ChatMessageProps {
 	message: ChatMessageType;
 	isStreaming: boolean;
 	displayedWords: string[];
+	messagesEndRef?: React.RefObject<HTMLDivElement | null>;
 }
 
-export const ChatMessage = ({ message, isStreaming }: ChatMessageProps) => {
+export const ChatMessage = ({
+	message,
+	isStreaming,
+	messagesEndRef,
+}: ChatMessageProps) => {
 	const hasContent = message.content.trim().length > 0;
 
 	if (isStreaming && !hasContent) {
@@ -47,6 +52,7 @@ export const ChatMessage = ({ message, isStreaming }: ChatMessageProps) => {
 				content={message.content}
 				isStreaming={isStreaming}
 				enableTypingAnimation={false}
+				messagesEndRef={messagesEndRef}
 			/>
 		</div>
 	);

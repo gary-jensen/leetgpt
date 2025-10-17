@@ -135,7 +135,7 @@ export interface FunctionCallTest {
  */
 export interface CodeContainsTest {
 	type: "codeContains";
-	pattern: string;
+	pattern: string | RegExp;
 	caseSensitive?: boolean;
 	negated?: boolean;
 	// hint?: string; // Optional for backward compatibility, will fallback to empty string
@@ -160,13 +160,13 @@ export interface CodeContainsTest {
  */
 export interface IfStatementTest {
 	type: "ifStatement";
-	pattern: string; // Main if condition pattern
-	bodyPattern?: string; // Optional pattern to match inside the if block
+	pattern: string | RegExp; // Main if condition pattern
+	bodyPattern?: string | RegExp; // Optional pattern to match inside the if block
 	elseIfPatterns?: Array<{
-		condition: string; // else-if condition pattern
-		body?: string; // optional else-if body pattern
+		condition: string | RegExp; // else-if condition pattern
+		body?: string | RegExp; // optional else-if body pattern
 	}>;
-	elsePattern?: string; // Optional pattern to match inside the final else block
+	elsePattern?: string | RegExp; // Optional pattern to match inside the final else block
 	// hint: string; // Manual hint required
 }
 
@@ -183,7 +183,7 @@ export interface IfStatementTest {
  */
 export interface ForLoopTest {
 	type: "forLoop";
-	pattern: string;
+	pattern: string | RegExp;
 	// hint: string; // Manual hint required
 }
 
@@ -229,15 +229,18 @@ export interface FunctionDeclarationTest {
 	functionType?: "arrow" | "regular";
 }
 
+// All test types can have a hintAdvice property
 export type Test =
-	| VariableTest
-	| VariableReassignmentTest
-	| ConsoleLogsTest
-	| ConsoleLogPatternTest
-	| ConsoleLogVariableTest
-	| FunctionTest
-	| FunctionDeclarationTest
-	| FunctionCallTest
-	| CodeContainsTest
-	| IfStatementTest
-	| ForLoopTest;
+	| (
+			| VariableTest
+			| VariableReassignmentTest
+			| ConsoleLogsTest
+			| ConsoleLogPatternTest
+			| ConsoleLogVariableTest
+			| FunctionTest
+			| FunctionDeclarationTest
+			| FunctionCallTest
+			| CodeContainsTest
+			| IfStatementTest
+			| ForLoopTest
+	  ) & { hintAdvice?: string };

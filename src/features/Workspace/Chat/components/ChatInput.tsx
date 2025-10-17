@@ -1,4 +1,4 @@
-import { LessonStreaming } from "../../temp-types";
+import { LessonStreaming } from "../../lesson-types";
 
 interface ChatInputProps {
 	lessonStreaming: LessonStreaming;

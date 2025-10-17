@@ -71,12 +71,14 @@ interface ChatMarkdownDisplayProps {
 	className?: string;
 	isStreaming?: boolean;
 	enableTypingAnimation?: boolean;
+	messagesEndRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 export const ChatMarkdownDisplay = ({
 	content,
 	className,
 	isStreaming = false,
+	messagesEndRef,
 }: ChatMarkdownDisplayProps) => {
 	const [processedHtml, setProcessedHtml] = useState<string>("");
 	const [isProcessing, setIsProcessing] = useState(false);
@@ -127,6 +129,43 @@ export const ChatMarkdownDisplay = ({
 
 		processContent();
 	}, [content, isStreaming]);
+
+	// Trigger scroll when streaming completes (when isStreaming changes from true to false)
+	useEffect(() => {
+		if (!isStreaming && messagesEndRef?.current) {
+			// Small delay to ensure the DOM has updated with the final content
+			const timeoutId = setTimeout(() => {
+				// Find the scrollable parent container
+				const scrollableParent = messagesEndRef.current?.parentElement;
+				if (scrollableParent) {
+					// Always scroll to the absolute bottom of the container
+					scrollableParent.scrollTop = scrollableParent.scrollHeight;
+				}
+			}, 150); // Increased delay to ensure content is fully rendered
+
+			return () => clearTimeout(timeoutId);
+		}
+	}, [isStreaming, messagesEndRef]);
+
+	// Also trigger scroll when markdown processing completes and we're not streaming
+	useEffect(() => {
+		if (
+			!isStreaming &&
+			!isProcessing &&
+			processedHtml &&
+			messagesEndRef?.current
+		) {
+			// Small delay to ensure the DOM has updated with the processed content
+			const timeoutId = setTimeout(() => {
+				const scrollableParent = messagesEndRef.current?.parentElement;
+				if (scrollableParent) {
+					scrollableParent.scrollTop = scrollableParent.scrollHeight;
+				}
+			}, 100);
+
+			return () => clearTimeout(timeoutId);
+		}
+	}, [isStreaming, isProcessing, processedHtml, messagesEndRef]);
 
 	// Show loading state while processing
 	if (isProcessing && !processedHtml) {

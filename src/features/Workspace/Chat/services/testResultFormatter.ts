@@ -1,4 +1,4 @@
-import { TestResult } from "../../temp-types";
+import { TestResult } from "../../lesson-types";
 
 export interface FormattedTestInfo {
 	testType: string;

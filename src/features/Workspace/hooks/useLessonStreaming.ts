@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, useRef } from "react";
-import { Lesson, LessonStreaming, TestResult } from "../temp-types";
+import { Lesson, LessonStreaming, TestResult } from "../lesson-types";
 import { useChat } from "../Chat/hooks/useChat";
 import { createLessonStreamer } from "../Chat/utils/lessonStreamer";
 import {

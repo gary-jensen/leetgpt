@@ -1,11 +1,11 @@
+import Analytics from "@/components/Analytics";
+import SessionProvider from "@/components/SessionProvider";
+import { ProgressProvider } from "@/contexts/ProgressContext";
+import { lessons } from "@/features/Workspace/lessons";
+import { getSession, setLessonMetadata } from "@/lib/auth";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { ProgressProvider } from "@/contexts/ProgressContext";
-import { mockLessons } from "@/features/Workspace/mock-lessons";
-import SessionProvider from "@/components/SessionProvider";
-import Analytics from "@/components/Analytics";
-import { getSession, setLessonMetadata } from "@/lib/auth";
 
 const inter = Inter({
 	variable: "--font-inter",
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
 };
 
 // Extract only the metadata we need (id and skillNodeId) from lessons
-const lessonMetadata = mockLessons.map((lesson) => ({
+const lessonMetadata = lessons.map((lesson) => ({
 	id: lesson.id,
 	skillNodeId: lesson.skillNodeId,
 }));

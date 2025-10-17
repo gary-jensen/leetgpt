@@ -1,4 +1,4 @@
-import { LessonStreaming } from "../../temp-types";
+import { LessonStreaming } from "../../lesson-types";
 import { ChatMessage } from "./ChatMessage";
 import ThinkingAnimation from "./ThinkingAnimation";
 
@@ -18,6 +18,7 @@ export const ChatMessageList = ({ lessonStreaming }: ChatMessageListProps) => {
 							lessonStreaming.streamingMessageId === message.id
 						}
 						displayedWords={[]}
+						messagesEndRef={lessonStreaming.messagesEndRef}
 					/>
 				);
 			})}

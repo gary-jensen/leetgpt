@@ -7,7 +7,7 @@ import { useState } from "react";
 import { useLessonStreaming } from "./hooks/useLessonStreaming";
 import { ProgressBar } from "./components/ProgressBar";
 import AnimationManager from "../../components/Rewards/AnimationManager";
-import { Lesson } from "./temp-types";
+import { Lesson } from "./lesson-types";
 
 interface WorkspaceContentProps {
 	lessons: Lesson[];

@@ -60,6 +60,11 @@
 .chat-markdown-display .markdown-content li {
 	color: #1f2937;
 	margin-bottom: 0.25rem;
+	list-style: disc;
+}
+
+.chat-markdown-display .markdown-content hr.markdown-hr {
+	margin: 24px 0;
 }
 
 .chat-markdown-display .markdown-content blockquote {
@@ -78,7 +83,11 @@
 	/* font-size: 0.75rem; */
 	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas,
 		"Liberation Mono", Menlo, monospace;
-	white-space: nowrap;
+	white-space: pre;
+
+	span span {
+		white-space: nowrap;
+	}
 }
 
 .chat-markdown-display .markdown-content pre {

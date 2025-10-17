@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CodeExecutor } from "../lib/codeExecutor";
 // import { TestValidator } from "../lib/testValidator";
-import { Lesson, TestResult } from "../../temp-types";
+import { Lesson, TestResult } from "../../lesson-types";
 import { ExecutionResult } from "../lib/types";
 import { questionTestDetailed } from "../lib/questionTest";
 import {
