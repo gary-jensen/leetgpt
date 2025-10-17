@@ -109,7 +109,7 @@ const useConsole = (
 					}
 					if (test.type === "variableReassignment") {
 						// Return the actual variable value
-						const variableValue = result.result[test.variable];
+						const variableValue = result.result?.[test.variable];
 						return variableValue;
 					}
 					// For other tests, pass the full result or appropriate data

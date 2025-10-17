@@ -142,7 +142,7 @@ console.log("Testing", 123)
 	// 		],
 	// 	},
 	{
-		id: "lesson-3",
+		id: "lesson-2",
 		title: "Numbers",
 		skillNodeId: "intro",
 		xpReward: 150,
@@ -214,7 +214,7 @@ Type those 3 lines into the console. Run the code to see the output.`,
 		],
 	},
 	{
-		id: "lesson-4",
+		id: "lesson-3",
 		title: "Strings",
 		skillNodeId: "intro",
 		xpReward: 150,
@@ -280,7 +280,7 @@ Try running that code!`,
 		],
 	},
 	{
-		id: "lesson-5",
+		id: "lesson-4",
 		title: "Booleans",
 		skillNodeId: "intro",
 		xpReward: 150,
@@ -356,7 +356,7 @@ console.log(10 === 10)
 	},
 	// ===== VARIABLES NODE =====
 	{
-		id: "lesson-6",
+		id: "lesson-5",
 		title: "Your First Variable",
 		skillNodeId: "variables",
 		xpReward: 150,
@@ -417,7 +417,7 @@ console.log(favoriteNumber)
 		],
 	},
 	{
-		id: "lesson-7",
+		id: "lesson-6",
 		title: "Multiple Variables",
 		skillNodeId: "variables",
 		xpReward: 150,
@@ -548,7 +548,7 @@ console.log(greeting, favoriteNumber)
 	// 		],
 	// 	},
 	{
-		id: "lesson-9",
+		id: "lesson-7",
 		title: "Math with Variables",
 		skillNodeId: "variables",
 		xpReward: 200,
@@ -677,6 +677,7 @@ console.log(product, difference)
 			},
 		],
 	},
+	// Too much math. Too much complexity for now.
 	// 	{
 	// 		id: "lesson-10",
 	// 		title: "More Operators",
@@ -754,7 +755,7 @@ console.log(product, difference)
 	// 		],
 	// 	},
 	{
-		id: "lesson-11",
+		id: "lesson-8",
 		title: "Combining Strings",
 		skillNodeId: "variables",
 		xpReward: 150,
@@ -766,181 +767,178 @@ console.log(product, difference)
 
 You can combine strings with the \`+\` operator!
 
+Try combining these strings by running this code:
+
 \`\`\`javascript
-console.log("Hello" + " " + "World")
-console.log("I love" + " JavaScript")
+let fullName = "John" + "Doe"
+console.log(fullName)
 \`\`\``,
 				tests: [
 					{
-						type: "consoleLogs",
-						expectedOutput: ["Hello World", "I love JavaScript"],
+						type: "variableAssignment",
+						variableName: "fullName",
+						expectedValue: { expected: "JohnDoe" },
+					},
+					{
+						type: "consoleLogVariable",
+						variableName: "fullName",
+						expectedOutput: "JohnDoe",
 					},
 				],
 			},
 			{
 				id: "step-2",
-				content: `## 📝 Variables and Strings
+				content: `## 😮 Uh Oh! No Space!
 
-You can combine variables with strings:
+Notice how the strings got stuck together? There's no space between \`"John"\` and \`"Doe"\`!
+
+To add a space, you need to include it in your concatenation:
 
 \`\`\`javascript
-let name = "Alice"
-let greeting = "Hello, " + name
-console.log(greeting)
-\`\`\``,
+let fullName = "John" + " " + "Doe"
+console.log(fullName)
+\`\`\`
+
+Add a space and log the result.`,
+				startingCode: `let fullName = "John" + "Doe"\nconsole.log(fullName)`,
 				tests: [
 					{
 						type: "variableAssignment",
-						variableName: "name",
-						expectedValue: { expected: "Alice" },
+						variableName: "fullName",
+						expectedValue: { expected: "John Doe" },
 					},
 					{
-						type: "variableAssignment",
-						variableName: "greeting",
-						expectedValue: { expected: "Hello, Alice" },
+						type: "codeContains",
+						pattern:
+							/let\s+fullName\s*=\s*"John"\s*\+\s*" "\s*\+\s*"Doe"/,
 					},
 					{
-						type: "consoleLogs",
-						expectedOutput: ["Hello, Alice"],
-					},
-				],
-			},
-		],
-	},
-	{
-		id: "lesson-12",
-		title: "Building Sentences",
-		skillNodeId: "variables",
-		xpReward: 150,
-		stepXpReward: 50,
-		steps: [
-			{
-				id: "step-1",
-				content: `## 📝 Multi-Part String Concatenation
-
-You can build complex sentences by combining multiple parts:
-
-\`\`\`javascript
-let firstName = "John"
-let lastName = "Doe"
-let age = 25
-let message = "Hi, I'm " + firstName + " " + lastName + " and I'm " + age + " years old"
-console.log(message)
-\`\`\``,
-				tests: [
-					{
-						type: "variableAssignment",
-						variableName: "firstName",
-						expectedValue: { expected: "John" },
-					},
-					{
-						type: "variableAssignment",
-						variableName: "lastName",
-						expectedValue: { expected: "Doe" },
-					},
-					{
-						type: "variableAssignment",
-						variableName: "age",
-						expectedValue: { expected: 25 },
-					},
-					{
-						type: "variableAssignment",
-						variableName: "message",
-						expectedValue: {
-							expected: "Hi, I'm John Doe and I'm 25 years old",
-						},
-					},
-					{
-						type: "consoleLogs",
-						expectedOutput: [
-							"Hi, I'm John Doe and I'm 25 years old",
-						],
-					},
-				],
-			},
-			{
-				id: "step-2",
-				content: `## 💡 Creating Personalized Messages
-
-This is how you create dynamic, personalized messages!
-
-**What's happening:**
-- Each variable holds a piece of information
-- The \`+\` operator combines them
-- Spaces are added where needed
-- Numbers are automatically converted to strings
-
----
-Try a different example:
-
-\`\`\`javascript
-let product = "laptop"
-let price = 999
-let store = "TechStore"
-let ad = "Buy a " + product + " for $" + price + " at " + store
-console.log(ad)
-\`\`\``,
-				tests: [
-					{
-						type: "variableAssignment",
-						variableName: "product",
-						expectedValue: { expected: "laptop" },
-					},
-					{
-						type: "variableAssignment",
-						variableName: "price",
-						expectedValue: { expected: 999 },
-					},
-					{
-						type: "variableAssignment",
-						variableName: "store",
-						expectedValue: { expected: "TechStore" },
-					},
-					{
-						type: "variableAssignment",
-						variableName: "ad",
-						expectedValue: {
-							expected: "Buy a laptop for $999 at TechStore",
-						},
-					},
-					{
-						type: "consoleLogs",
-						expectedOutput: ["Buy a laptop for $999 at TechStore"],
+						type: "consoleLogVariable",
+						variableName: "fullName",
+						expectedOutput: "John Doe",
 					},
 				],
 			},
 			{
 				id: "step-3",
-				content: `## 🎯 Personal Greeting Challenge!
+				content: `## 💡 Understanding the Difference
 
-Create your own personalized greeting:
-
-**Requirements:**
-- Use your name
-- Include your age
-- Include your favorite hobby
-- Create a complete sentence
-- Log the result
+**Important difference between these two approaches:**
 
 \`\`\`javascript
-// Your personal greeting here!
-\`\`\``,
+// Method 1: Separate arguments (space added automatically)
+console.log("John", "Doe")
+
+// Method 2: String concatenation (no automatic space)
+console.log("John" + "Doe")
+\`\`\`
+
+**Key points:**
+- \`console.log("John", "Doe")\` - logs two separate arguments with a space between them
+- \`console.log("John" + "Doe")\` - combines into one string first, then logs it
+
+Try both approaches and see the difference!`,
 				tests: [
 					{
-						type: "variableAssignment",
-						variableName: "", // Will be filled by user
-						expectedValue: { expected: "" }, // Will be filled by user
+						type: "consoleLogPattern",
+						expectedOutput: "John Doe",
+						pattern: /console\.log\("John"\s*,\s*"Doe"\)/,
 					},
 					{
-						type: "consoleLogs",
-						expectedOutput: [""], // Will be filled by user
+						type: "consoleLogPattern",
+						expectedOutput: "JohnDoe",
+						pattern: /console\.log\("John"\s*\+\s*"Doe"\)/,
 					},
 				],
 			},
 		],
 	},
 	{
-		id: "lesson-13",
+		id: "lesson-9",
+		title: "Building Sentences",
+		skillNodeId: "variables",
+		xpReward: 150,
+		stepXpReward: 150,
+		steps: [
+			{
+				id: "step-1",
+				content: `## 📝 Building Greeting Messages
+
+You can create different messages by combining variables!
+
+Create two greeting variables using the provided variables:
+
+\`\`\`javascript
+let dayGreeting = day + ", " + question
+let nightGreeting = night + ", " + question
+console.log(dayGreeting)
+console.log(nightGreeting)
+\`\`\``,
+				startingCode: `let day = "Good morning"
+let night = "Good evening"
+let question = "how are you?"
+
+`,
+				tests: [
+					{
+						type: "variableAssignment",
+						variableName: "day",
+						expectedValue: { expected: "Good morning" },
+					},
+					{
+						type: "variableAssignment",
+						variableName: "night",
+						expectedValue: { expected: "Good evening" },
+					},
+					{
+						type: "variableAssignment",
+						variableName: "question",
+						expectedValue: { expected: "how are you?" },
+					},
+					{
+						type: "variableAssignment",
+						variableName: "dayGreeting",
+						expectedValue: {
+							expected: "Good morning, how are you?",
+						},
+						hintAdvice:
+							"Make sure to combine the variables correctly using the + operator, and don't forget the comma and space between the variables.",
+					},
+					{
+						type: "variableAssignment",
+						variableName: "nightGreeting",
+						expectedValue: {
+							expected: "Good evening, how are you?",
+						},
+						hintAdvice:
+							"Make sure to combine the variables correctly using the + operator, and don't forget the comma and space between the variables.",
+					},
+					{
+						type: "codeContains",
+						pattern:
+							/let\s+dayGreeting\s*=\s*day\s*\+\s*", "\s*\+\s*question/,
+					},
+					{
+						type: "codeContains",
+						pattern:
+							/let\s+nightGreeting\s*=\s*night\s*\+\s*", "\s*\+\s*question/,
+					},
+					{
+						type: "consoleLogVariable",
+						variableName: "dayGreeting",
+						expectedOutput: "Good morning, how are you?",
+					},
+					{
+						type: "consoleLogVariable",
+						variableName: "nightGreeting",
+						expectedOutput: "Good evening, how are you?",
+					},
+				],
+			},
+		],
+	},
+	{
+		id: "lesson-10",
 		title: "Declaring vs Initializing",
 		skillNodeId: "variables",
 		xpReward: 200,
@@ -980,7 +978,8 @@ When you declare a variable without a value, it's \`undefined\`.
 - JavaScript knows about it, but it's empty
 
 ---
-Now give it a value:
+
+You can give it a value later by assigning it:
 
 \`\`\`javascript
 let x
@@ -988,15 +987,31 @@ console.log(x)  // undefined
 x = 42
 console.log(x)  // 42
 \`\`\``,
+				startingCode: `let x\nconsole.log(x)\n`,
 				tests: [
 					{
 						type: "variableAssignment",
 						variableName: "x",
-						expectedValue: { expected: 42 },
+						expectedValue: { expected: "__undefined__" },
 					},
 					{
-						type: "consoleLogs",
-						expectedOutput: ["undefined", "42"],
+						type: "consoleLogVariable",
+						variableName: "x",
+						expectedOutput: "undefined",
+					},
+					{
+						type: "variableReassignment",
+						variable: "x",
+						method: {
+							operator: "=",
+							operand: 42,
+						},
+						expectedValue: 42,
+					},
+					{
+						type: "consoleLogVariable",
+						variableName: "x",
+						expectedOutput: "42",
 					},
 				],
 			},
@@ -1007,188 +1022,36 @@ console.log(x)  // 42
 **Two ways to create variables:**
 
 1. **Declaration only**: \`let x;\` (value is \`undefined\`)
-2. **Declaration + Initialization**: \`let x = 42;\` (value is \`42\`)
+2. **Initialization**: \`let x = 42;\` (value is \`42\`)
 
 ---
 Try both approaches:
 
 \`\`\`javascript
-let declaredOnly
-let declaredAndInitialized = 100
-console.log(declaredOnly, declaredAndInitialized)
+let declared
+let initialized = 100
+console.log(declared, initialized)
 \`\`\``,
 				tests: [
 					{
 						type: "variableAssignment",
-						variableName: "declaredOnly",
+						variableName: "declared",
 						expectedValue: { expected: "__undefined__" },
 					},
 					{
 						type: "variableAssignment",
-						variableName: "declaredAndInitialized",
+						variableName: "initialized",
 						expectedValue: { expected: 100 },
 					},
 					{
 						type: "consoleLogs",
 						expectedOutput: ["undefined 100"],
 					},
-				],
-			},
-			{
-				id: "step-4",
-				content: `## 🎯 When to Use Each Approach
-
-**Use declaration only when:**
-- You need to create the variable first
-- You'll assign a value later
-- You're building up a value step by step
-
-**Use initialization when:**
-- You know the value right away
-- You want to avoid \`undefined\`
-- You're creating a complete variable
-
----
-Try both approaches in one example:
-
-\`\`\`javascript
-// Declaration only
-let result
-result = 10 + 5
-
-// Declaration + initialization
-let answer = 10 + 5
-
-console.log(result, answer)
-\`\`\``,
-				tests: [
 					{
-						type: "variableAssignment",
-						variableName: "result",
-						expectedValue: { expected: 15 },
-					},
-					{
-						type: "variableAssignment",
-						variableName: "answer",
-						expectedValue: { expected: 15 },
-					},
-					{
-						type: "consoleLogs",
-						expectedOutput: ["15 15"],
-					},
-				],
-			},
-		],
-	},
-	{
-		id: "lesson-14",
-		title: "Understanding Undefined",
-		skillNodeId: "variables",
-		xpReward: 150,
-		stepXpReward: 50,
-		steps: [
-			{
-				id: "step-1",
-				content: `## ❓ Variables Without Values
-
-When variables don't have values, they're \`undefined\`.
-
-\`\`\`javascript
-let name
-let age
-let city
-console.log(name, age, city)
-\`\`\``,
-				tests: [
-					{
-						type: "variableAssignment",
-						variableName: "name",
-						expectedValue: { expected: "__undefined__" },
-					},
-					{
-						type: "variableAssignment",
-						variableName: "age",
-						expectedValue: { expected: "__undefined__" },
-					},
-					{
-						type: "variableAssignment",
-						variableName: "city",
-						expectedValue: { expected: "__undefined__" },
-					},
-					{
-						type: "consoleLogs",
-						expectedOutput: ["undefined undefined undefined"],
-					},
-				],
-			},
-			{
-				id: "step-2",
-				content: `## 💡 When to Use Each Approach
-
-**Declaration only (\`let x;\`):**
-- When you need to create the variable first
-- When you'll assign a value later
-- When you're building up a value step by step
-
-**Initialization (\`let x = value;\`):**
-- When you know the value right away
-- When you want to avoid \`undefined\`
-- When you're creating a complete variable
-
----
-Try both approaches:
-
-\`\`\`javascript
-// Approach 1: Declaration only
-let score
-score = 100
-
-// Approach 2: Initialization
-let points = 100
-
-console.log(score, points)
-\`\`\``,
-				tests: [
-					{
-						type: "variableAssignment",
-						variableName: "score",
-						expectedValue: { expected: 100 },
-					},
-					{
-						type: "variableAssignment",
-						variableName: "points",
-						expectedValue: { expected: 100 },
-					},
-					{
-						type: "consoleLogs",
-						expectedOutput: ["100 100"],
-					},
-				],
-			},
-			{
-				id: "step-3",
-				content: `## 🎯 Experiment Challenge!
-
-Try different declaration styles and see what happens:
-
-**Requirements:**
-- Create 3 variables using declaration only
-- Create 3 variables using initialization
-- Assign values to the declaration-only variables
-- Log all variables
-
-\`\`\`javascript
-// Your experiment here!
-\`\`\``,
-				tests: [
-					{
-						type: "variableAssignment",
-						variableName: "", // Will be filled by user
-						expectedValue: { expected: "" }, // Will be filled by user
-					},
-					{
-						type: "consoleLogs",
-						expectedOutput: [""], // Will be filled by user
+						type: "codeContains",
+						pattern:
+							/console\.log\(\s*declared\s*,\s*initialized\s*\)/,
+						hintAdvice: "Make sure to log both variables together",
 					},
 				],
 			},

@@ -136,16 +136,22 @@ export const useLessonStreaming = ({
 		addSystemMessage
 	);
 
-	// Stream the first step when component mounts and is initialized
+	// Set initial startingCode and stream the first step when component mounts and is initialized
 	useEffect(() => {
 		if (
 			isInitialized &&
 			messages.length === 0 &&
 			currentLesson.steps[currentStepIndex]
 		) {
+			// Set the startingCode for the current step if it exists
+			const currentStep = currentLesson.steps[currentStepIndex];
+			if (currentStep.startingCode) {
+				setCode(currentStep.startingCode);
+			}
+
 			streamCurrentStep();
 		}
-	}, [isInitialized]); // Run when isInitialized becomes true
+	}, [isInitialized, currentLesson, currentStepIndex, setCode]); // Run when isInitialized becomes true
 
 	// Imperative streaming functions
 	const streamCurrentStep = useCallback(async () => {
