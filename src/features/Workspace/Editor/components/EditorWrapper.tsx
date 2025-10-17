@@ -62,13 +62,13 @@ const EditorWrapper = ({
 	return (
 		<div
 			className={cn(
-				"flex-1 w-[500px] bg-[var(--card)] text-[var(--card-foreground)] shadow-none",
+				"flex-1 w-[500px] bg-[var(--card)] text-[var(--card-foreground)] shadow-none flex flex-col",
 				className
 			)}
 		>
 			<Editor
 				loading={false}
-				className="editor shadow-insfet inset-shadow-black/30 inset-shadow-sm bg-muted/0 pt-1 rounded-lg"
+				className="editor shadow-insfet inset-shadow-black/30 inset-shadow-sm bg-muted/0 pt-1 rounded-lg flex flex-col flex-1"
 				theme="vs-dark"
 				height="100%"
 				onMount={(editor, monaco) => {

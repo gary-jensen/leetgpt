@@ -17,8 +17,16 @@ export const useChat = (): ChatHookReturn => {
 	const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
 	const scrollToBottom = useCallback(() => {
-		messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-	}, []);
+		if (window.innerWidth >= 980) {
+			messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+		} else {
+			// Find the scrollable parent container
+			const scrollableParent = messagesEndRef.current?.parentElement;
+			if (scrollableParent) {
+				scrollableParent.scrollTop = scrollableParent.scrollHeight;
+			}
+		}
+	}, [messagesEndRef.current]);
 
 	useEffect(() => {
 		scrollToBottom();

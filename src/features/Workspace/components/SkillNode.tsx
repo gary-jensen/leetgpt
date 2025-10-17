@@ -36,7 +36,7 @@ const SkillNode = forwardRef<
 			<>
 				<div
 					ref={ref}
-					className="flex items-center gap-3 mb-2 absolute left-0 hover:bg-background/80 px-4 py-3 rounded-lg cursor-pointer"
+					className="flex items-center gap-3 mb-2 relative md:absolute left-0 hover:bg-background/80 px-4 py-3 rounded-lg cursor-pointer"
 					onClick={openSkillTree}
 				>
 					{/* <div

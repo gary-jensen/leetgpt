@@ -36,7 +36,7 @@ const Console = ({
 
 	return (
 		<div
-			className={`w-full h-[400px] bg-background borderf-t border-border flex flex-col pb-4 rounded-2xl border-1 transition-all duration-300 ${
+			className={`w-full fh-[400px] min-h-[60vh] md:min-h-0  flex-1 bg-background borderf-t border-border flex flex-col pb-4 rounded-2xl border-1 transition-all duration-300 overflow-hidden ${
 				isGlowing ? "console-glow" : ""
 			}`}
 		>

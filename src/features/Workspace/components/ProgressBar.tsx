@@ -180,9 +180,9 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ className = "" }) => {
 
 	return (
 		<div
-			className={`flex justify-center items-center w-full gap-4 relative ${className}`}
+			className={`progress-bar flex justify-center items-center w-full gap-4 min-h-[80px] sticky top-0 z-10 bg-background-4 ${className}`}
 		>
-			<div className="flex justify-center items-center w-[80%] relative">
+			<div className="flex justify-between md:justify-center items-center w-[80%] relative">
 				{/* Skill Node Section */}
 				<SkillNode
 					ref={skillNodeRef}
@@ -215,8 +215,145 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ className = "" }) => {
 					}}
 					originPosition={originPosition}
 				/>
+
+				{/* Mobile Level Circle */}
+				{!isProgressLoading && (
+					<div className="relative flex md:hidden">
+						{/* Central Level Circle - follows the curve and scales */}
+						<div
+							className="absolute z-10 transition-all ease-out"
+							style={{
+								left: isLevelUpAnimating ? "50%" : "50%", // Always centered horizontally
+								top: isLevelUpAnimating
+									? "calc(50% + 50px)"
+									: "50%", // Moves down when curved
+								transform: isLevelUpAnimating
+									? "translate(-50%, -50%)"
+									: "translate(-50%, -50%)",
+								transitionDuration: `${animationDuration}ms`,
+							}}
+						>
+							<div
+								className={cn(
+									`${
+										isLevelUpAnimating
+											? "w-32 h-32"
+											: "w-16 h-16"
+									} scale-[0.8] rounded-full bg-[#202020] flex items-center justify-center shadow-lg relative`
+								)}
+								style={{
+									padding: isLevelUpAnimating ? "9px" : "6px",
+								}}
+							>
+								{/* Circular Progress Background */}
+								<svg
+									className="absolute inset-0 w-full h-full -rotate-90"
+									viewBox="0 0 100 100"
+								>
+									{/* Background circle */}
+									<circle
+										cx="50"
+										cy="50"
+										r="45"
+										stroke="#374151"
+										strokeWidth="8"
+										fill="none"
+									/>
+									{/* Progress circle */}
+									<circle
+										cx="50"
+										cy="50"
+										r="45"
+										stroke="url(#mobileProgressGradient)"
+										strokeWidth="8"
+										fill="none"
+										strokeLinecap="round"
+										strokeDasharray={`${2 * Math.PI * 45}`}
+										strokeDashoffset={`${
+											2 *
+											Math.PI *
+											45 *
+											(1 -
+												xpInCurrentLevel /
+													xpNeededForNextLevel)
+										}`}
+										className="transition-all ease-out"
+										style={{
+											transitionDuration: `${animationDuration}ms`,
+										}}
+									/>
+									{/* Gradient definition for mobile circle */}
+									<defs>
+										<linearGradient
+											id="mobileProgressGradient"
+											x1="0%"
+											y1="0%"
+											x2="100%"
+											y2="0%"
+											gradientUnits="userSpaceOnUse"
+										>
+											<stop
+												offset="0%"
+												stopColor="#3b82f6"
+											/>
+											<stop
+												offset="100%"
+												stopColor="#9333ea"
+											/>
+										</linearGradient>
+									</defs>
+								</svg>
+								<div className="w-full h-full rounded-full bg-[#202020] flex items-center justify-center relative z-10">
+									<div
+										className={`${
+											isLevelUpAnimating
+												? "text-center"
+												: "flex items-center justify-center"
+										}`}
+									>
+										<div
+											className={`text-gray-200 text-2xl font-bold transition-all duration-500 ${
+												levelUpAnimationPhase ===
+												"celebrating"
+													? "animate-bounce scale-125"
+													: levelUpAnimationPhase ===
+													  "completing"
+													? "animate-bounce scale-110"
+													: ""
+											}`}
+											style={{
+												transform: isLevelUpAnimating
+													? "translateY(-8px)"
+													: "translateY(0)",
+												fontSize: isLevelUpAnimating
+													? "40px"
+													: "24px",
+											}}
+										>
+											{progress.level}
+										</div>
+										<div
+											className="text-gray-300 text-base transition-opacity duration-50 absolute"
+											style={{
+												opacity: isLevelUpAnimating
+													? 1
+													: 0,
+												top: "60%",
+												left: "50%",
+												transform: "translateX(-50%)",
+												whiteSpace: "nowrap",
+											}}
+										>
+											level
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				)}
 				{/* Curved Progress Bar with Central Level Circle */}
-				<div className="relative w-[69%] h-20 flex items-center justify-center">
+				<div className="relative hidden md:flex md:w-[50%] lg:w-[69%] h-20 items-center justify-center">
 					<svg
 						width="100%"
 						height="80"
@@ -479,7 +616,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ className = "" }) => {
 						))}
 					</div>
 				</div>
-				<div className="text-sm text-gray-300 absolute right-4">
+				<div className="text-sm text-gray-300 relative md:absolute right-4">
 					<AuthButton />
 				</div>
 			</div>

@@ -52,10 +52,13 @@ const getSkillIcon = (nodeType: string) => {
 };
 
 // Calculate wavy vertical layout positions
-const calculateWavyVerticalLayout = (nodeCount: number) => {
+const calculateWavyVerticalLayout = (
+	nodeCount: number,
+	isMobile: boolean = false
+) => {
 	const positions: { x: number; y: number }[] = [];
-	const verticalSpacing = 180; // Vertical spacing between nodes
-	const waveAmplitude = 150; // How far left/right the wave goes
+	const verticalSpacing = isMobile ? 120 : 180; // Smaller vertical spacing for mobile
+	const waveAmplitude = isMobile ? 100 : 150; // Smaller wave amplitude for mobile
 
 	// Wave frequency controls how many nodes per complete wave cycle
 	// Formula: frequency = (2 * PI) / nodes_per_cycle
@@ -87,11 +90,27 @@ export const SkillTreeOverlayVertical: React.FC<
 	const [isAnimatingIn, setIsAnimatingIn] = useState(false);
 	const [isAnimatingOut, setIsAnimatingOut] = useState(false);
 	const [showContent, setShowContent] = useState(false);
+	const [isMobile, setIsMobile] = useState(false);
 	const overlayRef = useRef<HTMLDivElement>(null);
 	const contentRef = useRef<HTMLDivElement>(null);
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-	const positions = calculateWavyVerticalLayout(progress.skillNodes.length);
+	// Detect mobile screen size
+	useEffect(() => {
+		const checkMobile = () => {
+			setIsMobile(window.innerWidth < 768); // md breakpoint
+		};
+
+		checkMobile();
+		window.addEventListener("resize", checkMobile);
+
+		return () => window.removeEventListener("resize", checkMobile);
+	}, []);
+
+	const positions = calculateWavyVerticalLayout(
+		progress.skillNodes.length,
+		isMobile
+	);
 
 	// Find current node index
 	const currentNodeIndex = progress.skillNodes.findIndex(
@@ -113,9 +132,38 @@ export const SkillTreeOverlayVertical: React.FC<
 		}
 	}, [isOpen]);
 
+	// Prevent body scroll when overlay is open
+	useEffect(() => {
+		if (isOpen) {
+			// Store the current scroll position
+			const scrollY = window.scrollY;
+			// Prevent scrolling
+			document.body.style.position = "fixed";
+			document.body.style.top = `-${scrollY}px`;
+			document.body.style.width = "100%";
+		} else {
+			// Restore scrolling
+			const scrollY = document.body.style.top;
+			document.body.style.position = "";
+			document.body.style.top = "";
+			document.body.style.width = "";
+			if (scrollY) {
+				window.scrollTo(0, parseInt(scrollY || "0") * -1);
+			}
+		}
+
+		// Cleanup function
+		return () => {
+			document.body.style.position = "";
+			document.body.style.top = "";
+			document.body.style.width = "";
+		};
+	}, [isOpen]);
+
 	// Scroll to center the current node when overlay opens
 	useEffect(() => {
 		if (
+			isOpen &&
 			showContent &&
 			scrollContainerRef.current &&
 			currentNodeIndex !== -1
@@ -128,7 +176,7 @@ export const SkillTreeOverlayVertical: React.FC<
 
 			scrollContainerRef.current.scrollTop = scrollTop;
 		}
-	}, [showContent, currentNodeIndex, positions]);
+	}, [isOpen, showContent, currentNodeIndex, positions, isMobile]);
 
 	const handleClose = () => {
 		setIsAnimatingOut(true);
@@ -155,6 +203,9 @@ export const SkillTreeOverlayVertical: React.FC<
 			ref={overlayRef}
 			className="fixed inset-0 z-[100] flex items-center justify-center"
 			onClick={handleBackgroundClick}
+			style={{
+				overflow: "hidden", // Prevent body scroll
+			}}
 		>
 			{/* Expanding circular background */}
 			<div
@@ -184,7 +235,7 @@ export const SkillTreeOverlayVertical: React.FC<
 			{/* Scrollable tree container wrapper */}
 			<div
 				ref={scrollContainerRef}
-				className="relative z-[105] ease-out overflow-y-auto overflow-x-hidden"
+				className="relative z-[105] ease-out overflow-y-auto overflow-x-hidden pointer-events-auto"
 				style={{
 					maxHeight: "100vh",
 					width: "100%",
@@ -202,7 +253,7 @@ export const SkillTreeOverlayVertical: React.FC<
 				<button
 					onClick={handleClose}
 					className={cn(
-						"sticky top-[10%] left-[30%] -translafte-x-1/2 z-[110] w-10 h-10 flex items-center justify-center rounded-full bg-gray-800/80 hover:bg-gray-700/80 text-gray-300 hover:text-white transition-all duration-200",
+						"sticky top-[10%] left-[10%] md:left-[30%] -translafte-x-1/2 z-[110] w-10 h-10 flex items-center justify-center rounded-full bg-gray-800/80 hover:bg-gray-700/80 text-gray-300 hover:text-white transition-all duration-200",
 						showContent && !isAnimatingOut
 							? "opacity-100 scale-100"
 							: "opacity-0 scale-75"
@@ -219,7 +270,11 @@ export const SkillTreeOverlayVertical: React.FC<
 					ref={contentRef}
 					className="relative"
 					style={{
-						height: `${progress.skillNodes.length * 180 + 200}px`, // Dynamic height based on number of nodes
+						height: `${
+							progress.skillNodes.length *
+								(isMobile ? 120 : 180) +
+							200
+						}px`, // Dynamic height based on number of nodes and mobile spacing
 						minHeight: "100%",
 					}}
 				>

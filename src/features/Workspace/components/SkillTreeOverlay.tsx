@@ -52,9 +52,12 @@ const getSkillIcon = (nodeType: string) => {
 };
 
 // Calculate linear layout positions
-const calculateLinearLayout = (nodeCount: number) => {
+const calculateLinearLayout = (
+	nodeCount: number,
+	isMobile: boolean = false
+) => {
 	const positions: { x: number; y: number }[] = [];
-	const spacing = 200; // Horizontal spacing between nodes
+	const spacing = isMobile ? 120 : 200; // Smaller spacing for mobile
 	const totalWidth = (nodeCount - 1) * spacing;
 	const startX = -totalWidth / 2; // Center the line
 
@@ -77,11 +80,29 @@ export const SkillTreeOverlay: React.FC<SkillTreeOverlayProps> = ({
 	const [isAnimatingIn, setIsAnimatingIn] = useState(false);
 	const [isAnimatingOut, setIsAnimatingOut] = useState(false);
 	const [showContent, setShowContent] = useState(false);
+	const [isMobile, setIsMobile] = useState(false);
 	const overlayRef = useRef<HTMLDivElement>(null);
 	const contentRef = useRef<HTMLDivElement>(null);
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-	const positions = calculateLinearLayout(progress.skillNodes.length);
+	// Detect mobile screen size
+	useEffect(() => {
+		console.log("useEffect");
+		const checkMobile = () => {
+			setIsMobile(window.innerWidth < 768); // md breakpoint
+			console.log(window.innerWidth < 768 ? "ismobile" : "isnotmobile");
+		};
+
+		checkMobile();
+		window.addEventListener("resize", checkMobile);
+
+		return () => window.removeEventListener("resize", checkMobile);
+	}, []);
+
+	const positions = calculateLinearLayout(
+		progress.skillNodes.length,
+		isMobile
+	);
 
 	// Find current node index
 	const currentNodeIndex = progress.skillNodes.findIndex(
@@ -106,6 +127,7 @@ export const SkillTreeOverlay: React.FC<SkillTreeOverlayProps> = ({
 	// Scroll to center the current node when overlay opens
 	useEffect(() => {
 		if (
+			isOpen &&
 			showContent &&
 			scrollContainerRef.current &&
 			currentNodeIndex !== -1
@@ -122,7 +144,7 @@ export const SkillTreeOverlay: React.FC<SkillTreeOverlayProps> = ({
 
 			scrollContainerRef.current.scrollLeft = scrollLeft;
 		}
-	}, [showContent, currentNodeIndex, positions]);
+	}, [isOpen, showContent, currentNodeIndex, positions, isMobile]);
 
 	const handleClose = () => {
 		setIsAnimatingOut(true);

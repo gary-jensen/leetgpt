@@ -52,10 +52,10 @@ export default function WorkspaceContent({
 	);
 
 	return (
-		<div className="w-screen h-screen max-h-screen flex flex-col bg-background-4">
+		<div className="w-screen h-fit md:h-screen md:max-h-screen flex flex-col bg-background-4">
 			<ProgressBar />
-			<div className="flfex-1 h-[calc(100vh-144px)] flex items-start justify-center pb-6">
-				<div className="flex w-[80%] h-[99%] max-h-[99%] gap-6 roundfed-xl overflow-hidden">
+			<div className="h-fit md:h-[calc(100vh-144px)] flex items-start justify-center pb-6">
+				<div className="flex flex-col md:flex-row w-[80%] h-[99%] max-h-[99%] gap-6 roundfed-xl md:overflow-hidden">
 					<Chat lessonStreaming={lessonStreaming} />
 					<Editor
 						code={code}

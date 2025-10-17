@@ -15,6 +15,7 @@ import {
 	endSession,
 	trackSignInButtonClick,
 } from "@/lib/analytics";
+import { UserIcon } from "lucide-react";
 
 export default function AuthButton() {
 	const { data: session, status } = useSession();
@@ -94,8 +95,21 @@ export default function AuthButton() {
 	}
 
 	return (
-		<Button variant="run" onClick={handleSignIn}>
-			Sign In
-		</Button>
+		<>
+			<Button
+				className="hidden xs:block"
+				variant="run"
+				onClick={handleSignIn}
+			>
+				Sign In
+			</Button>
+			<Button
+				className="block xs:hidden"
+				variant="run"
+				onClick={handleSignIn}
+			>
+				<UserIcon size={20} />
+			</Button>
+		</>
 	);
 }
