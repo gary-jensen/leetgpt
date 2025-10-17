@@ -10,38 +10,44 @@ import { isCryptoSubtleAvailable } from "./cryptoUtils";
 const getEncryptionKey = async (): Promise<CryptoKey | null> => {
 	// Check if crypto.subtle is available
 	if (!isCryptoSubtleAvailable()) {
-		console.warn("crypto.subtle not available, encryption disabled");
+		console.warn("crypto.subtle not available, using fallback encryption");
 		return null;
 	}
-	const secret =
-		process.env.LOCAL_STORAGE_SECRET ||
-		"bitschool-default-secret-change-in-production";
 
-	// Convert secret to key material
-	const encoder = new TextEncoder();
-	const keyMaterial = await crypto.subtle.importKey(
-		"raw",
-		encoder.encode(secret),
-		{ name: "PBKDF2" },
-		false,
-		["deriveBits", "deriveKey"]
-	);
+	try {
+		const secret =
+			process.env.LOCAL_STORAGE_SECRET ||
+			"bitschool-default-secret-change-in-production";
 
-	// Derive AES-GCM key from key material
-	const key = await crypto.subtle.deriveKey(
-		{
-			name: "PBKDF2",
-			salt: encoder.encode("bitschool-salt"), // Static salt for deterministic key
-			iterations: 100000,
-			hash: "SHA-256",
-		},
-		keyMaterial,
-		{ name: "AES-GCM", length: 256 },
-		false,
-		["encrypt", "decrypt"]
-	);
+		// Convert secret to key material
+		const encoder = new TextEncoder();
+		const keyMaterial = await crypto.subtle.importKey(
+			"raw",
+			encoder.encode(secret),
+			{ name: "PBKDF2" },
+			false,
+			["deriveBits", "deriveKey"]
+		);
 
-	return key;
+		// Derive AES-GCM key from key material
+		const key = await crypto.subtle.deriveKey(
+			{
+				name: "PBKDF2",
+				salt: encoder.encode("bitschool-salt"), // Static salt for deterministic key
+				iterations: 100000,
+				hash: "SHA-256",
+			},
+			keyMaterial,
+			{ name: "AES-GCM", length: 256 },
+			false,
+			["encrypt", "decrypt"]
+		);
+
+		return key;
+	} catch (error) {
+		console.warn("Failed to create encryption key, using fallback:", error);
+		return null;
+	}
 };
 
 /**
@@ -54,11 +60,25 @@ const encrypt = async (data: string): Promise<string> => {
 			// Fallback: use simple XOR encryption with a derived key
 			return encryptWithFallback(data);
 		}
+
+		// Only use crypto.subtle if it's available
+		if (!isCryptoSubtleAvailable()) {
+			return encryptWithFallback(data);
+		}
+
 		const encoder = new TextEncoder();
 		const dataBuffer = encoder.encode(data);
 
 		// Generate random IV (Initialization Vector)
-		const iv = crypto.getRandomValues(new Uint8Array(12));
+		const iv = new Uint8Array(12);
+		if (typeof crypto !== "undefined" && crypto.getRandomValues) {
+			crypto.getRandomValues(iv);
+		} else {
+			// Fallback: use Math.random for older browsers
+			for (let i = 0; i < iv.length; i++) {
+				iv[i] = Math.floor(Math.random() * 256);
+			}
+		}
 
 		// Encrypt the data
 		const encryptedBuffer = await crypto.subtle.encrypt(
@@ -76,7 +96,8 @@ const encrypt = async (data: string): Promise<string> => {
 		return btoa(String.fromCharCode(...combined));
 	} catch (error) {
 		console.error("Encryption failed:", error);
-		throw new Error("Failed to encrypt data");
+		// Fallback to XOR encryption if crypto.subtle fails
+		return encryptWithFallback(data);
 	}
 };
 
@@ -88,6 +109,11 @@ const decrypt = async (encryptedData: string): Promise<string> => {
 		const key = await getEncryptionKey();
 		if (!key) {
 			// Fallback: use simple XOR decryption
+			return decryptWithFallback(encryptedData);
+		}
+
+		// Only use crypto.subtle if it's available
+		if (!isCryptoSubtleAvailable()) {
 			return decryptWithFallback(encryptedData);
 		}
 
@@ -112,7 +138,8 @@ const decrypt = async (encryptedData: string): Promise<string> => {
 		return decoder.decode(decryptedBuffer);
 	} catch (error) {
 		console.error("Decryption failed:", error);
-		throw new Error("Failed to decrypt data");
+		// Fallback to XOR decryption if crypto.subtle fails
+		return decryptWithFallback(encryptedData);
 	}
 };
 
@@ -158,12 +185,41 @@ const validateProgress = (data: any): data is UserProgress => {
  * Create a checksum/signature for data integrity
  */
 const createChecksum = async (data: string): Promise<string> => {
-	const encoder = new TextEncoder();
-	const dataBuffer = encoder.encode(data);
-	const hashBuffer = await crypto.subtle.digest("SHA-256", dataBuffer);
-	const hashArray = Array.from(new Uint8Array(hashBuffer));
-	return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+	if (!isCryptoSubtleAvailable()) {
+		// Fallback: simple hash function
+		return simpleHash(data);
+	}
+
+	try {
+		const encoder = new TextEncoder();
+		const dataBuffer = encoder.encode(data);
+		const hashBuffer = await crypto.subtle.digest("SHA-256", dataBuffer);
+		const hashArray = Array.from(new Uint8Array(hashBuffer));
+		return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+	} catch (error) {
+		console.warn(
+			"crypto.subtle.digest failed, using fallback hash:",
+			error
+		);
+		return simpleHash(data);
+	}
 };
+
+/**
+ * Simple hash function for fallback
+ */
+function simpleHash(str: string): string {
+	let hash = 0;
+	if (str.length === 0) return hash.toString(16);
+
+	for (let i = 0; i < str.length; i++) {
+		const char = str.charCodeAt(i);
+		hash = (hash << 5) - hash + char;
+		hash = hash & hash; // Convert to 32-bit integer
+	}
+
+	return Math.abs(hash).toString(16);
+}
 
 /**
  * Securely save progress to localStorage with encryption and validation
