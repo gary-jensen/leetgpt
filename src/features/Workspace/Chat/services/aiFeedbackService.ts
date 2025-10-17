@@ -3,7 +3,6 @@ import { getAIFeedback as getAIFeedbackServer } from "@/lib/actions/aiFeedback";
 
 interface AIFeedbackRequest {
 	stepContent: string;
-	stepType: string;
 	testResults: TestResult[];
 	userCode: string;
 }

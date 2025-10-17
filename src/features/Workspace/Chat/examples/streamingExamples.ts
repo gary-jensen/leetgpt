@@ -18,18 +18,15 @@ const exampleLesson: Lesson = {
 	steps: [
 		{
 			id: "step-1",
-			stepType: "concept",
 			content:
 				"JavaScript is a programming language that allows you to create interactive web pages.",
 		},
 		{
 			id: "step-2",
-			stepType: "example",
 			content: "Here's a simple example: console.log('Hello, World!');",
 		},
 		{
 			id: "step-3",
-			stepType: "exercise",
 			content:
 				"Try writing your own console.log statement with a different message.",
 		},

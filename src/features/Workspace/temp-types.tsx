@@ -12,7 +12,6 @@ export interface Lesson {
 
 export interface Step {
 	id: string;
-	stepType: string;
 	content: string;
 	startingCode?: string;
 	tests?: Test[];

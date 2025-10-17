@@ -195,7 +195,6 @@ export const useLessonStreaming = ({
 				// Get AI feedback
 				const aiResponse = await getAIFeedback({
 					stepContent: currentStep.content,
-					stepType: currentStep.stepType,
 					testResults: results,
 					userCode: userCode,
 				});

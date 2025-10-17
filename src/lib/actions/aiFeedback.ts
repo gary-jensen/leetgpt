@@ -21,7 +21,6 @@ const openai = new OpenAI({
 
 interface AIFeedbackRequest {
 	stepContent: string;
-	stepType: string;
 	testResults: TestResult[];
 	userCode: string;
 }
@@ -110,7 +109,7 @@ export async function getAIFeedback(
 			};
 		}
 
-		const { stepContent, stepType, testResults } = request;
+		const { stepContent, testResults } = request;
 
 		// Check if there's a syntax error
 		const hasSyntaxError =
