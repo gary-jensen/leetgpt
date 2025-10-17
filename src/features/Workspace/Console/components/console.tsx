@@ -6,10 +6,14 @@ import { useRef, useEffect, useState } from "react";
 
 const Console = ({
 	iframeRef,
-	handleRun,
+	handleRunClick,
+	buttonVariant,
+	buttonDisabled,
 }: {
 	iframeRef: React.RefObject<HTMLIFrameElement | null>;
-	handleRun: () => void;
+	handleRunClick: () => void;
+	buttonVariant: "correct" | "wrong" | "run";
+	buttonDisabled: boolean;
 }) => {
 	const [isGlowing, setIsGlowing] = useState(false);
 
@@ -40,11 +44,20 @@ const Console = ({
 				isGlowing ? "console-glow" : ""
 			}`}
 		>
-			<div className="w-full hf-[40px] flex items-center gap-2 cursor-pointer justify-between px-3 border-b-1 py-3.5 shadow-md">
+			<div className="w-full hf-[40px] flex items-center gap-4 cursor-pointer justify-start px-3 border-b-1 py-3.5 shadow-md">
 				{/* <Image src="/js.svg" alt="js" width={24} height={24} /> */}
 				<div className="flex items-center gap-2">
 					<SquareChevronRightIcon size={20} />
 					Console
+				</div>
+				<div className="hidden md:flex xl:hidden">
+					<Button
+						onClick={handleRunClick}
+						variant={buttonVariant}
+						disabled={buttonDisabled}
+					>
+						Run
+					</Button>
 				</div>
 				{/* <Button onClick={handleRun}>Run</Button> */}
 			</div>

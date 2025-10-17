@@ -71,6 +71,15 @@ const Editor = ({
 		}
 	}, [isThinking]);
 
+	const buttonVariant = hasJustPassed
+		? "correct"
+		: isThinking
+		? "wrong"
+		: "run";
+
+	const buttonDisabled =
+		!isInitialized || isExecuting || isThinking || isDebouncing;
+
 	return (
 		<div className="flex-50 lg:flex-65 h-full flex">
 			{/* <Sidebar /> */}
@@ -94,22 +103,11 @@ const Editor = ({
 							className="w-full md:flex-1 bg-background [&>*]:flex-1"
 							focusOnLoad={false}
 						/>
-						<div className="w-full h-[64px] px-3 bg-background-2 flex items-center gap-2 border-t-1">
+						<div className="flex md:hidden xl:flex w-full h-[64px] px-3 bg-background-2 items-center gap-2 border-t-1">
 							<Button
 								onClick={handleRunClick}
-								variant={
-									hasJustPassed
-										? "correct"
-										: isThinking
-										? "wrong"
-										: "run"
-								}
-								disabled={
-									!isInitialized ||
-									isExecuting ||
-									isThinking ||
-									isDebouncing
-								}
+								variant={buttonVariant}
+								disabled={buttonDisabled}
 							>
 								Run
 							</Button>
@@ -128,7 +126,12 @@ const Editor = ({
 							</Button> */}
 						</div>
 					</div>
-					<Console iframeRef={iframeRef} handleRun={handleRun} />
+					<Console
+						iframeRef={iframeRef}
+						handleRunClick={handleRunClick}
+						buttonVariant={buttonVariant}
+						buttonDisabled={buttonDisabled}
+					/>
 				</div>
 			</div>
 		</div>

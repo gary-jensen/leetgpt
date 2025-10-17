@@ -55,7 +55,7 @@ export default function WorkspaceContent({
 		<div className="w-screen h-fit md:h-screen md:max-h-screen flex flex-col bg-background-4">
 			<ProgressBar />
 			<div className="h-fit md:h-[calc(100vh-144px)] flex items-start justify-center pb-6">
-				<div className="flex flex-col md:flex-row w-[80%] h-[99%] max-h-[99%] gap-6 roundfed-xl md:overflow-hidden">
+				<div className="flex flex-col md:grid md:grid-cols-2 lg:grid-cols-[35%_65%] w-[80%] h-[99%] max-h-[99%] gap-6 roundfed-xl md:overflow-hidden">
 					<Chat lessonStreaming={lessonStreaming} />
 					<Editor
 						code={code}

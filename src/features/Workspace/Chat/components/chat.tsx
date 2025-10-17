@@ -11,7 +11,7 @@ interface ChatProps {
 
 const Chat = ({ lessonStreaming }: ChatProps) => {
 	return (
-		<div className="flex-50 min-h-[70vh] md:min-h-0 lg:flex-35 max-h-full h-full w-full md:w-auto bg-background flex flex-col rounded-2xl border-[#2f2f2f] border-1 overflow-hidden">
+		<div className="flex-50 max-h-[70vh] min-h-[70vh] md:min-h-0 lg:flex-35 md:max-h-full h-full w-full md:w-auto bg-background flex flex-col rounded-2xl border-[#2f2f2f] border-1 overflow-hidden">
 			<ChatHeader />
 			<ChatMessageList lessonStreaming={lessonStreaming} />
 			{/* <ChatInput lessonStreaming={lessonStreaming} /> */}
