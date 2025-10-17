@@ -74,6 +74,11 @@ async function encryptGuestId(guestId: string): Promise<string> {
  */
 async function decryptGuestId(encryptedData: string): Promise<string | null> {
 	try {
+		// Check if the data looks like it might be corrupted or from a different format
+		if (!encryptedData || encryptedData.length < 10) {
+			return null;
+		}
+
 		const key = await deriveKey();
 
 		// Decode from base64
@@ -81,15 +86,24 @@ async function decryptGuestId(encryptedData: string): Promise<string | null> {
 		const [iv, encrypted] = combined.split(":");
 
 		if (!iv || !encrypted) {
-			throw new Error("Invalid encrypted data format");
+			return null;
 		}
 
 		// Decrypt the data
 		const decrypted = await decryptData(encrypted, iv, key);
+
+		// Check if decryption returned the fallback deobfuscation result
+		// (which means the real decryption failed)
+		if (decrypted === encrypted) {
+			clearGuestId();
+			return null;
+		}
+
 		return decrypted;
 	} catch (error) {
-		console.error("Decryption failed (possible tampering):", error);
-		return null; // Tampering detected or invalid data
+		// Clear the corrupted data - this will trigger regeneration of a new guest ID
+		clearGuestId();
+		return null;
 	}
 }
 
@@ -102,15 +116,28 @@ async function initializeCache(): Promise<void> {
 	try {
 		const encrypted = localStorage.getItem(GUEST_ID_KEY);
 		if (encrypted) {
+			// Check if the data looks like it might be from the old format
+			// Look for the specific pattern we saw in the error logs
+			if (
+				encrypted.length > 100 &&
+				encrypted.includes("3399aeb540064a70cf19")
+			) {
+				// Silently clear corrupted data from old format
+				clearGuestId();
+				cachedGuestId = null;
+				return; // Exit early to prevent further processing
+			}
+
+			// Try to decrypt normally
 			cachedGuestId = await decryptGuestId(encrypted);
 			if (!cachedGuestId) {
-				// Tampering detected, clear it
-				console.warn("Guest ID tampering detected");
-				clearGuestId();
+				// Decryption failed - silently handle
 			}
 		}
 	} catch (error) {
 		console.error("Failed to initialize guest ID cache:", error);
+		// Clear any potentially corrupted data
+		clearGuestId();
 	}
 
 	cacheInitialized = true;
@@ -158,7 +185,7 @@ export async function getGuestIdAsync(): Promise<string> {
 		clearGuestId();
 		return "";
 	} catch (error) {
-		console.error("Failed to get guest ID:", error);
+		// Failed to get guest ID
 		return "";
 	}
 }

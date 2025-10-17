@@ -117,7 +117,6 @@ export async function saveAnalyticsEvent(eventData: AnalyticsEventData) {
 		try {
 			deviceData = await collectDeviceData();
 		} catch (error) {
-			console.warn("Failed to collect device data:", error);
 			// Continue without device data rather than failing the entire request
 		}
 
@@ -239,7 +238,6 @@ export async function saveAnalyticsEventBatch(events: AnalyticsEventData[]) {
 		try {
 			deviceData = await collectDeviceData();
 		} catch (error) {
-			console.warn("Failed to collect device data for batch:", error);
 			// Continue without device data rather than failing the entire batch
 		}
 

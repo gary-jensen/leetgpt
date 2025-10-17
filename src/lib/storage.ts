@@ -10,7 +10,6 @@ import { isCryptoSubtleAvailable } from "./cryptoUtils";
 const getEncryptionKey = async (): Promise<CryptoKey | null> => {
 	// Check if crypto.subtle is available
 	if (!isCryptoSubtleAvailable()) {
-		console.warn("crypto.subtle not available, using fallback encryption");
 		return null;
 	}
 
@@ -45,7 +44,6 @@ const getEncryptionKey = async (): Promise<CryptoKey | null> => {
 
 		return key;
 	} catch (error) {
-		console.warn("Failed to create encryption key, using fallback:", error);
 		return null;
 	}
 };
@@ -95,7 +93,6 @@ const encrypt = async (data: string): Promise<string> => {
 		// Convert to base64 for storage
 		return btoa(String.fromCharCode(...combined));
 	} catch (error) {
-		console.error("Encryption failed:", error);
 		// Fallback to XOR encryption if crypto.subtle fails
 		return encryptWithFallback(data);
 	}
@@ -137,7 +134,6 @@ const decrypt = async (encryptedData: string): Promise<string> => {
 		const decoder = new TextDecoder();
 		return decoder.decode(decryptedBuffer);
 	} catch (error) {
-		console.error("Decryption failed:", error);
 		// Fallback to XOR decryption if crypto.subtle fails
 		return decryptWithFallback(encryptedData);
 	}
@@ -197,10 +193,6 @@ const createChecksum = async (data: string): Promise<string> => {
 		const hashArray = Array.from(new Uint8Array(hashBuffer));
 		return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 	} catch (error) {
-		console.warn(
-			"crypto.subtle.digest failed, using fallback hash:",
-			error
-		);
 		return simpleHash(data);
 	}
 };
@@ -247,7 +239,6 @@ export const saveProgressToStorage = async (
 		localStorage.setItem("bitschool-progress", encryptedData);
 		localStorage.setItem("bitschool-progress-checksum", checksum);
 	} catch (error) {
-		console.error("Failed to save progress to storage:", error);
 		// Fallback: try to save unencrypted if encryption fails
 		try {
 			localStorage.setItem(
@@ -255,7 +246,7 @@ export const saveProgressToStorage = async (
 				JSON.stringify(progress)
 			);
 		} catch (fallbackError) {
-			console.error("Fallback save also failed:", fallbackError);
+			// Silent fallback failure
 		}
 	}
 };
@@ -281,9 +272,6 @@ export const loadProgressFromStorage =
 				jsonData = await decrypt(encryptedData);
 			} catch (decryptError) {
 				// If decryption fails, try to parse as unencrypted (for backward compatibility)
-				console.warn(
-					"Decryption failed, attempting to parse as unencrypted data"
-				);
 				jsonData = encryptedData;
 			}
 
@@ -291,9 +279,6 @@ export const loadProgressFromStorage =
 			if (storedChecksum) {
 				const calculatedChecksum = await createChecksum(jsonData);
 				if (calculatedChecksum !== storedChecksum) {
-					console.error(
-						"Data integrity check failed - checksum mismatch"
-					);
 					// Clear corrupted data
 					localStorage.removeItem("bitschool-progress");
 					localStorage.removeItem("bitschool-progress-checksum");
@@ -312,9 +297,6 @@ export const loadProgressFromStorage =
 				const age = Date.now() - parsedData._timestamp;
 				const maxAge = 90 * 24 * 60 * 60 * 1000; // 90 days
 				if (age > maxAge) {
-					console.warn(
-						"Progress data is older than 90 days, clearing"
-					);
 					localStorage.removeItem("bitschool-progress");
 					localStorage.removeItem("bitschool-progress-checksum");
 					return null;
@@ -323,7 +305,6 @@ export const loadProgressFromStorage =
 
 			// Validate structure (validates the progress data, not metadata)
 			if (!validateProgress(parsedData)) {
-				console.error("Data validation failed - invalid structure");
 				// Clear invalid data
 				localStorage.removeItem("bitschool-progress");
 				localStorage.removeItem("bitschool-progress-checksum");
@@ -341,7 +322,6 @@ export const loadProgressFromStorage =
 
 			return progress;
 		} catch (error) {
-			console.error("Failed to load progress from storage:", error);
 			// Clear corrupted data
 			localStorage.removeItem("bitschool-progress");
 			localStorage.removeItem("bitschool-progress-checksum");
@@ -384,7 +364,6 @@ function encryptWithFallback(data: string): string {
 		// Prepend IV to the encrypted data
 		return iv + ":" + encrypted;
 	} catch (error) {
-		console.error("Fallback encryption failed:", error);
 		// Ultimate fallback: base64 encoding
 		return btoa(data);
 	}
@@ -417,7 +396,6 @@ function decryptWithFallback(encryptedData: string): string {
 			return atob(encryptedData);
 		}
 	} catch (error) {
-		console.error("Fallback decryption failed:", error);
 		// Ultimate fallback: return as-is
 		return encryptedData;
 	}

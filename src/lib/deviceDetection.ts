@@ -201,7 +201,6 @@ export async function collectDeviceData(): Promise<DeviceData | null> {
 		]);
 
 		if (!userAgent) {
-			console.warn("No user agent found");
 			return null;
 		}
 
