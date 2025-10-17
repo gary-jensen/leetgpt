@@ -242,7 +242,6 @@ export default function MarkdownEditor({
 			}
 
 			const currentLine = lines[currentLineIndex];
-			const trimmedLine = currentLine.trim();
 
 			// Check if the line already has the same block element
 			if (currentLine.startsWith(text)) {

@@ -62,13 +62,13 @@ export async function saveUserProgress(
 			update: {
 				xp: progress.xp,
 				level: progress.level,
-				completedLessons: lessonValidation.valid as any,
+				completedLessons: lessonValidation.valid,
 			},
 			create: {
 				userId,
 				xp: progress.xp,
 				level: progress.level,
-				completedLessons: lessonValidation.valid as any,
+				completedLessons: lessonValidation.valid,
 			},
 		});
 
@@ -222,7 +222,7 @@ export async function migrateLocalStorageData(
 						userId,
 						xp: localProgress.xp,
 						level: localProgress.level,
-						completedLessons: localLessonValidation.valid as any,
+						completedLessons: localLessonValidation.valid,
 					},
 				});
 
@@ -254,7 +254,7 @@ export async function migrateLocalStorageData(
 						...existingLessonValidation.valid,
 						...localLessonValidation.valid,
 					])
-				) as any,
+				),
 			};
 
 			await tx.userProgress.update({

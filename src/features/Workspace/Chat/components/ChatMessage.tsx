@@ -7,11 +7,7 @@ interface ChatMessageProps {
 	displayedWords: string[];
 }
 
-export const ChatMessage = ({
-	message,
-	isStreaming,
-	displayedWords,
-}: ChatMessageProps) => {
+export const ChatMessage = ({ message, isStreaming }: ChatMessageProps) => {
 	const hasContent = message.content.trim().length > 0;
 
 	if (isStreaming && !hasContent) {

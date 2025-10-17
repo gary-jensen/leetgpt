@@ -2,7 +2,7 @@
 
 import ReactGA from "react-ga4";
 import { saveAnalyticsEvent } from "@/lib/actions/analytics";
-import { getGuestId, clearGuestId } from "@/lib/guestId";
+import { getGuestId } from "@/lib/guestId";
 
 // Session ID for tracking related events
 let currentSessionId: string | null = null;
@@ -287,7 +287,7 @@ const sendSessionData = (reason: string = "unknown") => {
 			category: "Session",
 			action: "session_end",
 			value: activeTime,
-		} as any);
+		});
 
 		// Send to database
 		trackEvent("Session", "session_end", reason, activeTime, {

@@ -2,7 +2,6 @@
 
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
 	const searchParams = useSearchParams();

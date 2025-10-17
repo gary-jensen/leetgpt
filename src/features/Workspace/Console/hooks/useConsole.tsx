@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { useSession } from "next-auth/react";
 import { CodeExecutor } from "../lib/codeExecutor";
 // import { TestValidator } from "../lib/testValidator";
 import { Lesson, TestResult } from "../../temp-types";
@@ -29,7 +28,6 @@ const useConsole = (
 		messageType?: "error" | "success" | "info"
 	) => void
 ) => {
-	const { data: session } = useSession();
 	const currentQuestion = currentLesson.steps[currentStepIndex];
 
 	const iframeRef = useRef<HTMLIFrameElement>(null);

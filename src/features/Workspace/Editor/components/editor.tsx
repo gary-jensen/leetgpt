@@ -7,10 +7,6 @@ import Console from "../../Console/components/console";
 import { Button } from "@/components/ui/button";
 import { useProgress } from "@/contexts/ProgressContext";
 
-const Sidebar = () => {
-	return <div className="flex-1 h-full bg-background-2"></div>;
-};
-
 const Editor = ({
 	code,
 	setCode,
@@ -30,23 +26,7 @@ const Editor = ({
 	isInitialized?: boolean;
 	hasJustPassed?: boolean;
 }) => {
-	const { addStepXP } = useProgress();
 	const [isDebouncing, setIsDebouncing] = useState(false);
-
-	const handleDebugLevelUp = () => {
-		// Add enough XP to trigger a level up (this will set justLeveledUp flag)
-		addStepXP(1000); // This should trigger a level up
-	};
-
-	const handleAdd33XP = () => {
-		// Add 250 XP to test level up animation (should trigger level up)
-		addStepXP(33);
-	};
-
-	const handleAdd3XP = () => {
-		// Add 250 XP to test level up animation (should trigger level up)
-		addStepXP(3);
-	};
 
 	const handleRunClick = () => {
 		// Don't run if already executing, thinking, debouncing, or not initialized

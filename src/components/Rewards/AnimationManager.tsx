@@ -6,13 +6,10 @@ import NodeCompleteAnimation from "./NodeCompleteAnimation";
 
 export const AnimationManager: React.FC = () => {
 	const {
-		nodeCompleteQueue,
 		removeNodeComplete,
-		progress,
 		animationQueue,
 		isAnimationPlaying,
 		completeCurrentAnimation,
-		closeSkillTree,
 	} = useProgress();
 
 	// Get the current animation from the queue

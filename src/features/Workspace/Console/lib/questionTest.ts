@@ -35,7 +35,7 @@ const extractConsoleLogs = (code: string): ConsoleLogInfo[] => {
 		const startIndex = match.index;
 		let parenCount = 1;
 		let i = regex.lastIndex;
-		let expressionStart = i;
+		const expressionStart = i;
 
 		// Find the matching closing parenthesis
 		while (i < code.length && parenCount > 0) {

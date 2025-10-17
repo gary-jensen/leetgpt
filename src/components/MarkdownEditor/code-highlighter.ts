@@ -238,7 +238,7 @@ export async function processContentForStorage(
 	content: string
 ): Promise<string> {
 	// First handle inline code
-	let processed = await highlightInlineCode(content);
+	const processed = await highlightInlineCode(content);
 
 	// You could add more processing here:
 	// - Convert markdown to HTML

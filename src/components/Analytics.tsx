@@ -6,7 +6,7 @@ import { initGA, startTimeTracking, trackSessionStart } from "@/lib/analytics";
 import { getOrCreateGuestId } from "@/lib/guestId";
 
 export default function Analytics() {
-	const { data: session, status } = useSession();
+	const { status } = useSession();
 
 	useEffect(() => {
 		// Initialize Google Analytics

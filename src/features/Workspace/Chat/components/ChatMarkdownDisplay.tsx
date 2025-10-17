@@ -77,7 +77,6 @@ export const ChatMarkdownDisplay = ({
 	content,
 	className,
 	isStreaming = false,
-	enableTypingAnimation = false,
 }: ChatMarkdownDisplayProps) => {
 	const [processedHtml, setProcessedHtml] = useState<string>("");
 	const [isProcessing, setIsProcessing] = useState(false);

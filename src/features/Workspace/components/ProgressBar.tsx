@@ -1,10 +1,4 @@
-import React, {
-	useState,
-	useEffect,
-	useRef,
-	Dispatch,
-	SetStateAction,
-} from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useProgress } from "../../../contexts/ProgressContext";
 import { getXPRequiredForLevel } from "../../../lib/progressionSystem";
 import { cn } from "@/lib/utils";

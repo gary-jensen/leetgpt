@@ -1,5 +1,4 @@
 import { LessonStreaming } from "../../temp-types";
-import { ChatMessage as ChatMessageType } from "../types/chat";
 import { ChatMessage } from "./ChatMessage";
 import ThinkingAnimation from "./ThinkingAnimation";
 
@@ -11,9 +10,6 @@ export const ChatMessageList = ({ lessonStreaming }: ChatMessageListProps) => {
 	return (
 		<div className="fflex-1 max-h-[calc(100%-40px)] h-[calc(100%-40px)] overflow-y-auto px-3 pt-3 pb-2 space-y-2">
 			{lessonStreaming.messages.map((message) => {
-				const isStreaming =
-					lessonStreaming.streamingMessageId === message.id;
-
 				return (
 					<ChatMessage
 						key={message.id}

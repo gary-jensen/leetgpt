@@ -1,5 +1,4 @@
 import { SkillNode as SkillNodeType } from "@/lib/progressionSystem";
-import { cn } from "@/lib/utils";
 import { forwardRef } from "react";
 
 const SkillNode = forwardRef<

@@ -1,7 +1,6 @@
 "use client";
 
 import { ChatHeader } from "./ChatHeader";
-import { ChatInput } from "./ChatInput";
 import { ChatMessageList } from "./ChatMessageList";
 import { LessonStreaming } from "../../temp-types";
 

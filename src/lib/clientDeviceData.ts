@@ -5,11 +5,7 @@
  * client-specific data that can't be obtained server-side.
  */
 
-import {
-	collectClientDeviceData,
-	mergeDeviceData,
-	DeviceData,
-} from "./deviceDetection";
+import { collectClientDeviceData, DeviceData } from "./deviceDetection";
 
 /**
  * Collect device data on the client side

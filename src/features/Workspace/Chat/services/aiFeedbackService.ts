@@ -35,10 +35,7 @@ export const getAIFeedback = async (
 	}
 };
 
-export const formatAIFeedback = (
-	aiResponse: AIFeedbackResponse,
-	stepContent: string
-): string => {
+export const formatAIFeedback = (aiResponse: AIFeedbackResponse): string => {
 	// Just return the single sentence feedback
 	return aiResponse.feedback;
 };

@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useProgress } from "../../../contexts/ProgressContext";
-import { SkillNode } from "@/lib/progressionSystem";
 import { cn } from "@/lib/utils";
 import {
 	BoxIcon,

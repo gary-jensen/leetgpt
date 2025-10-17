@@ -204,10 +204,7 @@ export const useLessonStreaming = ({
 				setThinking(false);
 
 				// Format and stream the AI feedback
-				const feedbackMessage = formatAIFeedback(
-					aiResponse,
-					currentStep.content
-				);
+				const feedbackMessage = formatAIFeedback(aiResponse);
 				await lessonStreamer.streamCustomLessonMessage(
 					feedbackMessage,
 					{},

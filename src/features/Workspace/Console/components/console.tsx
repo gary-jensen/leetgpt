@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { SquareChevronRightIcon } from "lucide-react";
-import { useRef, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 const Console = ({
 	iframeRef,

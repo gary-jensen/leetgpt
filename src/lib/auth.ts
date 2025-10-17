@@ -33,7 +33,7 @@ export const authOptions: AuthOptions = {
 		}),
 	],
 	callbacks: {
-		async signIn({ user, account, profile }) {
+		async signIn({ user }) {
 			if (!user.email) return false;
 			return true; // Let the adapter handle user creation
 		},
