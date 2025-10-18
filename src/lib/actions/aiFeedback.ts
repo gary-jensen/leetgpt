@@ -206,7 +206,7 @@ Check the initial value assigned to this variable.
 						const actualVarLogsStr = consoleLogVarLogs.join(", ");
 						testInfo = `Test Type: Console Log Variable
 Expected output: "${test.expectedOutput}"
-Actual logs: ${actualVarLogsStr}
+Actual logs: ${actualVarLogsStr.length > 0 ? actualVarLogsStr : "No logs"}
 Variable: ${test.variableName || "a variable"}
 
 The user should log a variable (not hardcode the value). Check if they're logging the variable ${
@@ -280,8 +280,10 @@ Break down the regex pattern into what it is actually checking, as the arguments
 						testInfo = `Test Type: Variable Reassignment
 Variable: ${test.variable}
 Expected final value: ${JSON.stringify(test.expectedValue)}${
-							test.method
-								? `\nShould use: ${test.method.operator} ${
+							test.method?.operator
+								? `\nShould use operator: ${
+										test.method.operator
+								  } ${
 										test.method.operand
 											? `by ${test.method.operand}. Prefer not to use the expected final value in your feedback (talk about the operator and operand instead).`
 											: ""
@@ -547,7 +549,14 @@ HINT ADVICE: ${test.hintAdvice}
 			}User Code:
 ${sanitizedCode}
 
-Give one sentence hint about what needs to be fixed. All code, numbers, data, etc should be wrapped in a backtick \` for markdown formatting`;
+ALL TEST RESULTS:
+${JSON.stringify(
+	testResults.map((test) => ({ test: test.test, passed: test.passed })),
+	null,
+	2
+)}
+
+Give one sentence hint about what needs to be fixed to pass the first failed test. Only worry about one test at a time. All code, numbers, data, etc should be wrapped in a backtick \` for markdown formatting`;
 		}
 
 		// Check if OpenAI API key is configured
