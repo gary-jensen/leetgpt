@@ -12,6 +12,7 @@ import {
 } from "../Chat/services/aiFeedbackService";
 import { useProgress } from "../../../contexts/ProgressContext";
 import { trackLessonStart } from "@/lib/analytics";
+import { playErrorSound, playSuccessSound } from "@/lib/soundManager";
 
 interface UseLessonStreamingProps {
 	currentLesson: Lesson;
@@ -247,6 +248,7 @@ export const useLessonStreaming = ({
 				setTimeout(() => setHasJustPassed(false), 1000);
 
 				// Show success message
+				playSuccessSound();
 				await lessonStreamer.streamCustomLessonMessage(
 					"✅ Great job! You got it right!",
 					{},
@@ -322,6 +324,7 @@ export const useLessonStreaming = ({
 				}
 			} else {
 				// send failed results to the AI, ask to provide feedback
+				playErrorSound();
 				await handleFailedTests(results);
 			}
 		},
