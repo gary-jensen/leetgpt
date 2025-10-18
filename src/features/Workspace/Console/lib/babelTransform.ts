@@ -99,6 +99,38 @@ function createVariableTrackingPlugin() {
 					path.skip();
 				}
 			},
+
+			UpdateExpression(path: any) {
+				// Skip if already processed
+				if (processedNodes.has(path.node)) return;
+
+				// Track increment/decrement operations: x++, ++x, x--, --x
+				// Skip if this is inside a for loop declaration (handled by VariableDeclarator)
+				if (
+					path.node.argument.type === "Identifier" &&
+					!path.findParent((parent: any) => parent.isForStatement())
+				) {
+					const name = path.node.argument.name;
+
+					// Mark as processed
+					processedNodes.add(path.node);
+
+					const trackExpr = t.callExpression(
+						t.identifier("trackVariable"),
+						[t.stringLiteral(name), t.identifier(name)]
+					);
+					processedNodes.add(trackExpr);
+
+					// Replace update expression with sequence: (x++, trackVariable("x", x))
+					const newNode = t.sequenceExpression([
+						path.node,
+						trackExpr,
+					]);
+					processedNodes.add(newNode);
+					path.replaceWith(newNode);
+					path.skip();
+				}
+			},
 		},
 	};
 }
