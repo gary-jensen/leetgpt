@@ -9,7 +9,7 @@ interface ChatMessageListProps {
 export const ChatMessageList = ({ lessonStreaming }: ChatMessageListProps) => {
 	return (
 		<div className="fflex-1 max-h-[calc(100%-40px)] h-[calc(100%-40px)] overflow-y-auto px-3 pt-3 pb-2 space-y-2">
-			{lessonStreaming.messages.map((message) => {
+			{lessonStreaming.messages.map((message, index) => {
 				return (
 					<ChatMessage
 						key={message.id}
@@ -18,6 +18,9 @@ export const ChatMessageList = ({ lessonStreaming }: ChatMessageListProps) => {
 							lessonStreaming.streamingMessageId === message.id
 						}
 						displayedWords={[]}
+						isLastMessage={
+							index + 1 === lessonStreaming.messages.length
+						}
 						messagesEndRef={lessonStreaming.messagesEndRef}
 					/>
 				);

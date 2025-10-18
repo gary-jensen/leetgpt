@@ -14,7 +14,7 @@ export interface UserProgress {
 	xp: number;
 	level: number;
 	currentSkillNodeId: string;
-	completedLessons: string[];
+	lessonProgress: Record<string, { currentStep: number; completed: boolean }>;
 	skillNodes: SkillNode[];
 }
 
@@ -58,45 +58,45 @@ export function getXPProgressForLevel(xp: number, level: number): number {
 }
 
 export function calculateSkillNodeProgress(
-	completedLessons: string[],
+	lessonProgress: Record<string, { currentStep: number; completed: boolean }>,
 	node: SkillNode
 ): number {
 	const completedInNode = node.lessons.filter((lessonId) =>
-		completedLessons.includes(lessonId)
+		isLessonCompleted(lessonProgress, lessonId)
 	).length;
 
 	return completedInNode / node.lessons.length;
 }
 
 export function isSkillNodeCompleted(
-	completedLessons: string[],
+	lessonProgress: Record<string, { currentStep: number; completed: boolean }>,
 	node: SkillNode
 ): boolean {
 	return node.lessons.every((lessonId) =>
-		completedLessons.includes(lessonId)
+		isLessonCompleted(lessonProgress, lessonId)
 	);
 }
 
 // Recalculate progress and completed status for all skill nodes
 export function recalculateSkillNodes(
 	skillNodes: SkillNode[],
-	completedLessons: string[]
+	lessonProgress: Record<string, { currentStep: number; completed: boolean }>
 ): SkillNode[] {
 	return skillNodes.map((node) => ({
 		...node,
-		progress: calculateSkillNodeProgress(completedLessons, node),
-		completed: isSkillNodeCompleted(completedLessons, node),
+		progress: calculateSkillNodeProgress(lessonProgress, node),
+		completed: isSkillNodeCompleted(lessonProgress, node),
 	}));
 }
 
-// Calculate current skill node ID from completed lessons and lesson metadata
+// Calculate current skill node ID from lesson progress and lesson metadata
 export function calculateCurrentSkillNodeId(
-	completedLessons: string[],
+	lessonProgress: Record<string, { currentStep: number; completed: boolean }>,
 	lessonMetadata: { id: string; skillNodeId: string }[]
 ): string {
 	// Find the first incomplete lesson
 	const firstIncompleteLesson = lessonMetadata.find(
-		(lesson) => !completedLessons.includes(lesson.id)
+		(lesson) => !isLessonCompleted(lessonProgress, lesson.id)
 	);
 
 	// If found, return its skill node
@@ -164,7 +164,7 @@ export function createInitialProgress(
 		xp: 0,
 		level: 1,
 		currentSkillNodeId: firstNodeId,
-		completedLessons: [],
+		lessonProgress: {},
 		skillNodes: skillTree.map((node) => ({ ...node })),
 	};
 }
@@ -173,24 +173,30 @@ export function updateProgressAfterLesson(
 	currentProgress: UserProgress,
 	lessonId: string,
 	skillNodeId: string,
-	xpReward: number
+	xpReward: number,
+	totalSteps?: number
 ): UserProgress {
 	const newXP = currentProgress.xp + xpReward;
 	const newLevel = getLevelFromXP(newXP);
-	const newCompletedLessons = [...currentProgress.completedLessons];
 
-	if (!newCompletedLessons.includes(lessonId)) {
-		newCompletedLessons.push(lessonId);
-	}
+	// Mark lesson as completed with final step
+	// Use totalSteps if provided, otherwise use a high number to indicate completion
+	const finalStep = totalSteps !== undefined ? totalSteps : 999;
+	const newLessonProgress = setLessonProgress(
+		currentProgress.lessonProgress,
+		lessonId,
+		finalStep,
+		true
+	);
 
 	// Update skill nodes
 	const updatedSkillNodes = currentProgress.skillNodes.map((node) => {
 		if (node.id === skillNodeId) {
 			const progress = calculateSkillNodeProgress(
-				newCompletedLessons,
+				newLessonProgress,
 				node
 			);
-			const completed = isSkillNodeCompleted(newCompletedLessons, node);
+			const completed = isSkillNodeCompleted(newLessonProgress, node);
 			return {
 				...node,
 				progress,
@@ -211,22 +217,68 @@ export function updateProgressAfterLesson(
 		xp: newXP,
 		level: newLevel,
 		currentSkillNodeId,
-		completedLessons: newCompletedLessons,
+		lessonProgress: newLessonProgress,
 		skillNodes: updatedSkillNodes,
 	};
 }
 
 export function updateProgressAfterStep(
 	currentProgress: UserProgress,
-	stepXpReward: number
+	stepXpReward: number,
+	lessonId: string,
+	newStepIndex: number
 ): UserProgress {
 	const newXP = currentProgress.xp + stepXpReward;
 	const newLevel = getLevelFromXP(newXP);
+
+	// Update the current step for the lesson
+	const newLessonProgress = setLessonProgress(
+		currentProgress.lessonProgress,
+		lessonId,
+		newStepIndex,
+		false // Not completed yet
+	);
 
 	return {
 		...currentProgress,
 		xp: newXP,
 		level: newLevel,
+		lessonProgress: newLessonProgress,
+	};
+}
+
+// Helper functions for lessonProgress
+export function getCompletedLessons(
+	lessonProgress: Record<string, { currentStep: number; completed: boolean }>
+): string[] {
+	return Object.entries(lessonProgress)
+		.filter(([_, progress]) => progress.completed)
+		.map(([lessonId, _]) => lessonId);
+}
+
+export function isLessonCompleted(
+	lessonProgress: Record<string, { currentStep: number; completed: boolean }>,
+	lessonId: string
+): boolean {
+	return lessonProgress[lessonId]?.completed ?? false;
+}
+
+export function getCurrentStep(
+	lessonProgress: Record<string, { currentStep: number; completed: boolean }>,
+	lessonId: string
+): number {
+	return lessonProgress[lessonId]?.currentStep ?? 0;
+}
+
+export function setLessonProgress(
+	lessonProgress: Record<string, { currentStep: number; completed: boolean }>,
+	lessonId: string,
+	currentStep: number,
+	completed: boolean
+): Record<string, { currentStep: number; completed: boolean }> {
+	return {
+		...lessonProgress,
+		[lessonId]: { currentStep, completed },
 	};
 }
 

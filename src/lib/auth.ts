@@ -59,12 +59,15 @@ export const authOptions: AuthOptions = {
 
 				// Load and calculate progress
 				if (userWithProgress.progress) {
-					const completedLessons = userWithProgress.progress
-						.completedLessons as unknown as string[];
+					const lessonProgress = userWithProgress.progress
+						.lessonProgress as unknown as Record<
+						string,
+						{ currentStep: number; completed: boolean }
+					>;
 
-					// Calculate current skill node from completed lessons
+					// Calculate current skill node from lesson progress
 					const currentSkillNodeId = calculateCurrentSkillNodeId(
-						completedLessons,
+						lessonProgress,
 						cachedLessonMetadata
 					);
 
@@ -73,14 +76,14 @@ export const authOptions: AuthOptions = {
 						buildSkillTreeFromLessons(cachedLessonMetadata);
 					const calculatedSkillNodes = recalculateSkillNodes(
 						skillNodes,
-						completedLessons
+						lessonProgress
 					);
 
 					session.progress = {
 						xp: userWithProgress.progress.xp,
 						level: userWithProgress.progress.level,
 						currentSkillNodeId,
-						completedLessons,
+						lessonProgress,
 						skillNodes: calculatedSkillNodes,
 					};
 				} else {

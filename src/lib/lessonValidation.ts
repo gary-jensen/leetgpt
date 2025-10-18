@@ -116,3 +116,64 @@ export function validateLessonArraySize(lessonIds: string[]): boolean {
 	// Allow up to 1000 lessons (reasonable upper bound)
 	return lessonIds.length <= 1000;
 }
+
+/**
+ * Validate lesson progress object structure
+ */
+export function validateLessonProgress(
+	lessonProgress: Record<string, { currentStep: number; completed: boolean }>
+): {
+	valid: Record<string, { currentStep: number; completed: boolean }>;
+	invalid: string[];
+	allValid: boolean;
+} {
+	if (!lessonProgress || typeof lessonProgress !== "object") {
+		return { valid: {}, invalid: [], allValid: false };
+	}
+
+	const valid: Record<string, { currentStep: number; completed: boolean }> =
+		{};
+	const invalid: string[] = [];
+
+	// Limit object size to prevent abuse
+	const entries = Object.entries(lessonProgress).slice(0, 1000);
+
+	for (const [lessonId, progress] of entries) {
+		// Validate lesson ID exists
+		if (!validateLessonId(lessonId)) {
+			invalid.push(lessonId);
+			continue;
+		}
+
+		// Validate progress structure
+		if (
+			!progress ||
+			typeof progress !== "object" ||
+			typeof progress.currentStep !== "number" ||
+			typeof progress.completed !== "boolean" ||
+			progress.currentStep < 0 ||
+			progress.currentStep > 1000 // Reasonable upper bound for steps
+		) {
+			invalid.push(lessonId);
+			continue;
+		}
+
+		// Get lesson to validate currentStep is within bounds
+		const lesson = getLessonById(lessonId);
+		if (lesson && progress.currentStep >= lesson.steps.length) {
+			// If currentStep >= total steps, it should be marked as completed
+			if (!progress.completed) {
+				invalid.push(lessonId);
+				continue;
+			}
+		}
+
+		valid[lessonId] = progress;
+	}
+
+	return {
+		valid,
+		invalid,
+		allValid: invalid.length === 0,
+	};
+}

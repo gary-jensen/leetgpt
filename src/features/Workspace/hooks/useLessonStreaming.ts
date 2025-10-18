@@ -12,7 +12,6 @@ import {
 } from "../Chat/services/aiFeedbackService";
 import { useProgress } from "../../../contexts/ProgressContext";
 import { trackLessonStart } from "@/lib/analytics";
-import { playErrorSound, playSuccessSound } from "@/lib/soundManager";
 
 interface UseLessonStreamingProps {
 	currentLesson: Lesson;
@@ -23,6 +22,7 @@ interface UseLessonStreamingProps {
 	currentLessonIndex: number;
 	setCode: (code: string) => void;
 	isInitialized?: boolean;
+	stepInitialized?: boolean;
 	setAttemptsCount: (count: number) => void;
 	onAllLessonsCompleted?: () => void;
 }
@@ -36,6 +36,7 @@ export const useLessonStreaming = ({
 	currentLessonIndex,
 	setCode,
 	isInitialized = true,
+	stepInitialized = true,
 	setAttemptsCount,
 	onAllLessonsCompleted,
 }: UseLessonStreamingProps): LessonStreaming => {
@@ -143,32 +144,105 @@ export const useLessonStreaming = ({
 		addSystemMessage
 	);
 
-	// Set initial startingCode and stream the first step when component mounts and is initialized
+	// Track if we've loaded content for this lesson to prevent infinite loops
+	const loadedLessonsRef = useRef<Set<string>>(new Set());
+
+	// Set initial startingCode and stream steps when component mounts and is initialized
 	useEffect(() => {
 		if (
 			isInitialized &&
+			stepInitialized &&
 			messages.length === 0 &&
 			currentLesson.steps[currentStepIndex]
 		) {
-			// Set the startingCode for the current step if it exists
-			const currentStep = currentLesson.steps[currentStepIndex];
-			if (currentStep.startingCode) {
-				setCode(currentStep.startingCode);
-			}
+			// Create a unique key for this lesson+step combination
+			const lessonKey = `${currentLesson.id}-${currentStepIndex}`;
 
-			streamCurrentStep();
+			// Only load if we haven't loaded this lesson yet
+			if (!loadedLessonsRef.current.has(lessonKey)) {
+				loadedLessonsRef.current.add(lessonKey);
+
+				// Set the startingCode for the current step if it exists
+				const currentStep = currentLesson.steps[currentStepIndex];
+				if (currentStep.startingCode) {
+					setCode(currentStep.startingCode);
+				}
+
+				// Stream all previous steps as context, then stream current step
+				// Call the function directly here to avoid dependency issues
+				(async () => {
+					// If we're on step 0, just stream normally
+					if (currentStepIndex === 0) {
+						await streamCurrentStep();
+						return;
+					}
+
+					// Way to stream all previous steps (non-streaming)
+					// Stream all previous steps as context (non-streaming for speed)
+					// const previousStepsContent = currentLesson.steps
+					// 	.slice(0, currentStepIndex)
+					// 	.map((step, index) => step.content)
+					// 	.join("");
+
+					// Add all previous steps (non-streaming)
+					// addSystemMessage(previousStepsContent, "info");
+					// addSystemMessage("👇 Continue from here!", "success");
+
+					// lessonStreamer.streamCustomLessonMessage(
+					// 	previousStepsContent,
+					// 	{},
+					// 	"info"
+					// );
+					// lessonStreamer.streamCustomLessonMessage(
+					// 	"👇 Continue from here!",
+					// 	{},
+					// 	"success"
+					// );
+
+					// Stream the current step, and all previous steps
+					await streamCurrentStep();
+				})();
+			}
 		}
-	}, [isInitialized, currentLesson, currentStepIndex, setCode]); // Run when isInitialized becomes true
+	}, [
+		isInitialized,
+		stepInitialized,
+		currentLesson,
+		currentStepIndex,
+		setCode,
+	]);
+
+	// Clear loaded lessons tracking when lesson changes
+	useEffect(() => {
+		loadedLessonsRef.current.clear();
+	}, [currentLesson.id]);
 
 	// Imperative streaming functions
 	const streamCurrentStep = useCallback(async () => {
 		if (currentLesson.steps[currentStepIndex]) {
-			await lessonStreamer.streamStep(
-				currentLesson.steps[currentStepIndex],
-				{
-					streamingSpeed: 30,
+			// Stream all steps up to the current step
+			for (let i = 0; i <= currentStepIndex; i++) {
+				if (i === currentStepIndex && currentStepIndex !== 0) {
+					// Streams the continue message (when needed)
+					await lessonStreamer.streamCustomLessonMessage(
+						"👇 Continue from here!",
+						{},
+						"success"
+					);
 				}
-			);
+				// Streams the step
+				await lessonStreamer.streamStep(currentLesson.steps[i], {
+					streamingSpeed: i === currentStepIndex ? 30 : 10,
+				});
+
+				// await new Promise((resolve) => setTimeout(resolve, 100));
+			}
+			// await lessonStreamer.streamStep(
+			// 	currentLesson.steps[currentStepIndex],
+			// 	{
+			// 		streamingSpeed: 30,
+			// 	}
+			// );
 		}
 	}, [currentLesson, currentStepIndex, lessonStreamer]);
 
@@ -248,7 +322,6 @@ export const useLessonStreaming = ({
 				setTimeout(() => setHasJustPassed(false), 1000);
 
 				// Show success message
-				playSuccessSound();
 				await lessonStreamer.streamCustomLessonMessage(
 					"✅ Great job! You got it right!",
 					{},
@@ -258,18 +331,22 @@ export const useLessonStreaming = ({
 				// If there is a next step, go to it
 				if (currentLesson.steps[currentStepIndex + 1]) {
 					// Award step XP and show animation
-					addStepXP(currentLesson.stepXpReward);
+					const newStepIndex = currentStepIndex + 1;
+					addStepXP(
+						currentLesson.stepXpReward,
+						currentLesson.id,
+						newStepIndex
+					);
 					showXPGain(currentLesson.stepXpReward);
 					setTimeout(() => {
-						setCurrentStepIndex(currentStepIndex + 1);
+						setCurrentStepIndex(newStepIndex);
 						setAttemptsCount(0); // Reset attempts counter when moving to next step
 						// Stream the next step content after success message streams
 
-						streamStep(currentLessonIndex, currentStepIndex + 1);
+						streamStep(currentLessonIndex, newStepIndex);
 						setCode(
-							lessons[currentLessonIndex].steps[
-								currentStepIndex + 1
-							].startingCode ?? ""
+							lessons[currentLessonIndex].steps[newStepIndex]
+								.startingCode ?? ""
 						);
 					}, 300);
 					// else if there is a next lesson, go to it
@@ -281,7 +358,8 @@ export const useLessonStreaming = ({
 						currentLesson.title,
 						currentLesson.skillNodeId,
 						currentLesson.xpReward,
-						now - startTime
+						now - startTime,
+						currentLesson.steps.length
 					);
 					setStartTime(now);
 					showXPGain(currentLesson.xpReward);
@@ -310,7 +388,8 @@ export const useLessonStreaming = ({
 						currentLesson.title,
 						currentLesson.skillNodeId,
 						currentLesson.xpReward,
-						now - startTime
+						now - startTime,
+						currentLesson.steps.length
 					);
 					setStartTime(now);
 					showXPGain(currentLesson.xpReward);
@@ -324,7 +403,6 @@ export const useLessonStreaming = ({
 				}
 			} else {
 				// send failed results to the AI, ask to provide feedback
-				playErrorSound();
 				await handleFailedTests(results);
 			}
 		},

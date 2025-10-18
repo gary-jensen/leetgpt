@@ -24,6 +24,10 @@ import {
 	getXPProgressForLevel,
 	recalculateSkillNodes,
 	calculateCurrentSkillNodeId,
+	getCompletedLessons,
+	isLessonCompleted,
+	getCurrentStep,
+	setLessonProgress,
 } from "../lib/progressionSystem";
 import {
 	saveUserProgress,
@@ -36,18 +40,20 @@ import {
 	trackStepComplete,
 	trackAuthSignin,
 } from "@/lib/analytics";
+// import { playLevelUpSound } from "@/lib/soundManager";
 import { clearGuestId } from "@/lib/guestId";
 
 interface ProgressContextType {
 	progress: UserProgress;
 	isProgressLoading: boolean;
-	addStepXP: (xp: number) => void;
+	addStepXP: (xp: number, lessonId: string, newStepIndex: number) => void;
 	addLessonXP: (
 		lessonId: string,
 		lessonTitle: string,
 		skillNodeId: string,
 		xp: number,
-		timeTaken: number
+		timeTaken: number,
+		totalSteps?: number
 	) => void;
 	getCurrentSkillNode: () => SkillNode | undefined;
 	getXPProgress: () => number;
@@ -74,6 +80,10 @@ interface ProgressContextType {
 	// Progress bar level up handling
 	justLeveledUp: boolean;
 	clearJustLeveledUp: () => void;
+	// Lesson progress helpers
+	getCompletedLessons: () => string[];
+	isLessonCompleted: (lessonId: string) => boolean;
+	getCurrentStep: (lessonId: string) => number;
 }
 
 const ProgressContext = createContext<ProgressContextType | undefined>(
@@ -81,12 +91,18 @@ const ProgressContext = createContext<ProgressContextType | undefined>(
 );
 
 type ProgressAction =
-	| { type: "ADD_STEP_XP"; xp: number }
+	| {
+			type: "ADD_STEP_XP";
+			xp: number;
+			lessonId: string;
+			newStepIndex: number;
+	  }
 	| {
 			type: "ADD_LESSON_XP";
 			lessonId: string;
 			skillNodeId: string;
 			xp: number;
+			totalSteps?: number;
 	  }
 	| { type: "LOAD_PROGRESS"; progress: UserProgress }
 	| { type: "CLEAR_LEVEL_UP" }
@@ -117,7 +133,12 @@ function progressReducer(
 ): ProgressState {
 	switch (action.type) {
 		case "ADD_STEP_XP": {
-			const newProgress = updateProgressAfterStep(state, action.xp);
+			const newProgress = updateProgressAfterStep(
+				state,
+				action.xp,
+				action.lessonId,
+				action.newStepIndex
+			);
 			const wasLevelUp = newProgress.level > state.level;
 
 			return {
@@ -137,7 +158,8 @@ function progressReducer(
 				state,
 				action.lessonId,
 				action.skillNodeId,
-				action.xp
+				action.xp,
+				action.totalSteps
 			);
 			const wasLevelUp = newProgress.level > state.level;
 
@@ -278,14 +300,14 @@ function getInitialProgress(
 	// Logged in with progress -> use it directly
 	if (
 		session?.progress &&
-		session.progress.completedLessons &&
-		session.progress.completedLessons.length > 0
+		session.progress.lessonProgress &&
+		Object.keys(session.progress.lessonProgress).length > 0
 	) {
 		return {
 			xp: session.progress.xp,
 			level: session.progress.level,
 			currentSkillNodeId: session.progress.currentSkillNodeId,
-			completedLessons: session.progress.completedLessons,
+			lessonProgress: session.progress.lessonProgress,
 			skillNodes: session.progress.skillNodes,
 			isLevelUp: false,
 			xpGainQueue: [],
@@ -332,8 +354,8 @@ export function ProgressProvider({
 	// Compute loading state based on whether we need to check migration/localStorage
 	const needsAsyncLoad = activeSession?.user?.id
 		? !(
-				activeSession.progress?.completedLessons &&
-				activeSession.progress.completedLessons.length > 0
+				activeSession.progress?.lessonProgress &&
+				Object.keys(activeSession.progress.lessonProgress).length > 0
 		  ) // Logged in, no progress -> check migration
 		: true; // Guest -> check localStorage
 
@@ -363,8 +385,8 @@ export function ProgressProvider({
 		// Skip if we already have progress loaded
 		if (
 			activeSession?.progress &&
-			activeSession.progress.completedLessons &&
-			activeSession.progress.completedLessons.length > 0
+			activeSession.progress.lessonProgress &&
+			Object.keys(activeSession.progress.lessonProgress).length > 0
 		) {
 			setIsProgressLoading(false);
 			// clear local storage
@@ -379,7 +401,9 @@ export function ProgressProvider({
 				// Logged in, no progress -> check for migration
 				// If user has progress in session, they're already migrated
 				const hasProgress =
-					!!activeSession.progress?.completedLessons?.length;
+					!!activeSession.progress?.lessonProgress &&
+					Object.keys(activeSession.progress.lessonProgress).length >
+						0;
 
 				if (!hasProgress && !hasMigratedRef.current) {
 					const localProgress = await loadProgressFromStorage();
@@ -435,15 +459,16 @@ export function ProgressProvider({
 				const savedProgress = await loadProgressFromStorage();
 				if (
 					savedProgress &&
-					savedProgress.completedLessons.length > 0
+					savedProgress.lessonProgress &&
+					Object.keys(savedProgress.lessonProgress).length > 0
 				) {
 					const currentSkillNodeId = calculateCurrentSkillNodeId(
-						savedProgress.completedLessons,
+						savedProgress.lessonProgress,
 						lessonMetadata || []
 					);
 					const updatedSkillNodes = recalculateSkillNodes(
 						savedProgress.skillNodes,
-						savedProgress.completedLessons
+						savedProgress.lessonProgress
 					);
 					dispatch({
 						type: "LOAD_PROGRESS",
@@ -511,13 +536,18 @@ export function ProgressProvider({
 		// Only track if level actually increased after initialization
 		if (state.level > prevLevelRef.current) {
 			trackLevelUp(state.level);
+			// Play level up sound
+			// playLevelUpSound();
 		}
 		prevLevelRef.current = state.level;
 	}, [state.level, isProgressLoading]);
 
-	const addStepXP = useCallback((xp: number) => {
-		dispatch({ type: "ADD_STEP_XP", xp });
-	}, []);
+	const addStepXP = useCallback(
+		(xp: number, lessonId: string, newStepIndex: number) => {
+			dispatch({ type: "ADD_STEP_XP", xp, lessonId, newStepIndex });
+		},
+		[]
+	);
 
 	const addLessonXP = useCallback(
 		(
@@ -525,22 +555,37 @@ export function ProgressProvider({
 			lessonTitle: string,
 			skillNodeId: string,
 			xp: number,
-			timeTaken: number
+			timeTaken: number,
+			totalSteps?: number
 		) => {
-			dispatch({ type: "ADD_LESSON_XP", lessonId, skillNodeId, xp });
+			dispatch({
+				type: "ADD_LESSON_XP",
+				lessonId,
+				skillNodeId,
+				xp,
+				totalSteps,
+			});
 			// Track lesson completion (can be used as Google Ads conversion)
 			trackLessonComplete(lessonId, lessonTitle, xp, timeTaken);
 		},
 		[]
 	);
 
-	const addStepXPWithTracking = useCallback((xp: number, stepId?: string) => {
-		dispatch({ type: "ADD_STEP_XP", xp });
-		// Track step completion if stepId provided
-		if (stepId) {
-			trackStepComplete("current", stepId, xp);
-		}
-	}, []);
+	const addStepXPWithTracking = useCallback(
+		(
+			xp: number,
+			lessonId: string,
+			newStepIndex: number,
+			stepId?: string
+		) => {
+			dispatch({ type: "ADD_STEP_XP", xp, lessonId, newStepIndex });
+			// Track step completion if stepId provided
+			if (stepId) {
+				trackStepComplete("current", stepId, xp);
+			}
+		},
+		[]
+	);
 
 	const getCurrentSkillNode = (): SkillNode | undefined => {
 		return state.skillNodes.find(
@@ -606,6 +651,25 @@ export function ProgressProvider({
 		dispatch({ type: "CLEAR_JUST_LEVELED_UP" });
 	}, []);
 
+	// Lesson progress helpers
+	const getCompletedLessonsHelper = useCallback(() => {
+		return getCompletedLessons(state.lessonProgress);
+	}, [state.lessonProgress]);
+
+	const isLessonCompletedHelper = useCallback(
+		(lessonId: string) => {
+			return isLessonCompleted(state.lessonProgress, lessonId);
+		},
+		[state.lessonProgress]
+	);
+
+	const getCurrentStepHelper = useCallback(
+		(lessonId: string) => {
+			return getCurrentStep(state.lessonProgress, lessonId);
+		},
+		[state.lessonProgress]
+	);
+
 	const value: ProgressContextType = {
 		progress: state,
 		isProgressLoading,
@@ -631,6 +695,9 @@ export function ProgressProvider({
 		completeCurrentAnimation,
 		justLeveledUp: state.justLeveledUp,
 		clearJustLeveledUp,
+		getCompletedLessons: getCompletedLessonsHelper,
+		isLessonCompleted: isLessonCompletedHelper,
+		getCurrentStep: getCurrentStepHelper,
 	};
 
 	return (

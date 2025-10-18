@@ -15,18 +15,23 @@ const Workspace = () => {
 	// Initialize lesson based on progress
 	useEffect(() => {
 		if (!isProgressLoading) {
+			// Get completed lessons from lessonProgress
+			const completedLessons = Object.entries(progress.lessonProgress)
+				.filter(([_, progress]) => progress.completed)
+				.map(([lessonId, _]) => lessonId);
+
 			// Check if progress has changed (for migration case)
 			const lessonsChanged =
 				JSON.stringify(lastProcessedLessons.current) !==
-				JSON.stringify(progress.completedLessons);
+				JSON.stringify(completedLessons);
 
 			// Initialize on first load, or recalculate if progress changed after init
 			if (!isInitialized || (isInitialized && lessonsChanged)) {
-				lastProcessedLessons.current = [...progress.completedLessons];
+				lastProcessedLessons.current = [...completedLessons];
 
 				// Find the first lesson that hasn't been completed
 				const firstIncompleteIndex = lessons.findIndex(
-					(lesson) => !progress.completedLessons.includes(lesson.id)
+					(lesson) => !completedLessons.includes(lesson.id)
 				);
 
 				// If all lessons are completed, stay on last lesson
@@ -43,7 +48,7 @@ const Workspace = () => {
 				}
 			}
 		}
-	}, [isProgressLoading, progress.completedLessons]);
+	}, [isProgressLoading, progress.lessonProgress]);
 
 	return (
 		<WorkspaceContent

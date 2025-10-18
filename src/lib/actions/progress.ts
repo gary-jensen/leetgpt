@@ -4,7 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 import { validateUUID } from "@/lib/validation";
 import { checkRateLimit, getRateLimitKey, RATE_LIMITS } from "@/lib/rateLimit";
-import { validateLessonIds } from "@/lib/lessonValidation";
+import {
+	validateLessonIds,
+	validateLessonProgress,
+} from "@/lib/lessonValidation";
 import {
 	UserProgress as UserProgressType,
 	buildSkillTreeFromLessons,
@@ -45,40 +48,42 @@ export async function saveUserProgress(
 			};
 		}
 
-		// Validate and filter lesson IDs
-		const lessonValidation = validateLessonIds(progress.completedLessons);
+		// Validate lessonProgress structure
+		const lessonValidation = validateLessonProgress(
+			progress.lessonProgress
+		);
 
 		if (!lessonValidation.allValid) {
 			console.warn(
-				`Invalid lesson IDs filtered out:`,
+				`Invalid lesson progress filtered out:`,
 				lessonValidation.invalid
 			);
 		}
 
-		// Only save xp, level, and validated completedLessons
+		// Only save xp, level, and validated lessonProgress
 		// skillNodes and currentSkillNodeId will be calculated on load
 		await prisma.userProgress.upsert({
 			where: { userId },
 			update: {
 				xp: progress.xp,
 				level: progress.level,
-				completedLessons: lessonValidation.valid,
+				lessonProgress: lessonValidation.valid,
 			},
 			create: {
 				userId,
 				xp: progress.xp,
 				level: progress.level,
-				completedLessons: lessonValidation.valid,
+				lessonProgress: lessonValidation.valid,
 			},
 		});
 
 		return {
 			success: true,
-			filteredLessons:
+			filteredProgress:
 				lessonValidation.invalid.length > 0
 					? {
 							invalid: lessonValidation.invalid,
-							valid: lessonValidation.valid.length,
+							valid: Object.keys(lessonValidation.valid).length,
 					  }
 					: undefined,
 		};
@@ -112,16 +117,18 @@ export async function loadUserProgress(
 			return null;
 		}
 
-		const completedLessons =
-			progress.completedLessons as unknown as string[];
+		const lessonProgress = progress.lessonProgress as unknown as Record<
+			string,
+			{ currentStep: number; completed: boolean }
+		>;
 
-		// Validate and filter lesson IDs from loaded data
-		const lessonValidation = validateLessonIds(completedLessons);
-		const validCompletedLessons = lessonValidation.valid;
+		// Validate and filter lesson progress from loaded data
+		const lessonValidation = validateLessonProgress(lessonProgress);
+		const validLessonProgress = lessonValidation.valid;
 
-		// Calculate current skill node from validated completed lessons
+		// Calculate current skill node from validated lesson progress
 		const currentSkillNodeId = calculateCurrentSkillNodeId(
-			validCompletedLessons,
+			validLessonProgress,
 			lessonMetadata
 		);
 
@@ -129,14 +136,14 @@ export async function loadUserProgress(
 		const skillNodes = buildSkillTreeFromLessons(lessonMetadata);
 		const calculatedSkillNodes = recalculateSkillNodes(
 			skillNodes,
-			validCompletedLessons
+			validLessonProgress
 		);
 
 		return {
 			xp: progress.xp,
 			level: progress.level,
 			currentSkillNodeId,
-			completedLessons: validCompletedLessons,
+			lessonProgress: validLessonProgress,
 			skillNodes: calculatedSkillNodes,
 		};
 	} catch (error) {
@@ -194,9 +201,9 @@ export async function migrateLocalStorageData(
 			};
 		}
 
-		// Validate lesson IDs in local progress
-		const localLessonValidation = validateLessonIds(
-			localProgress.completedLessons
+		// Validate lesson progress in local progress
+		const localLessonValidation = validateLessonProgress(
+			localProgress.lessonProgress
 		);
 
 		// Use transaction to prevent race conditions
@@ -222,39 +229,77 @@ export async function migrateLocalStorageData(
 						userId,
 						xp: localProgress.xp,
 						level: localProgress.level,
-						completedLessons: localLessonValidation.valid,
+						lessonProgress: localLessonValidation.valid,
 					},
 				});
 
 				return {
 					success: true,
 					migrated: true,
-					filteredLessons:
+					filteredProgress:
 						localLessonValidation.invalid.length > 0
 							? {
 									invalid: localLessonValidation.invalid,
-									valid: localLessonValidation.valid.length,
+									valid: Object.keys(
+										localLessonValidation.valid
+									).length,
 							  }
 							: undefined,
 				};
 			}
 
 			// EXISTING USER: Merge guest data with database data
-			const existingLessons =
-				existingProgress.completedLessons as unknown as string[];
-			const existingLessonValidation = validateLessonIds(existingLessons);
+			const existingLessonProgress =
+				existingProgress.lessonProgress as unknown as Record<
+					string,
+					{ currentStep: number; completed: boolean }
+				>;
+			const existingLessonValidation = validateLessonProgress(
+				existingLessonProgress
+			);
+
+			// Merge lesson progress intelligently
+			const mergedLessonProgress = { ...existingLessonValidation.valid };
+
+			// For each lesson in local progress, take the more advanced state
+			Object.entries(localLessonValidation.valid).forEach(
+				([lessonId, localProgress]: [
+					string,
+					{ currentStep: number; completed: boolean }
+				]) => {
+					const existing = mergedLessonProgress[lessonId];
+
+					if (!existing) {
+						// Lesson only exists in local progress
+						mergedLessonProgress[lessonId] = localProgress;
+					} else {
+						// Lesson exists in both - take the more advanced state
+						if (localProgress.completed && !existing.completed) {
+							// Local is completed, existing is not
+							mergedLessonProgress[lessonId] = localProgress;
+						} else if (
+							!localProgress.completed &&
+							!existing.completed
+						) {
+							// Both in progress - take higher step
+							mergedLessonProgress[lessonId] = {
+								currentStep: Math.max(
+									localProgress.currentStep,
+									existing.currentStep
+								),
+								completed: false,
+							};
+						}
+						// If existing is completed, keep it (don't downgrade)
+					}
+				}
+			);
 
 			// Take the most advanced progress from both sources
 			const mergedProgress = {
 				xp: Math.max(existingProgress.xp, localProgress.xp),
 				level: Math.max(existingProgress.level, localProgress.level),
-				// Merge completed lessons (union of both arrays, only valid ones)
-				completedLessons: Array.from(
-					new Set([
-						...existingLessonValidation.valid,
-						...localLessonValidation.valid,
-					])
-				),
+				lessonProgress: mergedLessonProgress,
 			};
 
 			await tx.userProgress.update({
@@ -266,14 +311,14 @@ export async function migrateLocalStorageData(
 				success: true,
 				migrated: true,
 				merged: true,
-				filteredLessons:
+				filteredProgress:
 					localLessonValidation.invalid.length > 0 ||
 					existingLessonValidation.invalid.length > 0
 						? {
 								localInvalid: localLessonValidation.invalid,
 								existingInvalid:
 									existingLessonValidation.invalid,
-								valid: mergedProgress.completedLessons.length,
+								valid: Object.keys(mergedLessonProgress).length,
 						  }
 						: undefined,
 			};

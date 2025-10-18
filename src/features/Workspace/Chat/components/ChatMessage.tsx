@@ -6,12 +6,14 @@ interface ChatMessageProps {
 	isStreaming: boolean;
 	displayedWords: string[];
 	messagesEndRef?: React.RefObject<HTMLDivElement | null>;
+	isLastMessage: boolean;
 }
 
 export const ChatMessage = ({
 	message,
 	isStreaming,
 	messagesEndRef,
+	isLastMessage,
 }: ChatMessageProps) => {
 	const hasContent = message.content.trim().length > 0;
 
@@ -52,6 +54,7 @@ export const ChatMessage = ({
 				content={message.content}
 				isStreaming={isStreaming}
 				enableTypingAnimation={false}
+				isLastMessage={isLastMessage}
 				messagesEndRef={messagesEndRef}
 			/>
 		</div>

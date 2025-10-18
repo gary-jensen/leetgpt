@@ -16,6 +16,7 @@ import {
 	trackSignInButtonClick,
 } from "@/lib/analytics";
 import { UserIcon } from "lucide-react";
+import SoundToggle from "./SoundToggle";
 
 export default function AuthButton() {
 	const { data: session, status } = useSession();
@@ -73,13 +74,16 @@ export default function AuthButton() {
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-56">
 					<DropdownMenuLabel>
-						<div className="flex flex-col space-y-1">
-							<p className="text-sm font-medium leading-none">
-								{session.user.name}
-							</p>
-							<p className="text-xs leading-none text-muted-foreground">
-								{session.user.email}
-							</p>
+						<div className="flex justify-between">
+							<div className="flex flex-col space-y-1">
+								<p className="text-sm font-medium leading-none">
+									{session.user.name}
+								</p>
+								<p className="text-xs leading-none text-muted-foreground">
+									{session.user.email}
+								</p>
+							</div>
+							<SoundToggle />
 						</div>
 					</DropdownMenuLabel>
 					<DropdownMenuSeparator />

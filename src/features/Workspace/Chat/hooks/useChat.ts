@@ -168,7 +168,7 @@ export const useChat = (): ChatHookReturn => {
 			}));
 
 			// Stream words one by one
-			const streamWords = () => {
+			const streamWords = async (): Promise<void> => {
 				if (currentWordIndex < words.length) {
 					const currentContent = words
 						.slice(0, currentWordIndex + 1)
@@ -188,17 +188,21 @@ export const useChat = (): ChatHookReturn => {
 					}));
 
 					currentWordIndex++;
-					setTimeout(streamWords, streamingSpeed);
+					await new Promise((resolve) =>
+						setTimeout(resolve, streamingSpeed)
+					);
+					await streamWords();
 				} else {
 					// Streaming complete
 					setState((prev) => ({
 						...prev,
 						streamingMessageId: null,
 					}));
+					return;
 				}
 			};
 
-			streamWords();
+			await streamWords();
 		},
 		[]
 	);

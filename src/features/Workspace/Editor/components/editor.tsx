@@ -81,7 +81,7 @@ const Editor = ({
 							code={code}
 							setCode={setCode}
 							className="w-full md:flex-1 bg-background [&>*]:flex-1"
-							focusOnLoad={false}
+							focusOnLoad={true}
 						/>
 						<div className="flex md:hidden xl:flex w-full h-[64px] px-3 bg-background-2 items-center gap-2 border-t-1">
 							<Button

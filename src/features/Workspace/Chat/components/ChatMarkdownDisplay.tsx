@@ -72,6 +72,7 @@ interface ChatMarkdownDisplayProps {
 	isStreaming?: boolean;
 	enableTypingAnimation?: boolean;
 	messagesEndRef?: React.RefObject<HTMLDivElement | null>;
+	isLastMessage?: boolean;
 }
 
 export const ChatMarkdownDisplay = ({
@@ -79,6 +80,7 @@ export const ChatMarkdownDisplay = ({
 	className,
 	isStreaming = false,
 	messagesEndRef,
+	isLastMessage = false,
 }: ChatMarkdownDisplayProps) => {
 	const [processedHtml, setProcessedHtml] = useState<string>("");
 	const [isProcessing, setIsProcessing] = useState(false);
@@ -168,7 +170,7 @@ export const ChatMarkdownDisplay = ({
 	}, [isStreaming, isProcessing, processedHtml, messagesEndRef]);
 
 	// Show loading state while processing
-	if (isProcessing && !processedHtml) {
+	if (isProcessing && !processedHtml && isLastMessage) {
 		return (
 			<div className={cn("chat-markdown-loading", className)}>
 				<div className="flex items-center space-x-2">

@@ -149,16 +149,26 @@ const validateProgress = (data: any): data is UserProgress => {
 	if (typeof data.xp !== "number") return false;
 	if (typeof data.level !== "number") return false;
 	if (typeof data.currentSkillNodeId !== "string") return false;
-	if (!Array.isArray(data.completedLessons)) return false;
+	if (!data.lessonProgress || typeof data.lessonProgress !== "object")
+		return false;
 	if (!Array.isArray(data.skillNodes)) return false;
 
 	// Validate XP and level ranges
 	if (data.xp < 0 || data.xp > 1000000) return false;
 	if (data.level < 1 || data.level > 100) return false;
 
-	// Validate completedLessons array contains only strings
-	if (!data.completedLessons.every((l: any) => typeof l === "string"))
-		return false;
+	// Validate lessonProgress object structure
+	const lessonProgress = data.lessonProgress;
+	for (const [lessonId, progress] of Object.entries(lessonProgress)) {
+		if (typeof lessonId !== "string") return false;
+		if (!progress || typeof progress !== "object") return false;
+		if (
+			typeof (progress as any).currentStep !== "number" ||
+			(progress as any).currentStep < 0
+		)
+			return false;
+		if (typeof (progress as any).completed !== "boolean") return false;
+	}
 
 	// Validate skillNodes array structure
 	if (
@@ -316,7 +326,7 @@ export const loadProgressFromStorage =
 				xp: parsedData.xp,
 				level: parsedData.level,
 				currentSkillNodeId: parsedData.currentSkillNodeId,
-				completedLessons: parsedData.completedLessons,
+				lessonProgress: parsedData.lessonProgress,
 				skillNodes: parsedData.skillNodes,
 			};
 

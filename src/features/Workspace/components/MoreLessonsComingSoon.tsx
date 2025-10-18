@@ -101,7 +101,11 @@ export default function MoreLessonsComingSoon() {
 									<BookOpen className="h-8 w-8 text-blue-600 dark:text-blue-400" />
 								</div>
 								<div className="text-2xl font-bold text-text-1">
-									{progress.completedLessons.length}
+									{
+										Object.values(
+											progress.lessonProgress
+										).filter((p) => p.completed).length
+									}
 								</div>
 								<div className="text-sm text-text-2">
 									Lessons Completed
