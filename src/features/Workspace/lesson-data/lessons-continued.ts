@@ -1,6 +1,6 @@
 import { Lesson } from "./lesson-types";
 
-const lessonsContinued: Lesson[] = [
+export const incompleteLessons: Lesson[] = [
 	// ===== CONDITIONAL THINKING NODE =====
 	{
 		id: "lesson-20",

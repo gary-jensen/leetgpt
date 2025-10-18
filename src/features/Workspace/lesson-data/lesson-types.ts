@@ -1,10 +1,11 @@
-import { ChatMessage } from "./Chat/types/chat";
-import { Test } from "./types/test-types";
+import { ChatMessage } from "../Chat/types/chat";
+import { Test } from "../types/test-types";
 
 export interface Lesson {
 	id: string;
 	title: string;
 	skillNodeId: string;
+	locked?: boolean;
 	xpReward: number;
 	stepXpReward: number;
 	steps: Step[];

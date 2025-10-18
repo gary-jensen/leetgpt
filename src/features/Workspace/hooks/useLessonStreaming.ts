@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useState, useRef } from "react";
-import { Lesson, LessonStreaming, TestResult } from "../lesson-types";
+import {
+	Lesson,
+	LessonStreaming,
+	TestResult,
+} from "../lesson-data/lesson-types";
 import { useChat } from "../Chat/hooks/useChat";
 import { createLessonStreamer } from "../Chat/utils/lessonStreamer";
 import {
@@ -19,6 +23,7 @@ interface UseLessonStreamingProps {
 	setCode: (code: string) => void;
 	isInitialized?: boolean;
 	setAttemptsCount: (count: number) => void;
+	onAllLessonsCompleted?: () => void;
 }
 
 export const useLessonStreaming = ({
@@ -31,6 +36,7 @@ export const useLessonStreaming = ({
 	setCode,
 	isInitialized = true,
 	setAttemptsCount,
+	onAllLessonsCompleted,
 }: UseLessonStreamingProps): LessonStreaming => {
 	// Chat state and functionality
 	const {
@@ -306,7 +312,13 @@ export const useLessonStreaming = ({
 					);
 					setStartTime(now);
 					showXPGain(currentLesson.xpReward);
-					// Finished
+
+					// Trigger callback for all lessons completed
+					if (onAllLessonsCompleted) {
+						setTimeout(() => {
+							onAllLessonsCompleted();
+						}, 2000); // Wait for XP animation to complete
+					}
 				}
 			} else {
 				// send failed results to the AI, ask to provide feedback
@@ -327,6 +339,7 @@ export const useLessonStreaming = ({
 			showXPGain,
 			queueAnimation,
 			clearMessages,
+			onAllLessonsCompleted,
 		]
 	);
 

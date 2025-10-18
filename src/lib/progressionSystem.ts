@@ -1,5 +1,7 @@
 // Progression system for XP, levels, and skill tree
 
+import getNodeName from "@/features/Workspace/lesson-data/nodes";
+
 export interface SkillNode {
 	id: string;
 	name: string;
@@ -118,8 +120,10 @@ export function buildSkillTreeFromLessons(
 		const skillNodeId = lesson.skillNodeId;
 		if (!skillNodeMap.has(skillNodeId)) {
 			// Capitalize the skill node name
-			const name =
-				skillNodeId.charAt(0).toUpperCase() + skillNodeId.slice(1);
+			// const name =
+			// 	(skillNodeId.charAt(0).toUpperCase() + skillNodeId.slice(1));
+			const name = getNodeName(skillNodeId);
+
 			skillNodeMap.set(skillNodeId, { lessons: [], name });
 		}
 		skillNodeMap.get(skillNodeId)!.lessons.push(lesson.id);

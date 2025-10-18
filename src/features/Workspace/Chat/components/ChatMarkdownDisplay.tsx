@@ -115,7 +115,7 @@ export const ChatMarkdownDisplay = ({
 				setProcessedHtml(html);
 				lastProcessedContent.current = content;
 			} catch (error) {
-				console.error("Error processing markdown:", error);
+				// console.error("Error processing markdown:", error);
 				// Fallback to plain text if markdown processing fails
 				setProcessedHtml(
 					content.replace(/</g, "&lt;").replace(/>/g, "&gt;")

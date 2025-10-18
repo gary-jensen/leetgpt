@@ -1,7 +1,7 @@
 import Analytics from "@/components/Analytics";
 import SessionProvider from "@/components/SessionProvider";
 import { ProgressProvider } from "@/contexts/ProgressContext";
-import { lessons } from "@/features/Workspace/lessons";
+import { lessonMetadata } from "@/features/Workspace/lesson-data/lessons";
 import { getSession, setLessonMetadata } from "@/lib/auth";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
@@ -39,12 +39,6 @@ export const metadata: Metadata = {
 			"Master JavaScript through hands-on, interactive lessons. Learn by doing with real-time code execution and gamified progression.",
 	},
 };
-
-// Extract only the metadata we need (id and skillNodeId) from lessons
-const lessonMetadata = lessons.map((lesson) => ({
-	id: lesson.id,
-	skillNodeId: lesson.skillNodeId,
-}));
 
 // Set lesson metadata in auth config so it's available in JWT callback
 setLessonMetadata(lessonMetadata);

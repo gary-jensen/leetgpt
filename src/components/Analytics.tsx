@@ -23,7 +23,7 @@ export default function Analytics() {
 		// Create guest ID for unauthenticated users only
 		if (status === "unauthenticated") {
 			getOrCreateGuestId().catch((error) => {
-				console.error("Failed to initialize guest ID:", error);
+				// console.error("Failed to initialize guest ID:", error);
 			});
 		}
 	}, [status]);

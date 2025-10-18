@@ -34,7 +34,7 @@ export async function getUserEvents(
 			hasMore: offset + limit < total,
 		};
 	} catch (error) {
-		console.error("Failed to fetch user events:", error);
+		// console.error("Failed to fetch user events:", error);
 		return { success: false, error: "Failed to fetch events" };
 	}
 }
@@ -61,7 +61,7 @@ export async function getEventsByCategory(
 
 		return { success: true, events };
 	} catch (error) {
-		console.error("Failed to fetch events by category:", error);
+		// console.error("Failed to fetch events by category:", error);
 		return { success: false, error: "Failed to fetch events" };
 	}
 }
@@ -133,7 +133,7 @@ export async function getEventStats(dateFrom?: Date, dateTo?: Date) {
 			},
 		};
 	} catch (error) {
-		console.error("Failed to fetch event stats:", error);
+		// console.error("Failed to fetch event stats:", error);
 		return { success: false, error: "Failed to fetch stats" };
 	}
 }
@@ -163,7 +163,7 @@ export async function getSessionAnalytics(sessionId: string) {
 			eventCount: events.length,
 		};
 	} catch (error) {
-		console.error("Failed to fetch session analytics:", error);
+		// console.error("Failed to fetch session analytics:", error);
 		return { success: false, error: "Failed to fetch session analytics" };
 	}
 }
@@ -186,7 +186,7 @@ export async function getGuestEvents(guestId: string, limit: number = 100) {
 
 		return { success: true, events };
 	} catch (error) {
-		console.error("Failed to fetch guest events:", error);
+		// console.error("Failed to fetch guest events:", error);
 		return { success: false, error: "Failed to fetch guest events" };
 	}
 }

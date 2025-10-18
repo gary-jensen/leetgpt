@@ -1,6 +1,6 @@
 // import { Question, HtmlCssTest } from "@/types/course";
 
-import { TestResult } from "../../lesson-types";
+import { TestResult } from "../../lesson-data/lesson-types";
 import { Test } from "../../types/test-types";
 
 /**

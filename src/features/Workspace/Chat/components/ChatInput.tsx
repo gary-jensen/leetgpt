@@ -1,4 +1,4 @@
-import { LessonStreaming } from "../../lesson-types";
+import { LessonStreaming } from "../../lesson-data/lesson-types";
 
 interface ChatInputProps {
 	lessonStreaming: LessonStreaming;

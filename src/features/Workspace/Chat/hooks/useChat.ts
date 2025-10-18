@@ -105,7 +105,7 @@ export const useChat = (): ChatHookReturn => {
 				}
 			},
 			(error) => {
-				console.error("Error sending message:", error);
+				// console.error("Error sending message:", error);
 				const errorMessage: ChatMessage = {
 					id: aiMessageId,
 					role: "assistant",

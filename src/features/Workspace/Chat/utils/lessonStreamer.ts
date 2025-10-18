@@ -1,4 +1,4 @@
-import { Lesson, Step } from "../../lesson-types";
+import { Lesson, Step } from "../../lesson-data/lesson-types";
 
 export interface LessonStreamOptions {
 	streamingSpeed?: number;

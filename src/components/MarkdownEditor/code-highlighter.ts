@@ -226,7 +226,7 @@ export async function highlightInlineCode(text: string): Promise<string> {
 
 		return highlightedText;
 	} catch (error) {
-		console.error("Failed to highlight inline code:", error);
+		// console.error("Failed to highlight inline code:", error);
 		return text; // Return original text if highlighting fails
 	}
 }

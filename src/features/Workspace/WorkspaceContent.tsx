@@ -3,11 +3,13 @@
 import Editor from "./Editor/components/editor";
 import Chat from "./Chat/components/chat";
 import useConsole from "./Console/hooks/useConsole";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLessonStreaming } from "./hooks/useLessonStreaming";
 import { ProgressBar } from "./components/ProgressBar";
 import AnimationManager from "../../components/Rewards/AnimationManager";
-import { Lesson } from "./lesson-types";
+import { Lesson } from "./lesson-data/lesson-types";
+import MoreLessonsComingSoon from "./components/MoreLessonsComingSoon";
+import { useProgress } from "../../contexts/ProgressContext";
 
 interface WorkspaceContentProps {
 	lessons: Lesson[];
@@ -25,8 +27,20 @@ export default function WorkspaceContent({
 	const [currentStepIndex, setCurrentStepIndex] = useState(0);
 	const [code, setCode] = useState("");
 	const [attemptsCount, setAttemptsCount] = useState(0);
+	const [allLessonsCompleted, setAllLessonsCompleted] = useState(false);
 
+	const { progress } = useProgress();
 	const currentLesson = lessons[currentLessonIndex];
+
+	// Check if all lessons are completed
+	useEffect(() => {
+		if (isInitialized && progress.completedLessons.length > 0) {
+			const allCompleted = lessons.every((lesson) =>
+				progress.completedLessons.includes(lesson.id)
+			);
+			setAllLessonsCompleted(allCompleted);
+		}
+	}, [isInitialized, progress.completedLessons, lessons]);
 
 	// Use our custom hook for all lesson streaming logic
 	const lessonStreaming = useLessonStreaming({
@@ -39,6 +53,7 @@ export default function WorkspaceContent({
 		setCode,
 		isInitialized,
 		setAttemptsCount,
+		onAllLessonsCompleted: () => setAllLessonsCompleted(true),
 	});
 
 	const { iframeRef, handleTest, isExecuting } = useConsole(
@@ -50,6 +65,11 @@ export default function WorkspaceContent({
 		setAttemptsCount,
 		lessonStreaming.addSystemMessage
 	);
+
+	// Show coming soon screen if all lessons are completed
+	if (allLessonsCompleted) {
+		return <MoreLessonsComingSoon />;
+	}
 
 	return (
 		<div className="w-screen h-fit md:h-screen md:max-h-screen flex flex-col bg-background-4">

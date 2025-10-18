@@ -1,4 +1,4 @@
-import { TestResult } from "../../lesson-types";
+import { TestResult } from "../../lesson-data/lesson-types";
 import { getAIFeedback as getAIFeedbackServer } from "@/lib/actions/aiFeedback";
 import { Test } from "../../types/test-types";
 
@@ -109,7 +109,7 @@ export const getAIFeedback = async (
 		const response = await getAIFeedbackServer(convertedRequest);
 		return response;
 	} catch (error) {
-		console.error("Error getting AI feedback:", error);
+		// console.error("Error getting AI feedback:", error);
 		// Check if there's a syntax error in the test results
 		const hasSyntaxError =
 			request.testResults[0]?.error &&

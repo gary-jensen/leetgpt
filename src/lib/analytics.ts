@@ -75,7 +75,7 @@ export const trackEvent = (
 		guestId: getGuestId(),
 		isDev,
 	}).catch((error) => {
-		console.error("Failed to save event to database:", error);
+		// console.error("Failed to save event to database:", error);
 	});
 };
 

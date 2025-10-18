@@ -4,7 +4,7 @@
  */
 
 // import { mockLessons } from "@/features/Workspace/mock-lessons";
-import { lessons } from "@/features/Workspace/lessons";
+import { lessons } from "@/features/Workspace/lesson-data/lessons";
 
 // Export lesson metadata for use in other modules
 export const lessonMetadata = lessons.map((lesson) => ({

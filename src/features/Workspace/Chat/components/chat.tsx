@@ -2,7 +2,7 @@
 
 import { ChatHeader } from "./ChatHeader";
 import { ChatMessageList } from "./ChatMessageList";
-import { LessonStreaming } from "../../lesson-types";
+import { LessonStreaming } from "../../lesson-data/lesson-types";
 
 interface ChatProps {
 	lessonStreaming: LessonStreaming;

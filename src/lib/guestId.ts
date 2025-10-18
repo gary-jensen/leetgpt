@@ -63,7 +63,7 @@ async function encryptGuestId(guestId: string): Promise<string> {
 		const combined = result.iv + ":" + result.encrypted;
 		return btoa(combined);
 	} catch (error) {
-		console.error("Encryption failed:", error);
+		// console.error("Encryption failed:", error);
 		// Fallback: return the plain guest ID
 		return guestId;
 	}
@@ -135,7 +135,7 @@ async function initializeCache(): Promise<void> {
 			}
 		}
 	} catch (error) {
-		console.error("Failed to initialize guest ID cache:", error);
+		// console.error("Failed to initialize guest ID cache:", error);
 		// Clear any potentially corrupted data
 		clearGuestId();
 	}
@@ -231,7 +231,7 @@ export async function getOrCreateGuestId(): Promise<string> {
 
 		return guestId;
 	} catch (error) {
-		console.error("Failed to get/create guest ID:", error);
+		// console.error("Failed to get/create guest ID:", error);
 		// Return a session-based ID as fallback
 		return "guest_" + Date.now();
 	}
@@ -249,7 +249,7 @@ export function clearGuestId(): void {
 		cachedGuestId = null;
 		cacheInitialized = false;
 	} catch (error) {
-		console.error("Failed to clear guest ID:", error);
+		// console.error("Failed to clear guest ID:", error);
 	}
 }
 

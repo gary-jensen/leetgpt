@@ -5,7 +5,7 @@
  * with the currentLesson and other custom content.
  */
 
-import { Lesson } from "../../lesson-types";
+import { Lesson } from "../../lesson-data/lesson-types";
 import { createLessonStreamer } from "../utils/lessonStreamer";
 
 // Example lesson data

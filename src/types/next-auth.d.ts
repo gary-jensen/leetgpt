@@ -9,6 +9,7 @@ declare module "next-auth" {
 			name?: string | null;
 			image?: string | null;
 			role?: string | null;
+			emailNotifications?: boolean;
 		};
 		progress?: UserProgress | null;
 	}
@@ -19,6 +20,7 @@ declare module "next-auth" {
 		name?: string | null;
 		image?: string | null;
 		role?: string | null;
+		emailNotifications?: boolean;
 	}
 }
 

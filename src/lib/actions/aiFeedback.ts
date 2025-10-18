@@ -1,7 +1,7 @@
 "use server";
 
 import OpenAI from "openai";
-import { TestResult } from "@/features/Workspace/lesson-types";
+import { TestResult } from "@/features/Workspace/lesson-data/lesson-types";
 import {
 	validateJsonPayloadSize,
 	sanitizeUserCode,
@@ -567,7 +567,6 @@ Give one sentence hint about what needs to be fixed to pass the first failed tes
 			};
 		}
 
-		console.log(prompt);
 		// Call OpenAI API with optimizations for speed
 		const completion = await openai.chat.completions.create({
 			model: "gpt-4o-mini",
@@ -601,7 +600,7 @@ Give one sentence hint about what needs to be fixed to pass the first failed tes
 
 		return { feedback };
 	} catch (error) {
-		console.error("Error processing AI feedback request:", error);
+		// console.error("Error processing AI feedback request:", error);
 		return {
 			feedback:
 				"I'm sorry, I encountered an error while processing your request. Please try again.",

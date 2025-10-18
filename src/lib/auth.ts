@@ -54,6 +54,8 @@ export const authOptions: AuthOptions = {
 
 				session.user.id = userWithProgress.id;
 				session.user.role = userWithProgress.role;
+				session.user.emailNotifications =
+					userWithProgress.emailNotifications;
 
 				// Load and calculate progress
 				if (userWithProgress.progress) {

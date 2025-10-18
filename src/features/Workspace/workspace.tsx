@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useProgress } from "../../contexts/ProgressContext";
 import WorkspaceContent from "./WorkspaceContent";
 // import { mockLessons as lessons } from "./mock-lessons";
-import { lessons } from "./lessons";
+import { lessons } from "./lesson-data/lessons";
 
 const Workspace = () => {
 	const { progress, isProgressLoading } = useProgress();

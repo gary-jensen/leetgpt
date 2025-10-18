@@ -13,7 +13,14 @@ import {
 	GlobeIcon,
 	ZapIcon,
 	XIcon,
+	ListIcon,
+	BoxesIcon,
+	CircleQuestionMarkIcon,
+	DatabaseZapIcon,
+	BracesIcon,
+	VariableIcon,
 } from "lucide-react";
+import { SkillNode } from "@/lib/progressionSystem";
 
 interface SkillTreeOverlayVerticalProps {
 	isOpen: boolean;
@@ -25,20 +32,35 @@ interface SkillTreeOverlayVerticalProps {
 const getSkillIcon = (nodeType: string) => {
 	switch (nodeType.toLowerCase()) {
 		case "variables":
-		case "variable":
 			return BoxIcon;
-		case "functions":
-		case "function":
+		case "redefining-variables":
+			return BoxesIcon;
+		case "conditionals":
+			return CircleQuestionMarkIcon;
+
+		case "function-basics":
 			return ParenthesesIcon;
+		case "function-advanced":
+			return VariableIcon;
 		case "arrays":
 		case "array":
+		case "array-basics":
+		case "array-advanced":
 			return DatabaseIcon;
+		case "array-methods":
+		case "array-method":
+			// return ListIcon;
+			return DatabaseZapIcon;
+		case "loop":
+		case "loops":
+		case "loop-basics":
+		case "loop-advanced":
+			return ZapIcon;
 		case "objects":
 		case "object":
-			return CircleIcon;
-		case "loops":
-		case "loop":
-			return ZapIcon;
+		case "object-basics":
+		case "object-advanced":
+			return BracesIcon;
 		case "dom":
 		case "html":
 			return GlobeIcon;
@@ -82,6 +104,58 @@ const calculateWavyVerticalLayout = (
 	return positions;
 };
 
+const fakeNodes: SkillNode[] = [
+	{
+		id: "conditionals",
+		name: "Conditional Thinking",
+		lessons: [],
+		progress: 0,
+		completed: false,
+	},
+	{
+		id: "function-basics",
+		name: "Function Basics",
+		lessons: [],
+		progress: 0,
+		completed: false,
+	},
+	{
+		id: "function-advanced",
+		name: "Advanced Functions",
+		lessons: [],
+		progress: 0,
+		completed: false,
+	},
+	{
+		id: "arrays",
+		name: "Arrays",
+		lessons: [],
+		progress: 0,
+		completed: false,
+	},
+	{
+		id: "array-methods",
+		name: "Array Methods",
+		lessons: [],
+		progress: 0,
+		completed: false,
+	},
+	{
+		id: "loops",
+		name: "Loops",
+		lessons: [],
+		progress: 0,
+		completed: false,
+	},
+	{
+		id: "objects",
+		name: "Objects",
+		lessons: [],
+		progress: 0,
+		completed: false,
+	},
+];
+
 export const SkillTreeOverlayVertical: React.FC<
 	SkillTreeOverlayVerticalProps
 > = ({ isOpen, onClose, originPosition }) => {
@@ -93,6 +167,8 @@ export const SkillTreeOverlayVertical: React.FC<
 	const overlayRef = useRef<HTMLDivElement>(null);
 	const contentRef = useRef<HTMLDivElement>(null);
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+	const nodes = [...progress.skillNodes, ...fakeNodes];
 
 	// Detect mobile screen size
 	useEffect(() => {
@@ -106,10 +182,7 @@ export const SkillTreeOverlayVertical: React.FC<
 		return () => window.removeEventListener("resize", checkMobile);
 	}, []);
 
-	const positions = calculateWavyVerticalLayout(
-		progress.skillNodes.length,
-		isMobile
-	);
+	const positions = calculateWavyVerticalLayout(nodes.length, isMobile);
 
 	// Find current node index
 	const currentNodeIndex = progress.skillNodes.findIndex(
@@ -267,27 +340,24 @@ export const SkillTreeOverlayVertical: React.FC<
 				{/* Tree container - wavy path */}
 				<div
 					ref={contentRef}
-					className="relative"
+					className="relative mb-128"
 					style={{
 						height: `${
-							progress.skillNodes.length *
-								(isMobile ? 120 : 180) +
-							200
+							nodes.length * (isMobile ? 120 : 180) + 200
 						}px`, // Dynamic height based on number of nodes and mobile spacing
 						minHeight: "100%",
 					}}
 				>
 					{/* Nodes */}
 					<div className="relative w-full h-full">
-						{progress.skillNodes.map((node, index) => {
+						{nodes.map((node, index) => {
 							const pos = positions[index];
-							const IconComponent = getSkillIcon(node.name);
+							const IconComponent = getSkillIcon(node.id);
 							const isActive =
 								node.id === progress.currentSkillNodeId;
 							const isCompleted = node.completed;
 							const isLocked =
-								index > 0 &&
-								!progress.skillNodes[index - 1].completed;
+								index > 0 && !nodes[index - 1].completed;
 
 							return (
 								<div
@@ -402,6 +472,9 @@ export const SkillTreeOverlayVertical: React.FC<
 								</div>
 							);
 						})}
+						<h2 className="text-4xl font-bold absolute bottom-[-48px] left-1/2 -translate-x-1/2">
+							More Coming Soon!
+						</h2>
 					</div>
 				</div>
 			</div>

@@ -83,7 +83,7 @@ export async function saveUserProgress(
 					: undefined,
 		};
 	} catch (error) {
-		console.error("Failed to save user progress:", error);
+		// console.error("Failed to save user progress:", error);
 		return { success: false, error: "Failed to save progress" };
 	}
 }
@@ -140,7 +140,7 @@ export async function loadUserProgress(
 			skillNodes: calculatedSkillNodes,
 		};
 	} catch (error) {
-		console.error("Failed to load user progress:", error);
+		// console.error("Failed to load user progress:", error);
 		return null;
 	}
 }
@@ -281,7 +281,7 @@ export async function migrateLocalStorageData(
 
 		return result;
 	} catch (error) {
-		console.error("Failed to migrate localStorage data:", error);
+		// console.error("Failed to migrate localStorage data:", error);
 		return { success: false, error: "Failed to migrate data" };
 	}
 }

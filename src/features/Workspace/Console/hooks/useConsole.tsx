@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CodeExecutor } from "../lib/codeExecutor";
 // import { TestValidator } from "../lib/testValidator";
-import { Lesson, TestResult } from "../../lesson-types";
+import { Lesson, TestResult } from "../../lesson-data/lesson-types";
 import { ExecutionResult } from "../lib/types";
 import { questionTestDetailed } from "../lib/questionTest";
 import {
@@ -60,7 +60,7 @@ const useConsole = (
 			const result = await executorRef.current.executeCode(code, false);
 			setLastResult(result);
 		} catch (error) {
-			console.error("Execution failed:", error);
+			// console.error("Execution failed:", error);
 			setLastResult({
 				success: false,
 				error: error instanceof Error ? error.message : "Unknown error",
@@ -172,7 +172,7 @@ const useConsole = (
 				handleTestResults(testResults);
 			}
 		} catch (error) {
-			console.error("Test execution failed:", error);
+			// console.error("Test execution failed:", error);
 			setLastResult({
 				success: false,
 				error: error instanceof Error ? error.message : "Unknown error",

@@ -45,7 +45,7 @@ export async function trackEventWithDeviceData(eventData: {
 			metadata: enhancedMetadata,
 		});
 	} catch (error) {
-		console.error("Failed to track event with device data:", error);
+		// console.error("Failed to track event with device data:", error);
 		return { success: false, error: "Failed to track event" };
 	}
 }

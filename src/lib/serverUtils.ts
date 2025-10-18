@@ -29,7 +29,7 @@ export async function getClientIP(): Promise<string | null> {
 
 		return null;
 	} catch (error) {
-		console.error("Failed to extract client IP:", error);
+		// console.error("Failed to extract client IP:", error);
 		return null;
 	}
 }
@@ -64,7 +64,7 @@ export async function getUserAgent(): Promise<string | null> {
 		const headersList = await headers();
 		return headersList.get("user-agent");
 	} catch (error) {
-		console.error("Failed to extract user agent:", error);
+		// console.error("Failed to extract user agent:", error);
 		return null;
 	}
 }
@@ -77,8 +77,7 @@ export async function getReferer(): Promise<string | null> {
 		const headersList = await headers();
 		return headersList.get("referer");
 	} catch (error) {
-		console.error("Failed to extract referer:", error);
+		// console.error("Failed to extract referer:", error);
 		return null;
 	}
 }
-

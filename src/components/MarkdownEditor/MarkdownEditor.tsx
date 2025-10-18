@@ -80,7 +80,7 @@ export default function MarkdownEditor({
 				setHtml(processedHtml);
 				onChange?.(textToProcess, processedHtml);
 			} catch (error) {
-				console.error("Failed to process markdown:", error);
+				// console.error("Failed to process markdown:", error);
 				setHtml(
 					`<p style="color: red;">Error processing markdown: ${error}</p>`
 				);

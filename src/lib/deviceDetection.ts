@@ -156,7 +156,7 @@ export async function getClientIP(): Promise<string | null> {
 
 		return ip;
 	} catch (error) {
-		console.error("Error getting client IP:", error);
+		// console.error("Error getting client IP:", error);
 		return null;
 	}
 }
@@ -170,7 +170,7 @@ export async function getUserAgent(): Promise<string | null> {
 		const headersList = await headers();
 		return headersList.get("user-agent");
 	} catch (error) {
-		console.error("Error getting user agent:", error);
+		// console.error("Error getting user agent:", error);
 		return null;
 	}
 }
@@ -184,7 +184,7 @@ export async function getReferrer(): Promise<string | null> {
 		const headersList = await headers();
 		return headersList.get("referer");
 	} catch (error) {
-		console.error("Error getting referrer:", error);
+		// console.error("Error getting referrer:", error);
 		return null;
 	}
 }
@@ -241,7 +241,7 @@ export async function collectDeviceData(): Promise<DeviceData | null> {
 
 		return deviceData;
 	} catch (error) {
-		console.error("Error collecting device data:", error);
+		// console.error("Error collecting device data:", error);
 		return null;
 	}
 }

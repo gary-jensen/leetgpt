@@ -140,7 +140,7 @@ export async function saveAnalyticsEvent(eventData: AnalyticsEventData) {
 
 		return { success: true };
 	} catch (error) {
-		console.error("Failed to save analytics event:", error);
+		// console.error("Failed to save analytics event:", error);
 		// Don't throw - we don't want analytics failures to break the app
 		return { success: false, error: "Failed to save analytics event" };
 	}
@@ -272,7 +272,7 @@ export async function saveAnalyticsEventBatch(events: AnalyticsEventData[]) {
 
 		return { success: true, count: events.length };
 	} catch (error) {
-		console.error("Failed to save analytics event batch:", error);
+		// console.error("Failed to save analytics event batch:", error);
 		return { success: false, error: "Failed to save analytics events" };
 	}
 }

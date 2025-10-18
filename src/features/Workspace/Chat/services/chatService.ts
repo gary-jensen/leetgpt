@@ -46,10 +46,10 @@ export const streamMessage = async (
 							const data = JSON.parse(line.slice(6));
 							onChunk(data);
 						} catch (parseError) {
-							console.error(
-								"Error parsing stream data:",
-								parseError
-							);
+							// console.error(
+							// 	"Error parsing stream data:",
+							// 	parseError
+							// );
 						}
 					}
 				}
