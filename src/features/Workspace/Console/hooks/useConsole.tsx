@@ -116,15 +116,17 @@ const useConsole = (
 					return result;
 				}) || [];
 
-			// Create result array like old system: [testResults, tracked, calls]
+			// Create result array like old system: [testResults, tracked, calls, newTracked]
 			const oldSystemResult: [
 				any[],
 				{ name: string; value: any }[],
-				any[]
+				any[],
+				any?
 			] = [
 				testResultArray,
 				result.__bs_tracked || [],
 				result.__bs_calls || [],
+				result.tracked, // Pass the new tracked data
 			];
 
 			const testResults = currentQuestion.tests

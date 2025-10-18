@@ -274,7 +274,7 @@ export const questionTestDetailed = (
 	tests: Test[],
 	currentCode: string,
 	// currentChoice: string,
-	result: [any[], { name: string; value: any }[], any[]], // [testResults, tracked, calls]
+	result: [any[], { name: string; value: any }[], any[], any?], // [testResults, tracked, calls, newTracked]
 	logs: string[]
 ): TestResult[] => {
 	// Guard against undefined question
@@ -752,18 +752,28 @@ export const questionTestDetailed = (
 			case "variableReassignment":
 				// Check both the final value and the assignment method
 				let valueMatches = false;
+				let methodMatches = true; // Default to true if no method specified
 
-				// Check the final value
+				// Get the tracked data from the new system
+				const tracked = result[1]; // Old system tracked data
+				const newTracked = result[3]; // New system tracked data (if available)
+
+				// Try to get variable trace from new system first, fallback to old system
+				let variableTrace: any[] = [];
 				if (
-					testResult === undefined &&
-					test.expectedValue === undefined
+					newTracked &&
+					newTracked.variableTrace &&
+					newTracked.variableTrace[test.variable]
 				) {
-					valueMatches = true;
-				} else {
-					valueMatches = deepEqual(testResult, test.expectedValue);
+					variableTrace = newTracked.variableTrace[test.variable];
+				} else if (tracked) {
+					// Fallback to old system - find all assignments for this variable
+					variableTrace = tracked
+						.filter((t: any) => t.name === test.variable)
+						.map((t: any) => t.value);
 				}
 
-				let methodMatches = true; // Default to true if no method specified
+				// Check if we have the method specified
 				if (test.method?.operator) {
 					const { operator, operand } = test.method;
 					let methodPattern = "";
@@ -815,6 +825,35 @@ export const questionTestDetailed = (
 							// Fallback - just check if the variable appears in the code
 							methodMatches = currentCode.includes(test.variable);
 						}
+					}
+				}
+
+				// If we have variable trace, check if the expected value appears in the sequence
+				if (variableTrace.length > 0) {
+					// Convert serialized values back to actual values for comparison
+					const actualValues = variableTrace.map((value: any) => {
+						if (value === "__undefined__") return undefined;
+						if (value === "__null__") return null;
+						return value;
+					});
+
+					// Check if the expected value appears anywhere in the variable's history
+					// This handles cases where there are multiple reassignments
+					valueMatches = actualValues.some((value: any) =>
+						deepEqual(value, test.expectedValue)
+					);
+				} else {
+					// Fallback to checking final value if no trace available
+					if (
+						testResult === undefined &&
+						test.expectedValue === undefined
+					) {
+						valueMatches = true;
+					} else {
+						valueMatches = deepEqual(
+							testResult,
+							test.expectedValue
+						);
 					}
 				}
 
