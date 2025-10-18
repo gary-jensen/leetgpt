@@ -937,10 +937,491 @@ let question = "how are you?"
 			},
 		],
 	},
+	// ===== VARIABLE redefining-variables NODE =====
 	{
 		id: "lesson-10",
+		title: "Changing Variables",
+		skillNodeId: "redefining-variables",
+		xpReward: 150,
+		stepXpReward: 50,
+		steps: [
+			{
+				id: "step-1",
+				content: `## 🔄 Redefining Variables
+
+You can change a variable's value after creating it!
+
+Create a variable and then change it:
+
+\`\`\`javascript
+let score = 100
+console.log(score)
+score = 150
+console.log(score)
+\`\`\``,
+				tests: [
+					{
+						type: "variableAssignment",
+						variableName: "score",
+						expectedValue: { expected: 100 },
+					},
+					{
+						type: "consoleLogVariable",
+						variableName: "score",
+						expectedOutput: "100",
+					},
+					{
+						type: "variableReassignment",
+						variable: "score",
+						expectedValue: 150,
+						method: { operator: "=", operand: 150 },
+					},
+
+					{
+						type: "consoleLogVariable",
+						variableName: "score",
+						expectedOutput: "150",
+					},
+				],
+			},
+			{
+				id: "step-2",
+				content: `## 💡 Using Old Value to Calculate New Value
+
+You can use the current value to calculate a new value:
+
+\`\`\`javascript
+let count = 5
+count = count + 3
+console.log(count)
+\`\`\``,
+				tests: [
+					{
+						type: "variableAssignment",
+						variableName: "count",
+						expectedValue: { expected: 5 },
+					},
+					{
+						type: "variableReassignment",
+						variable: "count",
+						expectedValue: 8,
+						method: { operator: "=", operand: `count\s*\+\s*3` },
+					},
+					{
+						type: "codeContains",
+						pattern: /count\s*=\s*count\s*\+\s*3/,
+					},
+					{
+						type: "consoleLogVariable",
+						variableName: "count",
+						expectedOutput: "8",
+					},
+				],
+			},
+		],
+	},
+	{
+		id: "lesson-11",
+		title: "const vs let",
+		skillNodeId: "redefining-variables",
+		xpReward: 200,
+		stepXpReward: 50,
+		steps: [
+			{
+				id: "step-1",
+				content: `## 🔒 Constant Variables
+
+\`const\` creates variables that **cannot be changed** after creation:
+
+\`\`\`javascript
+const pi = 3.14159
+console.log(pi)
+\`\`\``,
+				tests: [
+					{
+						type: "variableAssignment",
+						variableName: "pi",
+						expectedValue: { expected: 3.14159 },
+					},
+					{
+						type: "codeContains",
+						pattern: /const\s+pi\s*=\s*3\.14159/,
+					},
+					{
+						type: "consoleLogVariable",
+						variableName: "pi",
+						expectedOutput: "3.14159",
+					},
+				],
+			},
+			{
+				id: "step-2",
+				content: `## ❌ Try to Change a \`const\`
+
+Constants cannot be reassigned. 
+
+Run the code and see what happens!
+
+Then remove the line that's causing the error.`,
+				startingCode: `const name = "Alice"
+name = "Bob"
+console.log(name)`,
+				tests: [
+					{
+						type: "variableAssignment",
+						variableName: "name",
+						expectedValue: { expected: "Alice" },
+					},
+					{
+						type: "codeContains",
+						pattern: /const\s+name\s*=\s*"Alice"/,
+					},
+					{
+						type: "codeContains",
+						pattern: /name\s*=\s*"Bob"/,
+						negated: true,
+						hintAdvice: "Constants cannot be reassigned",
+					},
+					{
+						type: "consoleLogVariable",
+						variableName: "name",
+						expectedOutput: "Alice",
+					},
+				],
+			},
+			{
+				id: "step-3",
+				content: `## 🤔 When to Use const vs let
+
+**Use \`const\` when:**
+- The value will never change
+- You want to prevent accidental changes
+- Examples: names, constants, configuration values
+
+**Use \`let\` when:**
+- The value might change
+- You're building up a value
+- Examples: counters, user input, calculations
+
+---
+Try both approaches:
+
+\`\`\`javascript
+const company = "BitSchool"
+let userCount = 0
+userCount = userCount + 1
+console.log(company, userCount)
+\`\`\``,
+				tests: [
+					{
+						type: "variableAssignment",
+						variableName: "company",
+						expectedValue: { expected: "BitSchool" },
+					},
+					{
+						type: "codeContains",
+						pattern: /const\s+company\s*=\s*"BitSchool"/,
+					},
+					{
+						type: "variableAssignment",
+						variableName: "userCount",
+						expectedValue: { expected: 0 },
+					},
+					{
+						type: "variableReassignment",
+						variable: "userCount",
+						expectedValue: 1,
+						method: {
+							operator: "=",
+							operand: `userCount\s*\+\s*1`,
+						},
+					},
+					{
+						type: "consoleLogPattern",
+						expectedOutput: "BitSchool 1",
+						pattern: /company\s*,\s*userCount/,
+					},
+				],
+			},
+		],
+	},
+	{
+		id: "lesson-12",
+		title: "The += Operator",
+		skillNodeId: "redefining-variables",
+		xpReward: 150,
+		stepXpReward: 50,
+		steps: [
+			{
+				id: "step-1",
+				content: `## ➕ The \`+=\` Operator
+
+\`+=\` is a shortcut for adding to a variable:
+
+\`\`\`javascript
+let score = 100
+score += 50
+console.log(score)
+\`\`\``,
+				tests: [
+					{
+						type: "variableAssignment",
+						variableName: "score",
+						expectedValue: { expected: 100 },
+					},
+					{
+						type: "variableReassignment",
+						variable: "score",
+						expectedValue: 150,
+						method: { operator: "+=", operand: 50 },
+					},
+					{
+						type: "codeContains",
+						pattern: /score\s*\+\=\s*50/,
+					},
+					{
+						type: "consoleLogVariable",
+						variableName: "score",
+						expectedOutput: "150",
+					},
+				],
+			},
+			{
+				id: "step-2",
+				content: `## 💡 \`+=\` vs \`=\` \`+\` Comparison
+
+These two lines do the same thing:
+
+\`\`\`
+// Method 1: Long way
+x = x + 5
+
+// Method 2: Short way  
+x += 5
+\`\`\`
+
+Add them both to the code, then log \`x\``,
+				startingCode: `let x = 10\n`,
+				tests: [
+					{
+						type: "variableAssignment",
+						variableName: "x",
+						expectedValue: { expected: 10 },
+					},
+					{
+						type: "variableReassignment",
+						variable: "x",
+						expectedValue: 15,
+						method: { operator: "=", operand: `x\s*\+\s*5` },
+					},
+					{
+						type: "variableReassignment",
+						variable: "x",
+						expectedValue: 20,
+						method: { operator: "+=", operand: 5 },
+					},
+					{
+						type: "consoleLogPattern",
+						pattern: "x",
+						expectedOutput: "20",
+					},
+				],
+			},
+		],
+	},
+	{
+		id: "lesson-13",
+		title: "More Assignment Operators",
+		skillNodeId: "redefining-variables",
+		xpReward: 150,
+		stepXpReward: 50,
+		steps: [
+			{
+				id: "step-1",
+				content: `## ➖ -= Operator
+
+\`-=\` subtracts from a variable:
+
+Type this code into the editor and hit run!
+
+\`\`\`javascript
+let health = 100
+health -= 20
+console.log(health)
+\`\`\``,
+				tests: [
+					{
+						type: "variableAssignment",
+						variableName: "health",
+						expectedValue: { expected: 100 },
+					},
+					{
+						type: "variableReassignment",
+						variable: "health",
+						expectedValue: 80,
+						method: { operator: "-=", operand: 20 },
+					},
+					{
+						type: "consoleLogVariable",
+						variableName: "health",
+						expectedOutput: "80",
+					},
+				],
+			},
+			{
+				id: "step-2",
+				content: `## ✖️ *= and /= Operators
+
+\`*=\` multiplies and \`/=\` divides
+
+Let's try multiplying first, run this code:
+
+\`\`\`javascript
+let price = 100
+price *= 1.1
+console.log(price)
+\`\`\``,
+				tests: [
+					{
+						type: "variableAssignment",
+						variableName: "price",
+						expectedValue: { expected: 100 },
+					},
+					{
+						type: "variableReassignment",
+						variable: "price",
+						expectedValue: 110.00000000000001,
+						method: { operator: "*=", operand: 1.1 },
+					},
+					{
+						type: "consoleLogVariable",
+						variableName: "price",
+						expectedOutput: "110.00000000000001",
+					},
+				],
+			},
+			{
+				id: "step-3",
+				content: `## 110.00000000000001??
+\`price\` was not exactly 110 because of how JavaScript handles floating point numbers (decimals).
+
+It's a common issue with all programming languages.
+
+### Don't worry too much about it
+Now try dividing, run this code:
+
+\`\`\`javascript
+let quantity = 20
+quantity /= 4
+console.log(quantity)
+\`\`\``,
+				tests: [
+					{
+						type: "variableAssignment",
+						variableName: "quantity",
+						expectedValue: { expected: 20 },
+					},
+					{
+						type: "variableReassignment",
+						variable: "quantity",
+						expectedValue: 5,
+						method: { operator: "/=", operand: 4 },
+					},
+					{
+						type: "consoleLogVariable",
+						variableName: "quantity",
+						expectedOutput: "5",
+					},
+				],
+			},
+		],
+	},
+	{
+		id: "lesson-14",
+		title: "Increment and Decrement",
+		skillNodeId: "redefining-variables",
+		xpReward: 150,
+		stepXpReward: 50,
+		steps: [
+			{
+				id: "step-1",
+				content: `## ➕➖ ++ and -- Operators
+
+\`++\` adds 1, \`--\` subtracts 1
+
+Let's try adding first, run this code:
+
+\`\`\`javascript
+let count = 5
+count++
+console.log(count)
+\`\`\``,
+				tests: [
+					{
+						type: "variableAssignment",
+						variableName: "count",
+						expectedValue: { expected: 5 },
+					},
+					{
+						type: "variableReassignment",
+						variable: "count",
+						expectedValue: 6,
+						method: { operator: "++" },
+					},
+					// {
+					// 	type: "codeContains",
+					// 	pattern: /count\s*\+\+/,
+					// },
+					{
+						type: "consoleLogVariable",
+						variableName: "count",
+						expectedOutput: "6",
+					},
+				],
+			},
+			{
+				id: "step-2",
+				content: `On the line after \`console.log(count)\`, decrement count with the \`--\` operator
+                
+Then log \`count\` again!`,
+				startingCode: `let count = 5\ncount++\nconsole.log(count)\n`,
+				tests: [
+					{
+						type: "variableAssignment",
+						variableName: "count",
+						expectedValue: { expected: 5 },
+					},
+					{
+						type: "variableReassignment",
+						variable: "count",
+						expectedValue: 6,
+						method: { operator: "++" },
+					},
+					{
+						type: "consoleLogVariable",
+						variableName: "count",
+						expectedOutput: "6",
+					},
+
+					{
+						type: "variableReassignment",
+						variable: "count",
+						expectedValue: 5,
+						method: { operator: "--" },
+					},
+					{
+						type: "consoleLogVariable",
+						variableName: "count",
+						expectedOutput: "5",
+					},
+				],
+			},
+		],
+	},
+	{
+		id: "lesson-15",
 		title: "Declaring vs Initializing",
-		skillNodeId: "variables",
+		skillNodeId: "redefining-variables",
 		xpReward: 200,
 		stepXpReward: 50,
 		steps: [
