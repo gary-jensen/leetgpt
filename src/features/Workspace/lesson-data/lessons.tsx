@@ -17,6 +17,11 @@ BitSchool is a fun and fast way to learn JavaScript.
 
 In 5 minutes, you'll understand topics most beginners spend days confused about.
 
+## 🔥 With BitSchool, you'll:
+- Code smarter in only minutes every day
+- Build real projects, not fake tutorials
+- See your progress, and feel your wins
+
 ## 🚀 Ready to write your first line of real JavaScript code?
 
 \`console.log()\` is used to print text to the console.
@@ -40,7 +45,7 @@ You can see the message in the console now!
 ---
 
 If you want to log multiple things, you can use a comma to separate them.
-This will print each item (called arguments) seperated by a space!
+This will print each item (called arguments) separated by a space!
 
 Log \`"Testing"\` followed by a comma and the number \`123\` like this:
 \`\`\`javascript

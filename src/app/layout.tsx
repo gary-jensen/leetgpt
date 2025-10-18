@@ -5,6 +5,7 @@ import { lessonMetadata } from "@/features/Workspace/lesson-data/lessons";
 import { getSession, setLessonMetadata } from "@/lib/auth";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Analytics as VercelAnalytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const inter = Inter({
@@ -59,6 +60,7 @@ export default async function RootLayout({
 						session={session}
 					>
 						<Analytics />
+						<VercelAnalytics />
 						{children}
 					</ProgressProvider>
 				</SessionProvider>
