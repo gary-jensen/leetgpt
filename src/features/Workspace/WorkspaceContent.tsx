@@ -35,18 +35,12 @@ export default function WorkspaceContent({
 
 	// Initialize currentStepIndex from progress
 	useEffect(() => {
-		console.log(
-			`WorkspaceContent step init: currentLesson=${currentLesson?.id}, isInitialized=${isInitialized}`
-		);
 		if (currentLesson && isInitialized) {
 			const savedStep = getCurrentStep(currentLesson.id);
 			// Ensure the saved step is within bounds
 			const maxStep = Math.max(0, currentLesson.steps.length - 1);
 			const validStep = Math.min(Math.max(0, savedStep), maxStep);
 
-			console.log(
-				`Resuming lesson ${currentLesson.id}: savedStep=${savedStep}, maxStep=${maxStep}, validStep=${validStep}`
-			);
 			setCurrentStepIndex(validStep);
 			// Use setTimeout to ensure this runs after the state update
 			setTimeout(() => setStepInitialized(true), 0);

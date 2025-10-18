@@ -162,7 +162,7 @@ JavaScript can work with different types of numbers:
 - **Decimals**: \`3.14\`, \`2.5\`, \`-0.5\`
 
 ---
-Try logging these different numbers:
+**Type this code and run it to see different number types:**
 
 \`\`\`javascript
 console.log(42)
@@ -189,15 +189,13 @@ What you notice about them:
 
 ---
 
-Now try some math operations:
+**Type this code to try some math operations:**
 
 \`\`\`javascript
 console.log(5 + 3)
 console.log(10 - 2)
 console.log(4 * 2)
-\`\`\`
-
-Type those 3 lines into the console. Run the code to see the output.`,
+\`\`\``,
 				tests: [
 					{
 						type: "consoleLogPattern",
@@ -234,7 +232,7 @@ Text in JavaScript is called a **string**. Strings are wrapped in quotes.
 You can use single quotes \`'...'\` or double quotes \`"..."\` - both work the same!
 
 ---
-Try logging some text:
+**Type this code and run it to see strings in action:**
 
 \`\`\`javascript
 console.log("Hello")
@@ -264,12 +262,12 @@ console.log('World')
 ---
 If you want to use single or double quotes inside a string, you just have to use the other quote type for the string:
 
+**Type this code to see quotes inside strings:**
+
 \`\`\`javascript
 console.log("I love 'JavaScript'")
 console.log('He said "Hello!"')
-\`\`\`
-
-Try running that code!`,
+\`\`\``,
 				tests: [
 					{
 						type: "consoleLogs",
@@ -300,7 +298,7 @@ The last basic data type is **boolean** - it can only be \`true\` or \`false\`.
 Booleans represent yes/no, on/off, or true/false situations.
 
 ---
-Try logging boolean values:
+**Type this code and run it to see boolean values:**
 
 \`\`\`javascript
 console.log(true)
@@ -330,7 +328,7 @@ console.log(false)
 
 ---
 
-Try some comparisons that result in booleans:
+**Type this code to try some comparisons that result in booleans:**
 
 \`>\` is greater than, \`<\` is less than, \`===\` is equal to.
 
@@ -373,7 +371,7 @@ console.log(10 === 10)
 
 **Variables** are like *labeled boxes* where you can store data to use later.
 
-Create your first variable with the \`let\` keyword:
+**Type this code to create your first variable:**
 
 \`\`\`javascript
 let favoriteNumber = 300
@@ -400,7 +398,7 @@ let favoriteNumber = 300
 
 ---
 
-Now log your variable to see its value:
+**Type this code to log your variable and see its value:**
 
 \`\`\`javascript
 let favoriteNumber = 300
@@ -434,7 +432,7 @@ console.log(favoriteNumber)
 
 You can create as many variables as you need!
 
-Create two variables:
+**Type this code to create two variables:**
 
 \`\`\`javascript
 let favoriteNumber = 300
@@ -460,7 +458,7 @@ let greeting = "My favorite number is"
 
 Now you can use both variables together!
 
-Log them both in one \`console.log()\` statement:
+**Type this code to log both variables together:**
 
 \`\`\`javascript
 console.log(greeting, favoriteNumber)
@@ -1038,6 +1036,8 @@ console.log(count)
 
 \`const\` creates variables that **cannot be changed** after creation:
 
+**Type this code to create a constant variable:**
+
 \`\`\`javascript
 const pi = 3.14159
 console.log(pi)
@@ -1065,9 +1065,9 @@ console.log(pi)
 
 Constants cannot be reassigned. 
 
-Run the code and see what happens!
+**Run the code below and see what happens!**
 
-Then remove the line that's causing the error.`,
+Then **remove the line that's causing the error** and run it again.`,
 				startingCode: `const name = "Alice"
 name = "Bob"
 console.log(name)`,
@@ -1511,7 +1511,7 @@ console.log(x)  // 42
 2. **Initialization**: \`let x = 42;\` (value is \`42\`)
 
 ---
-Try both approaches:
+**Type this code to try both approaches:**
 
 \`\`\`javascript
 let declared
