@@ -1,6 +1,6 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 import { validateUUID } from "@/lib/validation";
 import { checkRateLimit, getRateLimitKey, RATE_LIMITS } from "@/lib/rateLimit";
