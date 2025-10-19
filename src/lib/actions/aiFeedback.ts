@@ -157,20 +157,29 @@ export async function getAIFeedback(
 		const { stepContent, testResults } = request;
 
 		// Check if there's a syntax error
-		const hasSyntaxError =
-			testResults[0]?.error &&
-			testResults[0].error.includes("SyntaxError");
+		const hasSyntaxError = testResults.some((result) =>
+			result.actualLogs?.some((log) => log.includes("Error:"))
+		);
 
 		// Create a prompt based on error type
 		let prompt;
 		if (hasSyntaxError) {
+			// Find the first error message
+			const errorResult = testResults.find((result) =>
+				result.actualLogs?.some((log) => log.includes("Error:"))
+			);
+			const errorMessage =
+				errorResult?.actualLogs?.find((log) =>
+					log.includes("Error:")
+				) || "Unknown syntax error";
+
 			prompt = `STEP CONTEXT:
 ${stepContent}
 
 Code: ${sanitizedCode}
-Error: ${testResults[0]?.error}
+Error: ${errorMessage}
 
-Give one sentence hint about the syntax error`;
+Give one sentence hint about the error`;
 		} else {
 			// Format test information for better AI understanding
 			const failedTest = testResults.find((test) => !test.passed);
@@ -209,9 +218,11 @@ Expected output: "${test.expectedOutput}"
 Actual logs: ${actualVarLogsStr.length > 0 ? actualVarLogsStr : "No logs"}
 Variable: ${test.variableName || "a variable"}
 
-The user should log a variable (not hardcode the value). Check if they're logging the variable ${
+ANALYSIS: Check if the user is missing a console.log() statement for the variable ${
 							test.variableName || "correctly"
-						} or hardcoding "${test.expectedOutput}".`;
+						}, or if they're logging something else instead. The expected output "${
+							test.expectedOutput
+						}" should come from logging the variable, not hardcoding the value.`;
 						break;
 					case "consoleLogPattern":
 						const actualLogs = failedTest.actualLogs || [];
@@ -555,6 +566,11 @@ ${JSON.stringify(
 	null,
 	2
 )}
+
+IMPORTANT ANALYSIS RULES:
+1. Look at ALL test results (both passed and failed) to understand what the user has done correctly vs what's missing
+2. If a test is PASSED, the user's code is correct for that requirement - don't suggest changing it
+3. If a test is FAILED, identify what's missing or incorrect
 
 Give one sentence hint about what needs to be fixed to pass the first failed test. Only worry about one test at a time. All code, numbers, data, etc should be wrapped in a backtick \` for markdown formatting`;
 		}

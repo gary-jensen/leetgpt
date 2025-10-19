@@ -354,6 +354,18 @@ This test type calls the function outside of the user sandbox:
 
 ### Test Best Practices
 
+Any use of regex patterns, if you are checking strings use (["']) paired with the appropriate selection group numeric reference like \1
+This way the user can use either quote type of their choice
+Example:
+
+```javascript
+{
+  type: "consoleLogPattern",
+  expectedOutput: "John Doe",
+  pattern: /(["'])John\1\s*,\s*(["'])Doe\2/,
+},
+```
+
 #### **Variable Testing**
 
 ```javascript

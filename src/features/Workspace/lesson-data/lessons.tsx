@@ -38,16 +38,20 @@ console.log("Hello, world!")
 			},
 			{
 				id: "step-2",
-				content: `That line of code tells JavaScript to *log* the message \`"Hello, world!"\` to the console.
+				content: `## 🎉🎉🎉 You just ran your first line of code!
+
+That line of code tells JavaScript to *log* the message \`"Hello, world!"\` to the console.
 
 You can see the message in the console now!
 
 ---
 
-If you want to log multiple things, you can use a comma to separate them.
-This will print each item (called arguments) separated by a space!
+## If you want to log multiple things:
+
+You can use a comma to separate them!
 
 Log \`"Testing"\` followed by a comma and the number \`123\` like this:
+
 \`\`\`javascript
 console.log("Testing", 123)
 \`\`\``,
@@ -229,7 +233,7 @@ console.log(4 * 2)
 
 Text in JavaScript is called a **string**. Strings are wrapped in quotes.
 
-You can use single quotes \`'...'\` or double quotes \`"..."\` - both work the same!
+You can use single quotes \`'Hi'\` or double quotes \`"Hi"\` - both work the same!
 
 ---
 **Type this code and run it to see strings in action:**
@@ -374,12 +378,12 @@ console.log(10 === 10)
 **Type this code to create your first variable:**
 
 \`\`\`javascript
-let favoriteNumber = 300
+let favNumber = 300
 \`\`\``,
 				tests: [
 					{
 						type: "variableAssignment",
-						variableName: "favoriteNumber",
+						variableName: "favNumber",
 						expectedValue: { expected: 300 },
 					},
 				],
@@ -390,25 +394,25 @@ let favoriteNumber = 300
 
 **Variables explained:**
 - \`let\` creates a new variable
-- \`favoriteNumber\` is the variable name (you get to choose this!)
+- \`favNumber\` is the variable name (you get to choose this!)
 - \`=\` assigns the value \`300\` to the variable
-- Now you can use \`favoriteNumber\` anywhere in your code
+- Now you can use \`favNumber\` anywhere in your code
 
-**Think of it like:** A box labeled "favoriteNumber" containing the number 300.
+**Think of it like:** A box labeled "favNumber" containing the number 300.
 
 ---
 
 **Type this code to log your variable and see its value:**
 
 \`\`\`javascript
-let favoriteNumber = 300
-console.log(favoriteNumber)
+let favNumber = 300
+console.log(favNumber)
 \`\`\``,
-				startingCode: "let favoriteNumber = 300\n",
+				startingCode: "let favNumber = 300\n",
 				tests: [
 					{
 						type: "variableAssignment",
-						variableName: "favoriteNumber",
+						variableName: "favNumber",
 						expectedValue: { expected: 300 },
 					},
 					{
@@ -435,14 +439,14 @@ You can create as many variables as you need!
 **Type this code to create two variables:**
 
 \`\`\`javascript
-let favoriteNumber = 300
+let favNumber = 300
 let greeting = "My favorite number is"
 \`\`\``,
 
 				tests: [
 					{
 						type: "variableAssignment",
-						variableName: "favoriteNumber",
+						variableName: "favNumber",
 						expectedValue: { expected: 300 },
 					},
 					{
@@ -461,14 +465,14 @@ Now you can use both variables together!
 **Type this code to log both variables together:**
 
 \`\`\`javascript
-console.log(greeting, favoriteNumber)
+console.log(greeting, favNumber)
 \`\`\``,
 				startingCode:
-					"let favoriteNumber = 300\nlet greeting = 'My favorite number is'\n",
+					"let favNumber = 300\nlet greeting = 'My favorite number is'\n",
 				tests: [
 					{
 						type: "variableAssignment",
-						variableName: "favoriteNumber",
+						variableName: "favNumber",
 						expectedValue: { expected: 300 },
 					},
 					{
@@ -479,7 +483,7 @@ console.log(greeting, favoriteNumber)
 					{
 						type: "consoleLogPattern",
 						expectedOutput: "My favorite number is 300",
-						pattern: /greeting\s*,\s*favoriteNumber/,
+						pattern: /greeting\s*,\s*favNumber/,
 					},
 				],
 			},
@@ -813,7 +817,7 @@ Add a space and log the result.`,
 					{
 						type: "codeContains",
 						pattern:
-							/let\s+fullName\s*=\s*"John"\s*\+\s*" "\s*\+\s*"Doe"/,
+							/let\s+fullName\s*=\s*(["'])John\1\s*\+\s*(["']) \2\s*\+\s*(["'])Doe\3/,
 					},
 					{
 						type: "consoleLogVariable",
@@ -845,12 +849,12 @@ Try both approaches and see the difference!`,
 					{
 						type: "consoleLogPattern",
 						expectedOutput: "John Doe",
-						pattern: /console\.log\("John"\s*,\s*"Doe"\)/,
+						pattern: /(["'])John\1\s*,\s*(["'])Doe\2/,
 					},
 					{
 						type: "consoleLogPattern",
 						expectedOutput: "JohnDoe",
-						pattern: /console\.log\("John"\s*\+\s*"Doe"\)/,
+						pattern: /(["'])John\1\s*\+\s*(["'])Doe\2/,
 					},
 				],
 			},
@@ -872,13 +876,13 @@ You can create different messages by combining variables!
 Create two greeting variables using the provided variables:
 
 \`\`\`javascript
-let dayGreeting = day + ", " + question
-let nightGreeting = night + ", " + question
+let dayGreeting = day + question
+let nightGreeting = night + question
 console.log(dayGreeting)
 console.log(nightGreeting)
 \`\`\``,
-				startingCode: `let day = "Good morning"
-let night = "Good evening"
+				startingCode: `let day = "Good morning, "
+let night = "Good evening, "
 let question = "how are you?"
 
 `,
@@ -886,12 +890,12 @@ let question = "how are you?"
 					{
 						type: "variableAssignment",
 						variableName: "day",
-						expectedValue: { expected: "Good morning" },
+						expectedValue: { expected: "Good morning, " },
 					},
 					{
 						type: "variableAssignment",
 						variableName: "night",
-						expectedValue: { expected: "Good evening" },
+						expectedValue: { expected: "Good evening, " },
 					},
 					{
 						type: "variableAssignment",
@@ -918,13 +922,12 @@ let question = "how are you?"
 					},
 					{
 						type: "codeContains",
-						pattern:
-							/let\s+dayGreeting\s*=\s*day\s*\+\s*", "\s*\+\s*question/,
+						pattern: /let\s+dayGreeting\s*=\s*day\s*\+\s*question/,
 					},
 					{
 						type: "codeContains",
 						pattern:
-							/let\s+nightGreeting\s*=\s*night\s*\+\s*", "\s*\+\s*question/,
+							/let\s+nightGreeting\s*=\s*night\s*\+\s*question/,
 					},
 					{
 						type: "consoleLogVariable",
@@ -977,7 +980,6 @@ console.log(score)
 						type: "variableReassignment",
 						variable: "score",
 						expectedValue: 150,
-						method: { operator: "=", operand: 150 },
 					},
 
 					{
@@ -1079,11 +1081,11 @@ console.log(name)`,
 					},
 					{
 						type: "codeContains",
-						pattern: /const\s+name\s*=\s*"Alice"/,
+						pattern: /const\s+name\s*=\s*(["'])Alice\1/,
 					},
 					{
 						type: "codeContains",
-						pattern: /name\s*=\s*"Bob"/,
+						pattern: /name\s*=\s*(["'])Bob\1/,
 						negated: true,
 						hintAdvice: "Constants cannot be reassigned",
 					},
@@ -1125,7 +1127,7 @@ console.log(company, userCount)
 					},
 					{
 						type: "codeContains",
-						pattern: /const\s+company\s*=\s*"BitSchool"/,
+						pattern: /const\s+company\s*=\s*(["'])BitSchool\1/,
 					},
 					{
 						type: "variableAssignment",
