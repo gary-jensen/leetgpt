@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { trackLandingCTAClick } from "@/lib/analytics";
 
 export default function Hero() {
 	return (
@@ -38,6 +39,7 @@ export default function Hero() {
 
 					<Link
 						href="/login"
+						onClick={() => trackLandingCTAClick("hero")}
 						className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 py-4 rounded-lg text-lg transition-all duration-200 hover:scale-105 hover:shadow-lg hover:shadow-orange-500/25"
 					>
 						Sign up for FREE

@@ -11,7 +11,7 @@ import { Test } from "@/features/Workspace/types/test-types";
 const useDemoConsole = (
 	code: string,
 	currentStep: Step,
-	handleTestResults: (results: TestResult[]) => void
+	handleTestResults: (results: TestResult[], userCode: string) => void
 ) => {
 	const iframeRef = useRef<HTMLIFrameElement>(null);
 	const executorRef = useRef<CodeExecutor | null>(null);
@@ -79,7 +79,7 @@ const useDemoConsole = (
 				: [];
 
 			if (handleTestResults) {
-				handleTestResults(testResults);
+				handleTestResults(testResults, code);
 			}
 		} catch (error) {
 			setLastResult({
@@ -101,7 +101,7 @@ const useDemoConsole = (
 			];
 
 			if (handleTestResults) {
-				handleTestResults(testResults);
+				handleTestResults(testResults, code);
 			}
 		} finally {
 			setIsExecuting(false);

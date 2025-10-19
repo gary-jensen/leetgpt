@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { trackLandingCTAClick } from "@/lib/analytics";
 
 export default function Pricing() {
 	const features = [
@@ -72,6 +73,7 @@ export default function Pricing() {
 					{/* CTA Button */}
 					<Link
 						href="/login"
+						onClick={() => trackLandingCTAClick("pricing")}
 						className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-4 px-6 rounded-lg text-center block transition-all duration-200 mb-4 hover:scale-105 hover:shadow-lg hover:shadow-orange-500/25"
 					>
 						Start learning free

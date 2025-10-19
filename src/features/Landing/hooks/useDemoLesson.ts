@@ -8,6 +8,11 @@ import {
 	getAIFeedback,
 	formatAIFeedback,
 } from "@/features/Workspace/Chat/services/aiFeedbackService";
+import {
+	trackDemoSubmitCorrect,
+	trackDemoSubmitIncorrect,
+	trackDemoComplete,
+} from "@/lib/analytics";
 import { playErrorSound, playSuccessSound } from "@/lib/soundManager";
 
 export interface DemoMessage {
@@ -21,6 +26,7 @@ export interface DemoMessage {
 export const useDemoLesson = () => {
 	const [currentStepIndex, setCurrentStepIndex] = useState(0);
 	const [code, setCode] = useState("");
+	const [attempts, setAttempts] = useState(0);
 	const [messages, setMessages] = useState<DemoMessage[]>([]);
 	const [isThinking, setIsThinking] = useState(false);
 	const [hasJustPassed, setHasJustPassed] = useState(false);
@@ -101,10 +107,21 @@ export const useDemoLesson = () => {
 		setDisplayedWords({});
 	};
 
-	const handleTestResults = async (results: TestResult[]) => {
+	const handleTestResults = async (
+		results: TestResult[],
+		userCode: string
+	) => {
 		const allTestsPassed = results.every((result) => result.passed);
 
 		if (allTestsPassed) {
+			// Track successful test
+			trackDemoSubmitCorrect(currentStep.id, attempts + 1, userCode);
+
+			// Track demo completion on last step
+			if (isLastStep) {
+				trackDemoComplete();
+			}
+
 			// Show success message
 			setHasJustPassed(true);
 			playSuccessSound();
@@ -119,12 +136,22 @@ export const useDemoLesson = () => {
 				if (!isLastStep) {
 					setCurrentStepIndex((prev) => prev + 1);
 					setCode(""); // Clear code for next step
+					setAttempts(0);
 				}
 			}, 500);
 		} else {
+			// Track failed test
+			const firstFailedTest = results.find((r) => !r.passed);
+			trackDemoSubmitIncorrect(
+				currentStep.id,
+				userCode,
+				firstFailedTest?.error
+			);
+
 			// Show AI feedback for failed test
 			setIsThinking(true);
 			playErrorSound();
+			setAttempts((prev) => prev + 1);
 			try {
 				// Get real AI feedback
 				const userCode = results[0]?.code || "";

@@ -1,11 +1,14 @@
-import { getSession } from "@/lib/auth";
+"use client";
+
 import Link from "next/link";
 import { Button } from "../../components/ui/button";
 import { redirect } from "next/navigation";
 import Image from "next/image";
+import NavbarLoginButton from "./components/NavbarLoginButton";
+import { useSession } from "next-auth/react";
 
-export default async function Navbar() {
-	const session = await getSession();
+export default function Navbar() {
+	const { data: session } = useSession();
 	if (session?.user) {
 		redirect("/learn");
 	}
@@ -59,12 +62,7 @@ export default async function Navbar() {
 							<Link href="/learn">Learn</Link>
 						</Button>
 					) : (
-						<Link
-							href="/login"
-							className="bg-background-2 hover:bg-background-3 text-foreground font-medium px-4 py-2 rounded-lg border border-border transition-colors duration-200"
-						>
-							Log in
-						</Link>
+						<NavbarLoginButton />
 					)}
 				</div>
 			</div>

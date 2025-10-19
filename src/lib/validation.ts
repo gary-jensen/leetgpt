@@ -14,6 +14,8 @@ export const ALLOWED_EVENT_CATEGORIES = [
 	"Code",
 	"Progress",
 	"Auth",
+	"Demo",
+	"Landing",
 ] as const;
 
 export const ALLOWED_EVENT_ACTIONS = new Map([
@@ -23,6 +25,8 @@ export const ALLOWED_EVENT_ACTIONS = new Map([
 	["Code", ["code_run", "code_submit_correct", "code_submit_incorrect"]],
 	["Progress", ["level_up", "skill_node_complete", "xp_gain"]],
 	["Auth", ["auth_signin", "auth_signout"]],
+	["Demo", ["demo_submit_correct", "demo_submit_incorrect", "demo_complete"]],
+	["Landing", ["page_view", "section_view", "cta_click"]],
 ]);
 
 // String length limits

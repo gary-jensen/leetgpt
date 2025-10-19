@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { trackLandingCTAClick } from "@/lib/analytics";
 
 export default function FinalCTA() {
 	return (
@@ -15,6 +16,7 @@ export default function FinalCTA() {
 				<div className="flex flex-col sm:flex-row items-center justify-center gap-4">
 					<Link
 						href="/login"
+						onClick={() => trackLandingCTAClick("final_cta")}
 						className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 py-4 rounded-lg text-lg transition-all duration-200 inline-flex items-center gap-2 hover:scale-105 hover:shadow-lg hover:shadow-orange-500/25"
 					>
 						Get started free

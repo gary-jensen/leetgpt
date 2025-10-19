@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
 import { MessageSquareIcon } from "lucide-react";
+import { trackLandingCTAClick } from "@/lib/analytics";
 
 export default function WorkspaceDemo() {
 	const {
@@ -68,6 +69,9 @@ export default function WorkspaceDemo() {
 					<div className="px-4 py-4 border-t border-border bg-background-2">
 						<Link
 							href="/login"
+							onClick={() =>
+								trackLandingCTAClick("demo_complete")
+							}
 							className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-4 rounded-2xl text-center block transition-colors duration-200"
 						>
 							Sign Up Free →

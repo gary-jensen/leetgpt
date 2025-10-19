@@ -47,6 +47,14 @@ export const trackEvent = (
 	value?: number,
 	metadata?: Record<string, any>
 ) => {
+	// console.log("🎯 Analytics: trackEvent called", {
+	// 	category,
+	// 	action,
+	// 	label,
+	// 	value,
+	// 	metadata,
+	// });
+
 	// Send to GA4
 	ReactGA.event({
 		category,
@@ -75,7 +83,7 @@ export const trackEvent = (
 		guestId: getGuestId(),
 		isDev,
 	}).catch((error) => {
-		// console.error("Failed to save event to database:", error);
+		console.error("Failed to save event to database:", error);
 	});
 };
 
@@ -216,6 +224,49 @@ export const trackSignInButtonClick = () => {
 export const trackAuthSignout = () => {
 	trackEvent("Auth", "auth_signout", undefined, undefined, {
 		timestamp: new Date().toISOString(),
+	});
+};
+
+// Demo workspace tracking
+
+export const trackDemoSubmitCorrect = (
+	stepId: string,
+	attempts: number,
+	userCode: string
+) => {
+	trackEvent("Demo", "demo_submit_correct", stepId, attempts, {
+		stepId,
+		attempts,
+		userCode: userCode.replace(/</g, "&lt;").replace(/>/g, "&gt;"), // Escape HTML
+	});
+};
+
+export const trackDemoSubmitIncorrect = (
+	stepId: string,
+	userCode: string,
+	errorType?: string
+) => {
+	trackEvent("Demo", "demo_submit_incorrect", stepId, undefined, {
+		stepId,
+		errorType,
+		userCode: userCode.replace(/</g, "&lt;").replace(/>/g, "&gt;"), // Escape HTML
+	});
+};
+
+export const trackDemoComplete = () => {
+	trackEvent("Demo", "demo_complete");
+};
+
+// Landing page section tracking
+export const trackLandingSectionView = (sectionName: string) => {
+	trackEvent("Landing", "section_view", sectionName, undefined, {
+		sectionName,
+	});
+};
+
+export const trackLandingCTAClick = (ctaLocation: string) => {
+	trackEvent("Landing", "cta_click", ctaLocation, undefined, {
+		ctaLocation,
 	});
 };
 

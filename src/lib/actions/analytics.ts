@@ -82,7 +82,7 @@ export async function saveAnalyticsEvent(eventData: AnalyticsEventData) {
 		if (!validateEventCategory(eventData.eventCategory)) {
 			return {
 				success: false,
-				error: `Invalid event category: '${eventData.eventCategory}'. Allowed: Session, Lesson, Step, Code, Progress, Auth`,
+				error: `Invalid event category: '${eventData.eventCategory}'. Allowed: Session, Lesson, Step, Code, Progress, Auth, Demo, Landing`,
 			};
 		}
 
@@ -209,7 +209,7 @@ export async function saveAnalyticsEventBatch(events: AnalyticsEventData[]) {
 			if (!validateEventCategory(event.eventCategory)) {
 				return {
 					success: false,
-					error: `Invalid event category: '${event.eventCategory}'. Allowed: Session, Lesson, Step, Code, Progress, Auth`,
+					error: `Invalid event category: '${event.eventCategory}'. Allowed: Session, Lesson, Step, Code, Progress, Auth, Demo, Landing`,
 				};
 			}
 

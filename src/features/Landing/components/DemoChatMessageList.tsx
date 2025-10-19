@@ -224,7 +224,7 @@ export default function DemoChatMessageList({
 			})}
 
 			{/* Thinking Indicator */}
-			{isThinking && (
+			{/* {isThinking && (
 				<div className="space-y-1 border-l-4 border-red-500 pl-4 bg-red-500/10 rounded-r-lg py-2 error-message">
 					<div className="text-base leading-[1.75]">
 						<div className="whitespace-pre-wrap">
@@ -232,7 +232,7 @@ export default function DemoChatMessageList({
 						</div>
 					</div>
 				</div>
-			)}
+			)} */}
 
 			<div ref={messagesEndRef} />
 		</div>
