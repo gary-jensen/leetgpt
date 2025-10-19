@@ -60,7 +60,7 @@ function initializeSounds() {
 
 // Play sound function with mute check
 function playSound(soundName: keyof typeof sounds) {
-	// if (isMuted) return;
+	if (isMuted) return;
 
 	const sound = sounds[soundName];
 	if (sound && sound.state() === "loaded") {
