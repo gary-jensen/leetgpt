@@ -8,12 +8,14 @@ import {
 	getAIFeedback,
 	formatAIFeedback,
 } from "@/features/Workspace/Chat/services/aiFeedbackService";
+import { playErrorSound, playSuccessSound } from "@/lib/soundManager";
 
 export interface DemoMessage {
 	id: string;
 	role: "assistant" | "system";
 	content: string;
 	type?: "error" | "success" | "info";
+	timestamp?: Date;
 }
 
 export const useDemoLesson = () => {
@@ -22,6 +24,12 @@ export const useDemoLesson = () => {
 	const [messages, setMessages] = useState<DemoMessage[]>([]);
 	const [isThinking, setIsThinking] = useState(false);
 	const [hasJustPassed, setHasJustPassed] = useState(false);
+	const [streamingMessageId, setStreamingMessageId] = useState<string | null>(
+		null
+	);
+	const [displayedWords, setDisplayedWords] = useState<{
+		[messageId: string]: string[];
+	}>({});
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 
 	const currentStep = demoLesson.steps[currentStepIndex];
@@ -30,11 +38,7 @@ export const useDemoLesson = () => {
 	// Initialize with first step content
 	useEffect(() => {
 		if (currentStep) {
-			addMessage({
-				id: `step-${currentStepIndex}-content`,
-				role: "assistant",
-				content: currentStep.content,
-			});
+			streamMessage(currentStep.content, "info");
 		}
 	}, [currentStepIndex]);
 
@@ -61,12 +65,40 @@ export const useDemoLesson = () => {
 		type?: "error" | "success" | "info"
 	) => {
 		const messageId = `msg-${Date.now()}`;
-		addMessage({
+		setStreamingMessageId(messageId);
+		setDisplayedWords({ [messageId]: [] });
+
+		// Create the message first
+		const message: DemoMessage = {
 			id: messageId,
 			role: "assistant",
-			content,
+			content: "",
 			type,
-		});
+			timestamp: new Date(),
+		};
+		setMessages((prev) => [...prev, message]);
+
+		// Simulate streaming by adding words progressively
+		const words = content.split(" ");
+		let currentContent = "";
+
+		for (let i = 0; i < words.length; i++) {
+			await new Promise((resolve) => setTimeout(resolve, 50)); // 50ms delay between words
+
+			currentContent += (i > 0 ? " " : "") + words[i];
+
+			setMessages((prev) =>
+				prev.map((msg) =>
+					msg.id === messageId
+						? { ...msg, content: currentContent }
+						: msg
+				)
+			);
+		}
+
+		// Finish streaming
+		setStreamingMessageId(null);
+		setDisplayedWords({});
 	};
 
 	const handleTestResults = async (results: TestResult[]) => {
@@ -75,6 +107,7 @@ export const useDemoLesson = () => {
 		if (allTestsPassed) {
 			// Show success message
 			setHasJustPassed(true);
+			playSuccessSound();
 			await streamMessage(
 				"✅ **Perfect!** Your code passed all tests.",
 				"success"
@@ -87,11 +120,11 @@ export const useDemoLesson = () => {
 					setCurrentStepIndex((prev) => prev + 1);
 					setCode(""); // Clear code for next step
 				}
-			}, 2000);
+			}, 500);
 		} else {
 			// Show AI feedback for failed test
 			setIsThinking(true);
-
+			playErrorSound();
 			try {
 				// Get real AI feedback
 				const userCode = results[0]?.code || "";
@@ -99,6 +132,7 @@ export const useDemoLesson = () => {
 					stepContent: currentStep.content,
 					testResults: results,
 					userCode: userCode,
+					isDemo: true, // Flag this as a demo request
 				});
 
 				// Format and display the AI feedback
@@ -128,5 +162,7 @@ export const useDemoLesson = () => {
 		handleTestResults,
 		messagesEndRef,
 		isLastStep,
+		streamingMessageId,
+		displayedWords,
 	};
 };

@@ -21,6 +21,8 @@ export default function WorkspaceDemo() {
 		handleTestResults,
 		messagesEndRef,
 		isLastStep,
+		streamingMessageId,
+		displayedWords,
 	} = useDemoLesson();
 
 	const { iframeRef, isExecuting, handleTest } = useDemoConsole(
@@ -57,6 +59,8 @@ export default function WorkspaceDemo() {
 					messages={messages}
 					messagesEndRef={messagesEndRef}
 					isThinking={isThinking}
+					streamingMessageId={streamingMessageId}
+					displayedWords={displayedWords}
 				/>
 
 				{/* CTA on last step */}

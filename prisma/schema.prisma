@@ -25,7 +25,7 @@ model User {
     emailNotifications Boolean          @default(false)
     createdAt          DateTime         @default(now())
     updatedAt          DateTime         @updatedAt
-    role               Role             @default(BASIC)
+    role               Role             @default(PRO)
     progress           UserProgress?
     sessions           UserSession[]
     analyticsEvents    AnalyticsEvent[]
@@ -34,13 +34,13 @@ model User {
 }
 
 model UserProgress {
-    id              String   @id @default(uuid())
-    userId          String   @unique
-    user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-    xp              Int      @default(0)
-    level           Int      @default(1)
-    lessonProgress  Json     @default("{}")
-    updatedAt       DateTime @updatedAt
+    id             String   @id @default(uuid())
+    userId         String   @unique
+    user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    xp             Int      @default(0)
+    level          Int      @default(1)
+    lessonProgress Json     @default("{}")
+    updatedAt      DateTime @updatedAt
 }
 
 model UserSession {

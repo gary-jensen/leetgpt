@@ -9,17 +9,17 @@ export const demoLesson: Lesson = {
 	steps: [
 		{
 			id: "step-1",
-			content: `## 👋 Welcome to BitSchool!
+			content: `## 🧪 Test Our AI Feedback System
 
-This is our AI-powered coding workspace. Let's try it out!
+Welcome to BitSchool! This demo showcases our intelligent testing and AI feedback.
 
----
-
-**Your first task:** Type this code and click **Run**:
+**Try this:** Type the code below and click **Run**:
 
 \`\`\`javascript
 console.log("Hello, BitSchool!")
-\`\`\``,
+\`\`\`
+
+💡 **Pro tip:** Try making mistakes on purpose to see our AI in action!`,
 			tests: [
 				{
 					type: "consoleLogs",
@@ -29,75 +29,77 @@ console.log("Hello, BitSchool!")
 		},
 		{
 			id: "step-2",
-			content: `## 🎉 Great job!
+			content: `## 🎯 Now Try Breaking It!
 
-You just ran your first code! Notice how the output appeared in the console below.
+Great! You saw the output in the console.
 
----
+**Challenge:** Try typing something wrong and click Run to see our AI feedback system in action.
 
-Now let's create a **variable**. Type this:
+Then fix it and try again:
 
 \`\`\`javascript
-let myName = "Your Name"
-console.log(myName)
+let count = 10
+console.log(count)
 \`\`\`
 
-*(Replace "Your Name" with your actual name)*`,
+*💡 **Experiment:** Try typging the wrong variable name, or forgetting \`console.log()\`*`,
 			tests: [
 				{
 					type: "variableAssignment",
-					variableName: "myName",
-					expectedValue: { expected: "__any__" },
+					variableName: "count",
+					expectedValue: { expected: 10 },
 				},
 				{
-					type: "consoleLogVariable",
-					expectedOutput: "__any__",
-					variableName: "myName",
+					type: "consoleLogs",
+					expectedOutput: ["10"],
 				},
 			],
 		},
 		{
 			id: "step-3",
-			content: `## 💪 Awesome!
+			content: `## 🔥 Final Challenge - Break Everything!
 
-Now let's try something more interesting. Create a **function** that adds two numbers:
+Perfect! Now for the ultimate test of our AI system.
+
+**Try this code, then break it on purpose:**
 
 \`\`\`javascript
-function add(a, b) {
-  return a + b
+function multiply(a, b) {
+  return a * b
 }
 
-console.log(add(5, 3))
+console.log(multiply(4, 5))
 \`\`\`
 
-This function should output **8** in the console.`,
+*💡 **Go wild:** Try wrong function names, missing parameters, wrong math, or syntax errors!*`,
 			tests: [
 				{
 					type: "functionDeclaration",
-					functionName: "add",
+					functionName: "multiply",
 					parameters: ["a", "b"],
 				},
 				{
 					type: "consoleLogs",
-					expectedOutput: ["8"],
+					expectedOutput: ["20"],
 				},
 			],
 		},
 		{
 			id: "step-4",
-			content: `## 🚀 Incredible work!
+			content: `## 🎉 You've Seen the Magic!
 
-You've just experienced BitSchool's interactive workspace with:
+You just experienced BitSchool's powerful features:
 
-✅ Real-time code execution  
-✅ Instant AI feedback  
-✅ Smart test validation  
+✅ **Smart Testing** - Detects exactly what went wrong  
+✅ **AI Feedback** - Personalized hints for every mistake  
+✅ **Real-time Execution** - See results instantly  
+✅ **Intelligent Guidance** - Learns from your code  
 
 ---
 
-**Ready to learn JavaScript for real?**
+**Ready to learn JavaScript with AI that actually helps?**
 
-Sign up now and start your coding journey with AI-powered guidance!`,
+Sign up now and start your coding journey!`,
 			tests: [],
 		},
 	],

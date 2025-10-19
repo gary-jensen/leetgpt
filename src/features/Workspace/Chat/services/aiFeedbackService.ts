@@ -6,6 +6,7 @@ interface AIFeedbackRequest {
 	stepContent: string;
 	testResults: TestResult[];
 	userCode: string;
+	isDemo?: boolean;
 }
 
 interface AIFeedbackResponse {

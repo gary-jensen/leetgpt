@@ -68,6 +68,7 @@ interface AIFeedbackRequest {
 	stepContent: string;
 	testResults: TestResult[];
 	userCode: string;
+	isDemo?: boolean; // Flag to identify demo requests
 }
 
 interface AIFeedbackResponse {
@@ -88,36 +89,74 @@ export async function getAIFeedback(
 		const userId = session?.user?.id;
 		const clientIP = await getClientIP();
 
+		// Determine if this is a demo request
+		const isDemoRequest = request.isDemo || false;
+
+		// Use different rate limits for demo vs production
+		const rateLimitType = isDemoRequest
+			? "demo_ai_feedback"
+			: "ai_feedback";
+		const userLimit = isDemoRequest
+			? RATE_LIMITS.DEMO_AI_FEEDBACK
+			: RATE_LIMITS.AI_FEEDBACK;
+		const ipLimit = isDemoRequest
+			? RATE_LIMITS.DEMO_AI_FEEDBACK_IP
+			: RATE_LIMITS.AI_FEEDBACK_IP;
+
 		// Rate limiting - user/guest based
-		const userKey = getRateLimitKey(userId || null, null, "ai_feedback");
+		const userKey = getRateLimitKey(userId || null, null, rateLimitType);
 		const userRateLimit = checkRateLimit(
 			userKey,
-			RATE_LIMITS.AI_FEEDBACK.limit,
-			RATE_LIMITS.AI_FEEDBACK.windowMs
+			userLimit.limit,
+			userLimit.windowMs
 		);
 
 		if (!userRateLimit.allowed) {
+			const timeRemaining = Math.ceil(
+				(userRateLimit.resetTime - Date.now()) / 1000
+			);
+			const timeUnit = isDemoRequest
+				? timeRemaining > 60
+					? "minutes"
+					: "seconds"
+				: "seconds";
+			const timeValue = isDemoRequest
+				? timeRemaining > 60
+					? Math.ceil(timeRemaining / 60)
+					: timeRemaining
+				: timeRemaining;
+
 			return {
-				feedback: `Rate limit exceeded. Please try again in ${Math.ceil(
-					(userRateLimit.resetTime - Date.now()) / 1000
-				)} seconds.`,
+				feedback: `Rate limit exceeded. Please try again in ${timeValue} ${timeUnit}.`,
 			};
 		}
 
 		// Rate limiting - IP based
 		if (clientIP) {
-			const ipKey = getIPRateLimitKey(clientIP, "ai_feedback");
+			const ipKey = getIPRateLimitKey(clientIP, rateLimitType);
 			const ipRateLimit = checkRateLimit(
 				ipKey,
-				RATE_LIMITS.AI_FEEDBACK_IP.limit,
-				RATE_LIMITS.AI_FEEDBACK_IP.windowMs
+				ipLimit.limit,
+				ipLimit.windowMs
 			);
 
 			if (!ipRateLimit.allowed) {
+				const timeRemaining = Math.ceil(
+					(ipRateLimit.resetTime - Date.now()) / 1000
+				);
+				const timeUnit = isDemoRequest
+					? timeRemaining > 60
+						? "minutes"
+						: "seconds"
+					: "seconds";
+				const timeValue = isDemoRequest
+					? timeRemaining > 60
+						? Math.ceil(timeRemaining / 60)
+						: timeRemaining
+					: timeRemaining;
+
 				return {
-					feedback: `Rate limit exceeded. Please try again in ${Math.ceil(
-						(ipRateLimit.resetTime - Date.now()) / 1000
-					)} seconds.`,
+					feedback: `Rate limit exceeded. Please try again in ${timeValue} ${timeUnit}.`,
 				};
 			}
 		}

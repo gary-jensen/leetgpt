@@ -29,6 +29,10 @@ export const RATE_LIMITS = {
 	AI_FEEDBACK: { limit: 20, windowMs: 60 * 1000 }, // 20 per minute
 	AI_FEEDBACK_IP: { limit: 100, windowMs: 60 * 1000 }, // 100 per minute per IP
 
+	// Demo AI feedback (stricter limits)
+	DEMO_AI_FEEDBACK: { limit: 10, windowMs: 60 * 60 * 1000 }, // 10 per hour
+	DEMO_AI_FEEDBACK_IP: { limit: 10, windowMs: 60 * 60 * 1000 }, // 10 per hour per IP
+
 	// General IP rate limiting
 	IP_GENERAL: { limit: 1000, windowMs: 60 * 1000 }, // 1000 requests per minute per IP
 } as const;
@@ -148,4 +152,3 @@ export function getRateLimitStatus(key: string): {
 export function clearRateLimitData(): void {
 	rateLimitStore.clear();
 }
-
