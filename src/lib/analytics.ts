@@ -258,9 +258,13 @@ export const trackDemoComplete = () => {
 };
 
 // Landing page section tracking
-export const trackLandingSectionView = (sectionName: string) => {
-	trackEvent("Landing", "section_view", sectionName, undefined, {
+export const trackLandingSectionView = (
+	sectionName: string,
+	percentViewed: number
+) => {
+	trackEvent("Landing", "section_view", sectionName, percentViewed, {
 		sectionName,
+		percentViewed,
 	});
 };
 

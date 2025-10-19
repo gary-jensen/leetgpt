@@ -42,7 +42,7 @@ let count = 10
 console.log(count)
 \`\`\`
 
-*💡 **Experiment:** Try typging the wrong variable name, or forgetting \`console.log()\`*`,
+💡 **Experiment:** Try typing the wrong variable name, or forgetting \`console.log()\``,
 			tests: [
 				{
 					type: "variableAssignment",
@@ -57,43 +57,18 @@ console.log(count)
 		},
 		{
 			id: "step-3",
-			content: `## 🔥 Final Challenge - Break Everything!
-
-Perfect! Now for the ultimate test of our AI system.
-
-**Try this code, then break it on purpose:**
-
-\`\`\`javascript
-function multiply(a, b) {
-  return a * b
-}
-
-console.log(multiply(4, 5))
-\`\`\`
-
-*💡 **Go wild:** Try wrong function names, missing parameters, wrong math, or syntax errors!*`,
-			tests: [
-				{
-					type: "functionDeclaration",
-					functionName: "multiply",
-					parameters: ["a", "b"],
-				},
-				{
-					type: "consoleLogs",
-					expectedOutput: ["20"],
-				},
-			],
-		},
-		{
-			id: "step-4",
 			content: `## 🎉 You've Seen the Magic!
 
 You just experienced BitSchool's powerful features:
 
-✅ **Smart Testing** - Detects exactly what went wrong  
-✅ **AI Feedback** - Personalized hints for every mistake  
-✅ **Real-time Execution** - See results instantly  
-✅ **Intelligent Guidance** - Learns from your code  
+✅ **Smart Testing** - Detects exactly what went wrong
+
+✅ **AI Feedback** - Personalized hints for every mistake
+
+✅ **Real-time Execution** - See results instantly
+
+✅ **Intelligent Guidance** - Learns from your code
+
 
 ---
 

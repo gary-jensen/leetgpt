@@ -16,6 +16,8 @@ export const useScrollTracking = () => {
 			{ id: "footer", selector: "footer" },
 		];
 
+		const totalSections = sections.length;
+
 		const observer = new IntersectionObserver(
 			(entries) => {
 				entries.forEach((entry) => {
@@ -27,7 +29,16 @@ export const useScrollTracking = () => {
 
 						if (!trackedSections.current.has(sectionId)) {
 							trackedSections.current.add(sectionId);
-							trackLandingSectionView(sectionId);
+
+							// Calculate percentage viewed based on number of sections viewed
+							const sectionsViewed = trackedSections.current.size;
+							const percentViewed =
+								Math.round(
+									((sectionsViewed / totalSections) * 100) /
+										10
+								) * 10;
+
+							trackLandingSectionView(sectionId, percentViewed);
 						}
 					}
 				});

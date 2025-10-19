@@ -39,13 +39,7 @@ const MessageContent = ({
 		<div className={className}>
 			<div className="text-base leading-[1.75]">
 				<div className="chat-markdown-display">
-					{isProcessing ? (
-						<div className="flex items-center space-x-2">
-							<div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" />
-							<div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" />
-							<div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" />
-						</div>
-					) : (
+					{!isProcessing && (
 						<div
 							className="markdown-content"
 							dangerouslySetInnerHTML={{ __html: html }}
@@ -223,8 +217,8 @@ export default function DemoChatMessageList({
 				);
 			})}
 
-			{/* Thinking Indicator */}
-			{/* {isThinking && (
+			{/* Thinking Indicator - only show when thinking and not streaming */}
+			{isThinking && !streamingMessageId && (
 				<div className="space-y-1 border-l-4 border-red-500 pl-4 bg-red-500/10 rounded-r-lg py-2 error-message">
 					<div className="text-base leading-[1.75]">
 						<div className="whitespace-pre-wrap">
@@ -232,7 +226,7 @@ export default function DemoChatMessageList({
 						</div>
 					</div>
 				</div>
-			)} */}
+			)}
 
 			<div ref={messagesEndRef} />
 		</div>
