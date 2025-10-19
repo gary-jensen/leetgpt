@@ -1,6 +1,21 @@
-import Image from "next/image";
-import { redirect } from "next/navigation";
+import Demo from "@/features/Landing/Demo";
+import Features from "@/features/Landing/Features";
+import FinalCTA from "@/features/Landing/FinalCTA";
+import Footer from "@/features/Landing/Footer";
+import Hero from "@/features/Landing/Hero";
+import Navbar from "@/features/Landing/Navbar";
+import Pricing from "@/features/Landing/Pricing";
 
 export default function Home() {
-	redirect("/learn");
+	return (
+		<main className="min-h-screen bg-background font-dm-sans">
+			<Navbar />
+			<Hero />
+			<Demo />
+			<Features />
+			<Pricing />
+			<FinalCTA />
+			<Footer />
+		</main>
+	);
 }

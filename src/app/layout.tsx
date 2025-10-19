@@ -4,9 +4,14 @@ import { ProgressProvider } from "@/contexts/ProgressContext";
 import { lessonMetadata } from "@/features/Workspace/lesson-data/lessons";
 import { getSession, setLessonMetadata } from "@/lib/auth";
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { DM_Sans, Inter } from "next/font/google";
 import { Analytics as VercelAnalytics } from "@vercel/analytics/next";
 import "./globals.css";
+
+const dmSans = DM_Sans({
+	variable: "--font-dm-sans",
+	subsets: ["latin"],
+});
 
 const inter = Inter({
 	variable: "--font-inter",
@@ -53,7 +58,9 @@ export default async function RootLayout({
 
 	return (
 		<html lang="en">
-			<body className={`${inter.variable} antialiased`}>
+			<body
+				className={`${inter.variable} ${dmSans.variable} antialiased`}
+			>
 				<SessionProvider session={session}>
 					<ProgressProvider
 						lessonMetadata={lessonMetadata}

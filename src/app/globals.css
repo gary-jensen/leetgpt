@@ -10,6 +10,8 @@
 	--color-background-4: var(--background-4);
 	--color-foreground: var(--foreground);
 	--font-sans: var(--font-inter);
+	--font-inter: var(--font-inter);
+	--font-dm-sans: var(--font-dm-sans);
 	/* --font-mono: "'SF Mono', Monaco, Menlo, Consolas, 'Ubuntu Mono', 'Liberation Mono', 'DejaVu Sans Mono','Courier New', monospace"; */
 	--color-sidebar-ring: var(--sidebar-ring);
 	--color-sidebar-border: var(--sidebar-border);
