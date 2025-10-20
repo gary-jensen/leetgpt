@@ -44,7 +44,7 @@ export async function saveAnalyticsEvent(eventData: AnalyticsEventData) {
 			eventData.guestId || null,
 			"analytics_single"
 		);
-		const userRateLimit = checkRateLimit(
+		const userRateLimit = await checkRateLimit(
 			userKey,
 			RATE_LIMITS.ANALYTICS_SINGLE.limit,
 			RATE_LIMITS.ANALYTICS_SINGLE.windowMs
@@ -62,7 +62,7 @@ export async function saveAnalyticsEvent(eventData: AnalyticsEventData) {
 		// Rate limiting - IP based
 		if (clientIP) {
 			const ipKey = getIPRateLimitKey(clientIP, "analytics_single");
-			const ipRateLimit = checkRateLimit(
+			const ipRateLimit = await checkRateLimit(
 				ipKey,
 				RATE_LIMITS.ANALYTICS_IP.limit,
 				RATE_LIMITS.ANALYTICS_IP.windowMs
@@ -169,7 +169,7 @@ export async function saveAnalyticsEventBatch(events: AnalyticsEventData[]) {
 			events[0]?.guestId || null,
 			"analytics_batch"
 		);
-		const userRateLimit = checkRateLimit(
+		const userRateLimit = await checkRateLimit(
 			userKey,
 			RATE_LIMITS.ANALYTICS_BATCH.limit,
 			RATE_LIMITS.ANALYTICS_BATCH.windowMs
@@ -187,7 +187,7 @@ export async function saveAnalyticsEventBatch(events: AnalyticsEventData[]) {
 		// Rate limiting - IP based
 		if (clientIP) {
 			const ipKey = getIPRateLimitKey(clientIP, "analytics_batch");
-			const ipRateLimit = checkRateLimit(
+			const ipRateLimit = await checkRateLimit(
 				ipKey,
 				RATE_LIMITS.ANALYTICS_IP.limit,
 				RATE_LIMITS.ANALYTICS_IP.windowMs

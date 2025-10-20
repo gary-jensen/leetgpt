@@ -33,7 +33,7 @@ export async function saveUserProgress(
 
 		// Rate limiting - 10 saves per minute per user
 		const rateLimitKey = getRateLimitKey(userId, null, "progress_save");
-		const rateLimit = checkRateLimit(
+		const rateLimit = await checkRateLimit(
 			rateLimitKey,
 			RATE_LIMITS.PROGRESS_SAVE.limit,
 			RATE_LIMITS.PROGRESS_SAVE.windowMs
@@ -186,7 +186,7 @@ export async function migrateLocalStorageData(
 			null,
 			"progress_migration"
 		);
-		const rateLimit = checkRateLimit(
+		const rateLimit = await checkRateLimit(
 			rateLimitKey,
 			RATE_LIMITS.PROGRESS_MIGRATION.limit,
 			RATE_LIMITS.PROGRESS_MIGRATION.windowMs

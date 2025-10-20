@@ -8,7 +8,7 @@ const SOUND_PATHS = {
 } as const;
 
 // Sound instances
-let sounds: {
+const sounds: {
 	success: Howl | null;
 	error: Howl | null;
 	levelup: Howl | null;

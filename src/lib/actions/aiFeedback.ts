@@ -105,7 +105,7 @@ export async function getAIFeedback(
 
 		// Rate limiting - user/guest based
 		const userKey = getRateLimitKey(userId || null, null, rateLimitType);
-		const userRateLimit = checkRateLimit(
+		const userRateLimit = await checkRateLimit(
 			userKey,
 			userLimit.limit,
 			userLimit.windowMs
@@ -134,7 +134,7 @@ export async function getAIFeedback(
 		// Rate limiting - IP based
 		if (clientIP) {
 			const ipKey = getIPRateLimitKey(clientIP, rateLimitType);
-			const ipRateLimit = checkRateLimit(
+			const ipRateLimit = await checkRateLimit(
 				ipKey,
 				ipLimit.limit,
 				ipLimit.windowMs

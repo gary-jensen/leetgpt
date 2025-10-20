@@ -41,6 +41,12 @@ LOCAL_STORAGE_SECRET="your-generated-storage-secret-here"
 
 # OpenAI API (for AI features)
 OPENAI_API_KEY="sk-..."
+
+# Redis (for rate limiting) - OPTIONAL for local development
+# Get from: Redis Cloud, Upstash, or any Redis provider
+# For local development, you can use a local Redis instance or leave unset
+# If not set, rate limiting will use in-memory fallback (resets on server restart)
+REDIS_URL="redis://localhost:6379"
 ```
 
 ## Production Environment Variables (Vercel)

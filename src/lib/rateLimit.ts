@@ -1,18 +1,88 @@
 /**
  * Rate limiting utilities for server functions
- * Uses in-memory storage with sliding window algorithm
+ * Uses Redis for persistent storage with sliding window algorithm
+ * Falls back to in-memory storage if Redis is not available
  */
+
+import { createClient } from "redis";
 
 interface RateLimitEntry {
 	timestamps: number[];
 	lastCleanup: number;
 }
 
-// In-memory storage for rate limiting
-const rateLimitStore = new Map<string, RateLimitEntry>();
-
 // Cleanup interval (5 minutes)
 const CLEANUP_INTERVAL = 5 * 60 * 1000;
+
+// Create Redis client only if REDIS_URL is available
+const redis = process.env.REDIS_URL
+	? createClient({
+			url: process.env.REDIS_URL,
+	  })
+	: null;
+
+// Connect to Redis if client exists
+if (redis) {
+	redis.on("error", (err) => {
+		console.warn("Redis connection error:", err);
+	});
+}
+
+// Fallback in-memory storage for when Redis is not available
+const fallbackStore = new Map<string, RateLimitEntry>();
+
+// Helper functions for Redis operations
+async function getRateLimitData(key: string): Promise<RateLimitEntry | null> {
+	// If no Redis client, use fallback storage
+	if (!redis) {
+		return fallbackStore.get(key) || null;
+	}
+
+	try {
+		// Ensure Redis is connected
+		if (!redis.isOpen) {
+			await redis.connect();
+		}
+
+		const data = await redis.get(key);
+		return data ? JSON.parse(data) : null;
+	} catch (error) {
+		console.warn(
+			"Redis not available, using fallback storage:",
+			error instanceof Error ? error.message : String(error)
+		);
+		// Fallback to in-memory storage
+		return fallbackStore.get(key) || null;
+	}
+}
+
+async function setRateLimitData(
+	key: string,
+	data: RateLimitEntry
+): Promise<void> {
+	// If no Redis client, use fallback storage
+	if (!redis) {
+		fallbackStore.set(key, data);
+		return;
+	}
+
+	try {
+		// Ensure Redis is connected
+		if (!redis.isOpen) {
+			await redis.connect();
+		}
+
+		// Set with 1 hour expiry to prevent indefinite storage
+		await redis.setEx(key, 3600, JSON.stringify(data));
+	} catch (error) {
+		console.warn(
+			"Redis not available, using fallback storage:",
+			error instanceof Error ? error.message : String(error)
+		);
+		// Fallback to in-memory storage
+		fallbackStore.set(key, data);
+	}
+}
 
 // Rate limit configurations
 export const RATE_LIMITS = {
@@ -40,19 +110,18 @@ export const RATE_LIMITS = {
 /**
  * Check if a request is within rate limits
  */
-export function checkRateLimit(
+export async function checkRateLimit(
 	key: string,
 	limit: number,
 	windowMs: number
-): { allowed: boolean; remaining: number; resetTime: number } {
+): Promise<{ allowed: boolean; remaining: number; resetTime: number }> {
 	const now = Date.now();
 	const windowStart = now - windowMs;
 
-	// Get or create entry
-	let entry = rateLimitStore.get(key);
+	// Get existing rate limit entry from KV
+	let entry = await getRateLimitData(key);
 	if (!entry) {
 		entry = { timestamps: [], lastCleanup: now };
-		rateLimitStore.set(key, entry);
 	}
 
 	// Clean up old timestamps
@@ -67,6 +136,9 @@ export function checkRateLimit(
 	if (allowed) {
 		// Add current request timestamp
 		entry.timestamps.push(now);
+
+		// Save updated entry to KV
+		await setRateLimitData(key, entry);
 	}
 
 	// Calculate remaining requests and reset time
@@ -78,8 +150,8 @@ export function checkRateLimit(
 
 	// Periodic cleanup of old entries
 	if (now - entry.lastCleanup > CLEANUP_INTERVAL) {
-		cleanupOldEntries();
 		entry.lastCleanup = now;
+		// Note: We don't need to cleanup KV entries as they have TTL
 	}
 
 	return { allowed, remaining, resetTime };
@@ -111,32 +183,14 @@ export function getIPRateLimitKey(ip: string, type: string): string {
 }
 
 /**
- * Clean up old entries from memory
- */
-export function cleanupOldEntries(): void {
-	const now = Date.now();
-	const cutoff = now - 60 * 60 * 1000; // Remove entries older than 1 hour
-
-	for (const [key, entry] of rateLimitStore.entries()) {
-		// Remove entries with no recent activity
-		if (
-			entry.timestamps.length === 0 ||
-			entry.timestamps[entry.timestamps.length - 1] < cutoff
-		) {
-			rateLimitStore.delete(key);
-		}
-	}
-}
-
-/**
  * Get rate limit status for debugging
  */
-export function getRateLimitStatus(key: string): {
+export async function getRateLimitStatus(key: string): Promise<{
 	key: string;
 	timestamps: number[];
 	count: number;
-} | null {
-	const entry = rateLimitStore.get(key);
+} | null> {
+	const entry = await getRateLimitData(key);
 	if (!entry) return null;
 
 	return {
@@ -148,7 +202,12 @@ export function getRateLimitStatus(key: string): {
 
 /**
  * Clear all rate limit data (for testing)
+ * Note: This is not easily possible with KV as we don't track all keys
  */
-export function clearRateLimitData(): void {
-	rateLimitStore.clear();
+export async function clearRateLimitData(): Promise<void> {
+	// Note: With KV, we can't easily clear all data without tracking keys
+	// Individual keys will expire automatically with TTL
+	console.warn(
+		"clearRateLimitData: Cannot clear all KV data without tracking keys"
+	);
 }
