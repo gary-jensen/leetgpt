@@ -31,11 +31,13 @@ export const useScrollTracking = () => {
 							trackedSections.current.add(sectionId);
 
 							// Calculate percentage viewed based on number of sections viewed
-							const sectionsViewed = trackedSections.current.size;
+							const sectionIndex =
+								sections.findIndex(
+									(section) => section.id === sectionId
+								) + 1;
 							const percentViewed =
 								Math.round(
-									((sectionsViewed / totalSections) * 100) /
-										10
+									((sectionIndex / totalSections) * 100) / 10
 								) * 10;
 
 							trackLandingSectionView(sectionId, percentViewed);
