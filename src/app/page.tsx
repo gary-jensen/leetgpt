@@ -1,6 +1,5 @@
-import Image from "next/image";
-import { redirect } from "next/navigation";
+import Workspace from "@/features/Workspace/workspace";
 
 export default function Home() {
-	redirect("/learn");
+	return <Workspace />;
 }
