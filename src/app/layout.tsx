@@ -37,12 +37,14 @@ export const metadata: Metadata = {
 			"Master JavaScript through hands-on, interactive lessons. Learn by doing with real-time code execution and gamified progression.",
 		type: "website",
 		url: "https://thebitschool.com",
+		images: ["https://thebitschool.com/preview-image.png"], // URL to the image for the card
 	},
 	twitter: {
 		card: "summary_large_image",
 		title: "BitSchool - Learn JavaScript Through Interactive Coding",
 		description:
 			"Master JavaScript through hands-on, interactive lessons. Learn by doing with real-time code execution and gamified progression.",
+		images: ["https://thebitschool.com/preview-image.png"], // URL to the image for the card
 	},
 };
 
