@@ -1,3 +1,5 @@
+"use client";
+
 import WorkspaceDemo from "./components/WorkspaceDemo";
 
 export default function Demo() {
