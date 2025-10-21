@@ -10,6 +10,8 @@ import AnimationManager from "../../components/Rewards/AnimationManager";
 import { Lesson } from "./lesson-data/lesson-types";
 import MoreLessonsComingSoon from "./components/MoreLessonsComingSoon";
 import { useProgress } from "../../contexts/ProgressContext";
+import { redirect } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 interface WorkspaceContentProps {
 	lessons: Lesson[];
@@ -32,6 +34,11 @@ export default function WorkspaceContent({
 
 	const { progress, getCurrentStep } = useProgress();
 	const currentLesson = lessons[currentLessonIndex];
+
+	const { data: session } = useSession();
+	if (!session?.user) {
+		redirect("/login");
+	}
 
 	// Initialize currentStepIndex from progress
 	useEffect(() => {
