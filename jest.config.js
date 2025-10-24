@@ -1,4 +1,4 @@
-import nextJest from "next/jest";
+const nextJest = require("next/jest");
 
 const createJestConfig = nextJest({
 	// Provide the path to your Next.js app to load next.config.js and .env files
@@ -12,11 +12,15 @@ const customJestConfig = {
 	testMatch: [
 		"<rootDir>/src/lib/__tests__/**/*.test.ts",
 		"<rootDir>/src/lib/__tests__/**/*.test.tsx",
+		"<rootDir>/src/features/**/__tests__/**/*.test.ts",
+		"<rootDir>/src/features/**/__tests__/**/*.test.tsx",
 	],
 	collectCoverageFrom: [
 		"src/lib/**/*.{js,jsx,ts,tsx}",
+		"src/features/**/*.{js,jsx,ts,tsx}",
 		"!src/lib/**/*.d.ts",
 		"!src/lib/__tests__/**",
+		"!src/features/**/__tests__/**",
 	],
 	coverageThreshold: {
 		"src/lib/rateLimit.ts": {
@@ -47,8 +51,9 @@ const customJestConfig = {
 	moduleNameMapper: {
 		"^@/(.*)$": "<rootDir>/src/$1",
 	},
+	transformIgnorePatterns: ["node_modules/(?!(uuid)/)"],
 	testTimeout: 10000,
 };
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
-export default createJestConfig(customJestConfig);
+module.exports = createJestConfig(customJestConfig);

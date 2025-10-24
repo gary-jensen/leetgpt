@@ -99,6 +99,95 @@ const useConsole = (
 			// Create result array where each element corresponds to a test
 			const testResultArray =
 				currentQuestion.tests?.map((test) => {
+					// For function tests, execute the function with test cases
+					if (test.type === "function") {
+						// Execute function test cases
+						return (
+							test.testCases?.map((testCase) => {
+								const testLogs: string[] = [];
+								const originalLog = console.log;
+
+								// Override console.log to capture output during function execution
+								console.log = function (...args: any[]) {
+									const msg = args
+										.map((arg) =>
+											arg === undefined
+												? "undefined"
+												: arg
+										)
+										.join(" ");
+									testLogs.push(msg);
+									// Don't output to console during test case execution
+								};
+
+								let testResult: any;
+								try {
+									// Check if function exists in the tracked functions
+									const trackedFunctions =
+										result.tracked?.functions || {};
+									const serializedFunction =
+										trackedFunctions[test.functionName];
+
+									if (!serializedFunction) {
+										// Function doesn't exist
+										testResult = {
+											__functionNotFound: true,
+											functionName: test.functionName,
+										};
+									} else {
+										// Recreate the function from serialized format
+										let targetFunction;
+										try {
+											if (serializedFunction.toString) {
+												// Create function from string representation
+												targetFunction = eval(
+													`(${serializedFunction.toString})`
+												);
+											} else {
+												// Fallback if it's already a function
+												targetFunction =
+													serializedFunction;
+											}
+										} catch (e) {
+											// Function could not be recreated
+											testResult = {
+												__functionNotFound: true,
+												functionName: test.functionName,
+											};
+										}
+
+										if (targetFunction) {
+											// Actually execute the function with test inputs
+											testResult = targetFunction.apply(
+												null,
+												testCase.input
+											);
+										}
+									}
+								} catch (e) {
+									// If it's a ReferenceError, the function doesn't exist
+									if (
+										e instanceof ReferenceError &&
+										e.message.includes(test.functionName)
+									) {
+										testResult = {
+											__functionNotFound: true,
+											functionName: test.functionName,
+										};
+									} else {
+										// Re-throw other errors (these are legitimate user code errors)
+										throw e;
+									}
+								} finally {
+									// Restore original console.log
+									console.log = originalLog;
+								}
+
+								return { result: testResult, logs: testLogs };
+							}) || []
+						);
+					}
+
 					// For variable tests, use the old system approach
 					if (test.type === "variableAssignment") {
 						// Return marker object like old system
