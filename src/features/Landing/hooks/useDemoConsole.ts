@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { CodeExecutor } from "@/features/Workspace/Console/lib/codeExecutor";
-import { ExecutionResult } from "@/features/Workspace/Console/lib/types";
-import { questionTestDetailed } from "@/features/Workspace/Console/lib/questionTest";
+import { CodeExecutor } from "@/lib/execution/codeExecutor";
+import { ExecutionResult } from "@/lib/execution/types";
+import { questionTestDetailed } from "@/lib/execution/questionTest";
 import {
 	TestResult,
 	Step,

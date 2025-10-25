@@ -1,35 +1,6 @@
-// Optional: configure or set up a testing framework before each test.
-// If you delete this file, remove `setupFilesAfterEnv` from `jest.config.js`
-
-// Used for __tests__/testing-library.js
-// Learn more: https://github.com/testing-library/jest-dom
 import "@testing-library/jest-dom";
 
 // Mock Next.js router
-jest.mock("next/router", () => ({
-	useRouter() {
-		return {
-			route: "/",
-			pathname: "/",
-			query: {},
-			asPath: "/",
-			push: jest.fn(),
-			pop: jest.fn(),
-			reload: jest.fn(),
-			back: jest.fn(),
-			prefetch: jest.fn().mockResolvedValue(undefined),
-			beforePopState: jest.fn(),
-			events: {
-				on: jest.fn(),
-				off: jest.fn(),
-				emit: jest.fn(),
-			},
-			isFallback: false,
-		};
-	},
-}));
-
-// Mock Next.js navigation
 jest.mock("next/navigation", () => ({
 	useRouter() {
 		return {
@@ -41,17 +12,58 @@ jest.mock("next/navigation", () => ({
 			refresh: jest.fn(),
 		};
 	},
+	useParams() {
+		return {};
+	},
 	useSearchParams() {
 		return new URLSearchParams();
 	},
 	usePathname() {
-		return "/";
+		return "";
 	},
 }));
 
-// Mock environment variables
-process.env.OPENAI_API_KEY = "test-api-key";
-process.env.DATABASE_URL = "postgresql://test:test@localhost:5432/test";
-process.env.NEXTAUTH_SECRET = "test-secret";
-process.env.NEXTAUTH_URL = "http://localhost:3000";
+// Mock console methods to avoid noise in tests
+global.console = {
+	...console,
+	// Uncomment to ignore a specific log level
+	// log: jest.fn(),
+	// debug: jest.fn(),
+	// info: jest.fn(),
+	// warn: jest.fn(),
+	// error: jest.fn(),
+};
 
+// Mock cryptoUtils to avoid UUID ES module issues
+jest.mock("@/lib/cryptoUtils", () => ({
+	generateUUID: jest.fn(() => "mock-uuid-123"),
+	isCryptoSubtleAvailable: jest.fn(() => false),
+	getRandomValues: jest.fn((array) => {
+		for (let i = 0; i < array.length; i++) {
+			array[i] = Math.floor(Math.random() * 256);
+		}
+		return array;
+	}),
+	hashSHA256: jest.fn(() => Promise.resolve("mock-hash")),
+	encryptData: jest.fn(() =>
+		Promise.resolve({ encrypted: "mock-encrypted", iv: "mock-iv" })
+	),
+	decryptData: jest.fn(() => Promise.resolve("mock-decrypted")),
+}));
+
+// Mock auth module to avoid NextAuth/jose ES module issues
+jest.mock("@/lib/auth", () => ({
+	getServerSession: jest.fn(() => Promise.resolve(null)),
+}));
+
+// Mock useConsole hook
+jest.mock("@/hooks/workspace/useConsole", () => ({
+	__esModule: true,
+	default: jest.fn(() => ({
+		iframeRef: { current: null },
+		handleTest: jest.fn(),
+		isExecuting: false,
+		handleRun: jest.fn(),
+		lastResult: null,
+	})),
+}));

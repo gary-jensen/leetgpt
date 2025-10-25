@@ -3,8 +3,8 @@
 import { useDemoLesson } from "../hooks/useDemoLesson";
 import useDemoConsole from "../hooks/useDemoConsole";
 import DemoChatMessageList from "./DemoChatMessageList";
-import EditorWrapper from "@/features/Workspace/Editor/components/EditorWrapper";
-import Console from "@/features/Workspace/Console/components/console";
+import EditorWrapper from "@/components/workspace/Editor/components/EditorWrapper";
+import Console from "@/components/workspace/Console/components/console";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";

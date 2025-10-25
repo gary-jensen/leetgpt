@@ -3,7 +3,7 @@
 import { DemoMessage } from "../hooks/useDemoLesson";
 import { processMarkdown } from "@/components/MarkdownEditor/markdown-processor";
 import { useEffect, useState } from "react";
-import "@/features/Workspace/Chat/components/ChatMarkdownDisplay.css";
+import "@/components/workspace/Chat/components/ChatMarkdownDisplay.css";
 
 // Component to handle async markdown processing
 const MessageContent = ({

@@ -1,8 +1,8 @@
 "use client";
 
-import Editor from "./Editor/components/editor";
-import Chat from "./Chat/components/chat";
-import useConsole from "./Console/hooks/useConsole";
+import Editor from "@/components/workspace/Editor/components/editor";
+import Chat from "@/components/workspace/Chat/components/chat";
+import useConsole from "@/hooks/workspace/useConsole";
 import { useState, useEffect } from "react";
 import { useLessonStreaming } from "./hooks/useLessonStreaming";
 import { ProgressBar } from "./components/ProgressBar";

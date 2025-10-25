@@ -4,12 +4,12 @@ import {
 	LessonStreaming,
 	TestResult,
 } from "../lesson-data/lesson-types";
-import { useChat } from "../Chat/hooks/useChat";
-import { createLessonStreamer } from "../Chat/utils/lessonStreamer";
+import { useChat } from "@/components/workspace/Chat/hooks/useChat";
+import { createLessonStreamer } from "@/components/workspace/Chat/utils/lessonStreamer";
 import {
 	getAIFeedback,
 	formatAIFeedback,
-} from "../Chat/services/aiFeedbackService";
+} from "@/components/workspace/Chat/services/aiFeedbackService";
 import { useProgress } from "../../../contexts/ProgressContext";
 import { trackLessonStart } from "@/lib/analytics";
 import { playErrorSound, playSuccessSound } from "@/lib/soundManager";

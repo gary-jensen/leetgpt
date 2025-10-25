@@ -1,4 +1,4 @@
-import { ChatMessage } from "../Chat/types/chat";
+import { ChatMessage } from "@/components/workspace/Chat/types/chat";
 import { Test } from "../types/test-types";
 
 export interface Lesson {

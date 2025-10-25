@@ -18,63 +18,63 @@ beforeEach(() => {
 
 describe("Rate Limiting", () => {
 	describe("checkRateLimit", () => {
-		it("should allow requests within limit", () => {
+		it("should allow requests within limit", async () => {
 			const key = "test:user:123:analytics_single";
 			const limit = 5;
 			const windowMs = 60000; // 1 minute
 
 			// First 5 requests should be allowed
 			for (let i = 0; i < 5; i++) {
-				const result = checkRateLimit(key, limit, windowMs);
+				const result = await checkRateLimit(key, limit, windowMs);
 				expect(result.allowed).toBe(true);
 				expect(result.remaining).toBe(4 - i);
 			}
 		});
 
-		it("should block requests exceeding limit", () => {
-			const key = "test:user:123:analytics_single";
+		it("should block requests exceeding limit", async () => {
+			const key = `test:user:${Date.now()}:analytics_single`;
 			const limit = 3;
 			const windowMs = 60000;
 
 			// First 3 requests should be allowed
 			for (let i = 0; i < 3; i++) {
-				const result = checkRateLimit(key, limit, windowMs);
+				const result = await checkRateLimit(key, limit, windowMs);
 				expect(result.allowed).toBe(true);
+				// Add small delay to ensure timestamps are different
+				await new Promise((resolve) => setTimeout(resolve, 50));
 			}
 
 			// 4th request should be blocked
-			const result = checkRateLimit(key, limit, windowMs);
+			const result = await checkRateLimit(key, limit, windowMs);
 			expect(result.allowed).toBe(false);
 			expect(result.remaining).toBe(0);
 		});
 
-		it("should reset after window expires", (done) => {
+		it("should reset after window expires", async () => {
 			const key = "test:user:123:analytics_single";
 			const limit = 2;
 			const windowMs = 100; // Very short window for testing
 
 			// Use up the limit
-			checkRateLimit(key, limit, windowMs);
-			checkRateLimit(key, limit, windowMs);
+			await checkRateLimit(key, limit, windowMs);
+			await checkRateLimit(key, limit, windowMs);
 
 			// Should be blocked
-			const blockedResult = checkRateLimit(key, limit, windowMs);
+			const blockedResult = await checkRateLimit(key, limit, windowMs);
 			expect(blockedResult.allowed).toBe(false);
 
 			// Wait for window to expire
-			setTimeout(() => {
-				const allowedResult = checkRateLimit(key, limit, windowMs);
-				expect(allowedResult.allowed).toBe(true);
-				done();
-			}, 150);
+			await new Promise((resolve) => setTimeout(resolve, 150));
+			const allowedResult = await checkRateLimit(key, limit, windowMs);
+			expect(allowedResult.allowed).toBe(true);
 		});
 
-		it("should calculate reset time correctly", () => {
+		it("should calculate reset time correctly", async () => {
 			const key = "test:user:123:analytics_single";
 			const limit = 1;
 			const windowMs = 60000;
 
-			const result = checkRateLimit(key, limit, windowMs);
+			const result = await checkRateLimit(key, limit, windowMs);
 			expect(result.resetTime).toBeGreaterThan(Date.now());
 			expect(result.resetTime).toBeLessThanOrEqual(Date.now() + windowMs);
 		});
@@ -127,16 +127,18 @@ describe("Rate Limiting", () => {
 	});
 
 	describe("getRateLimitStatus", () => {
-		it("should return null for non-existent key", () => {
-			const status = getRateLimitStatus("nonexistent");
+		it("should return null for non-existent key", async () => {
+			const status = await getRateLimitStatus("nonexistent");
 			expect(status).toBeNull();
 		});
 
-		it("should return status for existing key", () => {
-			const key = "test:user:123:analytics_single";
-			checkRateLimit(key, 5, 60000);
+		it("should return status for existing key", async () => {
+			const key = `test:user:${Date.now()}:analytics_single`;
+			await checkRateLimit(key, 5, 60000);
+			// Add small delay to ensure the request is processed
+			await new Promise((resolve) => setTimeout(resolve, 10));
 
-			const status = getRateLimitStatus(key);
+			const status = await getRateLimitStatus(key);
 			expect(status).not.toBeNull();
 			expect(status?.key).toBe(key);
 			expect(status?.count).toBe(1);
@@ -144,4 +146,3 @@ describe("Rate Limiting", () => {
 		});
 	});
 });
-

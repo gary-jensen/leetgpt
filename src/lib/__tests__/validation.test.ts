@@ -244,6 +244,8 @@ describe("Validation Utilities", () => {
 				"Code",
 				"Progress",
 				"Auth",
+				"Demo",
+				"Landing",
 			]);
 		});
 
@@ -285,4 +287,3 @@ describe("Validation Utilities", () => {
 		});
 	});
 });
-

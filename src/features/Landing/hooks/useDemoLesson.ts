@@ -7,7 +7,7 @@ import { demoLesson } from "../data/demoLesson";
 import {
 	getAIFeedback,
 	formatAIFeedback,
-} from "@/features/Workspace/Chat/services/aiFeedbackService";
+} from "@/components/workspace/Chat/services/aiFeedbackService";
 import {
 	trackDemoSubmitCorrect,
 	trackDemoSubmitIncorrect,
