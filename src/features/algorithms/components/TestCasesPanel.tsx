@@ -1,0 +1,366 @@
+import { useState, useEffect } from "react";
+import { AlgoProblemDetail } from "@/types/algorithm-types";
+import { TestResult } from "./TestResultsDisplay";
+import { getTestStatus, getOverallStatus } from "../utils/testStatusUtils";
+import { createDiff } from "../utils/diffUtils";
+import { cn } from "@/lib/utils";
+import { processMarkdown } from "@/components/MarkdownEditor/markdown-processor";
+import "@/components/MarkdownEditor/MarkdownDisplay.css";
+
+interface TestCasesPanelProps {
+	problem: AlgoProblemDetail;
+	testResults: TestResult[];
+	activeTestTab: "testcase" | "results";
+	setActiveTestTab: (tab: "testcase" | "results") => void;
+}
+
+export function TestCasesPanel({
+	problem,
+	testResults,
+	activeTestTab,
+	setActiveTestTab,
+}: TestCasesPanelProps) {
+	const [selectedTestIndex, setSelectedTestIndex] = useState(0);
+
+	// Auto-select first failed case when switching to results tab
+	useEffect(() => {
+		if (activeTestTab === "results" && testResults.length > 0) {
+			const firstFailedIndex = testResults.findIndex(
+				(result) => !result.passed
+			);
+			if (firstFailedIndex !== -1) {
+				setSelectedTestIndex(firstFailedIndex);
+			} else {
+				// All passed, select first case
+				setSelectedTestIndex(0);
+			}
+		}
+	}, [activeTestTab, testResults]);
+
+	return (
+		<div className="bg-background flex flex-col rounded-2xl border-[#2f2f2f] border-1 overflow-hidden h-full">
+			<div className="flex items-center justify-between p-3 py-1.5 border-b border-border">
+				<div className="flex gap-4">
+					<button
+						onClick={() => setActiveTestTab("testcase")}
+						className={`px-2 py-1 rounded-md hover:bg-white/10 hover:cursor-pointer ${
+							activeTestTab !== "testcase" &&
+							"text-muted-foreground"
+						}`}
+					>
+						Test Case
+					</button>
+					<button
+						onClick={() => setActiveTestTab("results")}
+						className={`px-2 py-1 rounded-md hover:bg-white/10 hover:cursor-pointer ${
+							activeTestTab !== "results" &&
+							"text-muted-foreground"
+						}`}
+					>
+						Test Results
+					</button>
+				</div>
+			</div>
+
+			<div className="flex-1 flex flex-col overflow-hidden">
+				{/* Tab Content */}
+				{activeTestTab === "testcase" ? (
+					<TestCaseTab
+						problem={problem}
+						selectedTestIndex={selectedTestIndex}
+						setSelectedTestIndex={setSelectedTestIndex}
+					/>
+				) : (
+					<TestResultsTab
+						problem={problem}
+						testResults={testResults}
+						selectedTestIndex={selectedTestIndex}
+						setSelectedTestIndex={setSelectedTestIndex}
+					/>
+				)}
+			</div>
+		</div>
+	);
+}
+
+interface TestCaseTabProps {
+	problem: AlgoProblemDetail;
+	selectedTestIndex: number;
+	setSelectedTestIndex: (index: number) => void;
+}
+
+function TestCaseTab({
+	problem,
+	selectedTestIndex,
+	setSelectedTestIndex,
+}: TestCaseTabProps) {
+	const [processedInputs, setProcessedInputs] = useState<string[]>([]);
+
+	useEffect(() => {
+		if (problem.tests[selectedTestIndex]) {
+			const processInputs = async () => {
+				const inputs = problem.tests[selectedTestIndex].input.map(
+					async (value) => {
+						const jsonStr = JSON.stringify(value);
+						const markdown = `\`\`\`json\n${jsonStr}\n\`\`\``;
+						return await processMarkdown(markdown);
+					}
+				);
+				setProcessedInputs(await Promise.all(inputs));
+			};
+			processInputs();
+		}
+	}, [selectedTestIndex, problem.tests]);
+
+	return (
+		<div className="flex-1 flex flex-col overflow-hidden">
+			{/* Test Case Selection Tabs */}
+			<div className="flex mx-4 my-4 gap-2">
+				{problem.tests.map((_, index) => {
+					const isSelected = selectedTestIndex === index;
+					return (
+						<button
+							key={index}
+							onClick={() => setSelectedTestIndex(index)}
+							className={cn(
+								"px-3 py-1.5 rounded-md text-sm font-medium hover:bg-white/15 hover:cursor-pointer",
+								isSelected
+									? "bg-white/10 text-white"
+									: "text-muted-foreground hover:text-foreground "
+							)}
+						>
+							Case {index + 1}
+						</button>
+					);
+				})}
+			</div>
+
+			{/* Test Case Input Content */}
+			<div
+				className="flex-1 overflow-auto p-4 pt-0 dark-scrollbar"
+				style={{
+					scrollbarWidth: "thin",
+					scrollbarColor: "#9f9f9f #2C2C2C",
+				}}
+			>
+				{problem.tests[selectedTestIndex] && (
+					<div className="space-y-4">
+						{problem.tests[selectedTestIndex].input.map(
+							(value, index) => (
+								<div key={index}>
+									<span className="text-sm font-medium text-foreground">
+										{problem.parameterNames[index] ||
+											`param${index + 1}`}{" "}
+										=
+									</span>
+									<div className="mt-1 bg-[#ffffff22] rounded-md p-3">
+										{processedInputs[index] ? (
+											<div
+												className="text-sm overflow-x-auto"
+												dangerouslySetInnerHTML={{
+													__html:
+														processedInputs[
+															index
+														] || "",
+												}}
+											/>
+										) : (
+											<pre
+												className="text-sm text-white 
+                                        overflow-x-auto"
+											>
+												{JSON.stringify(value)}
+											</pre>
+										)}
+									</div>
+								</div>
+							)
+						)}
+					</div>
+				)}
+			</div>
+		</div>
+	);
+}
+
+interface TestResultsTabProps {
+	problem: AlgoProblemDetail;
+	testResults: TestResult[];
+	selectedTestIndex: number;
+	setSelectedTestIndex: (index: number) => void;
+}
+
+function TestResultsTab({
+	problem,
+	testResults,
+	selectedTestIndex,
+	setSelectedTestIndex,
+}: TestResultsTabProps) {
+	const status = getOverallStatus(testResults);
+	if (status === "pending") {
+		return (
+			<div className="flex-1 flex flex-col items-center justify-center h-full mb-16">
+				You must run your code first.
+			</div>
+		);
+	}
+	return (
+		<div
+			className="flex-1 flex flex-col overflow-auto"
+			style={{
+				scrollbarWidth: "thin",
+				scrollbarColor: "#9f9f9f #2C2C2C",
+			}}
+		>
+			{/* Overall Status Header */}
+			<div className="p-4 border-b border-border">
+				<div className="flex items-center justify-between">
+					<div className="flex items-center gap-2">
+						<span
+							className={`text-lg font-semibold ${
+								getOverallStatus(testResults) === "accepted"
+									? "text-green-500"
+									: getOverallStatus(testResults) === "wrong"
+									? "text-red-500"
+									: "text-gray-500"
+							}`}
+						>
+							{getOverallStatus(testResults) === "accepted"
+								? "Accepted"
+								: getOverallStatus(testResults) === "wrong"
+								? "Wrong Answer"
+								: "Pending"}
+						</span>
+						{testResults.length > 0 && (
+							<span className="text-sm text-muted-foreground">
+								Runtime: 0 ms
+							</span>
+						)}
+					</div>
+				</div>
+			</div>
+
+			{/* Test Case Selection Tabs */}
+			<div className="flex mx-4 my-4 gap-2">
+				{problem.tests.map((_, index) => {
+					const status = getTestStatus(testResults, index);
+					const isSelected = selectedTestIndex === index;
+					return (
+						<button
+							key={index}
+							onClick={() => setSelectedTestIndex(index)}
+							className={cn(
+								"px-3 py-1.5 rounded-md text-sm font-medium hover:bg-white/15 hover:cursor-pointer",
+								isSelected
+									? "bg-white/10 text-white"
+									: "text-muted-foreground hover:text-foreground"
+							)}
+						>
+							<div className="flex items-center gap-2">
+								{status === "passed" && (
+									<span className="text-green-500">✔</span>
+								)}
+								{status === "failed" && (
+									<span className="text-red-500">❌</span>
+								)}
+								{status === "pending" && (
+									<span className="text-gray-400">○</span>
+								)}
+								Case {index + 1}
+							</div>
+						</button>
+					);
+				})}
+			</div>
+
+			{/* Test Results Content */}
+			<div className="flex-1 p-4 pt-0 dark-scrollbar">
+				{problem.tests[selectedTestIndex] && (
+					<div className="space-y-4">
+						{/* Input Section */}
+						<div>
+							<h4 className="text-sm font-medium text-muted-foreground mb-2">
+								Input
+							</h4>
+							<div className="space-y-2">
+								{problem.tests[selectedTestIndex].input.map(
+									(value, index) => (
+										<div key={index}>
+											<span className="text-sm font-medium text-foreground">
+												{problem.parameterNames[
+													index
+												] || `param${index + 1}`}{" "}
+												=
+											</span>
+											<div className="mt-1 bg-[#ffffff22] rounded-md p-3">
+												<pre className="text-sm text-white overflow-x-auto">
+													{JSON.stringify(value)}
+												</pre>
+											</div>
+										</div>
+									)
+								)}
+							</div>
+						</div>
+
+						{/* Output Section */}
+						<div>
+							<h4 className="text-sm font-medium text-muted-foreground mb-2">
+								Output
+							</h4>
+							<div className="mt-1 bg-[#ffffff22] rounded-md p-3">
+								<pre
+									className="text-sm overflow-x-auto"
+									dangerouslySetInnerHTML={{
+										__html:
+											testResults[selectedTestIndex]
+												?.actual !== undefined
+												? createDiff(
+														testResults[
+															selectedTestIndex
+														].actual,
+														problem.tests[
+															selectedTestIndex
+														].output
+												  ).output
+												: '<span class="text-gray-400">undefined</span>',
+									}}
+								/>
+							</div>
+						</div>
+
+						{/* Expected Section */}
+						<div>
+							<h4 className="text-sm font-medium text-muted-foreground mb-2">
+								Expected
+							</h4>
+							<div className="mt-1 bg-[#ffffff22] rounded-md p-3">
+								<pre
+									className="text-sm overflow-x-auto"
+									dangerouslySetInnerHTML={{
+										__html:
+											testResults[selectedTestIndex]
+												?.actual !== undefined
+												? createDiff(
+														testResults[
+															selectedTestIndex
+														].actual,
+														problem.tests[
+															selectedTestIndex
+														].output
+												  ).expected
+												: `<span class="text-green-400">${JSON.stringify(
+														problem.tests[
+															selectedTestIndex
+														].output
+												  )}</span>`,
+									}}
+								/>
+							</div>
+						</div>
+					</div>
+				)}
+			</div>
+		</div>
+	);
+}

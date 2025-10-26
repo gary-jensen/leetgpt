@@ -21,6 +21,7 @@ jest.mock("../algoProblems", () => ({
 			languages: ["javascript"],
 			statementMd: "Given an array...",
 			rubric: { optimal_time: "O(n)", acceptable_time: ["O(n log n)"] },
+			parameterNames: ["nums", "target"],
 			tests: [{ input: [[2, 7, 11, 15], 9], output: [0, 1] }],
 			startingCode: { javascript: "function twoSum(nums, target) {}" },
 		},
@@ -33,6 +34,7 @@ jest.mock("../algoProblems", () => ({
 			languages: ["javascript"],
 			statementMd: "A phrase is a palindrome...",
 			rubric: { optimal_time: "O(n)", acceptable_time: ["O(n)"] },
+			parameterNames: ["s"],
 			tests: [
 				{ input: ["A man, a plan, a canal: Panama"], output: true },
 			],

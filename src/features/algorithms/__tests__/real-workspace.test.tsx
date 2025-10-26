@@ -45,9 +45,9 @@ describe("Real Workspace Page", () => {
 	});
 
 	it("should render real workspace with actual problem data", () => {
-		const {
-			useAlgoProblemExecution,
-		} = require("@/features/algorithms/hooks/useAlgoProblemExecution");
+		const { useAlgoProblemExecution } = jest.requireMock(
+			"@/features/algorithms/hooks/useAlgoProblemExecution"
+		);
 		useAlgoProblemExecution.mockReturnValue({
 			code: realProblem.startingCode.javascript,
 			setCode: jest.fn(),
@@ -72,9 +72,9 @@ describe("Real Workspace Page", () => {
 
 	it("should handle real code execution", async () => {
 		const mockExecuteCode = jest.fn();
-		const {
-			useAlgoProblemExecution,
-		} = require("@/features/algorithms/hooks/useAlgoProblemExecution");
+		const { useAlgoProblemExecution } = jest.requireMock(
+			"@/features/algorithms/hooks/useAlgoProblemExecution"
+		);
 		useAlgoProblemExecution.mockReturnValue({
 			code: "function twoSum(nums, target) { return [0, 1]; }",
 			setCode: jest.fn(),
@@ -104,15 +104,15 @@ describe("Real Workspace Page", () => {
 	});
 
 	it("should handle real hint requests", async () => {
-		const { getHint } = require("@/lib/actions/algoCoach");
+		const { getHint } = jest.requireMock("@/lib/actions/algoCoach");
 		getHint.mockResolvedValue({
 			message: "Consider using a hash map",
 			followUpQuestion: "What would you store in the hash map?",
 		});
 
-		const {
-			useAlgoProblemExecution,
-		} = require("@/features/algorithms/hooks/useAlgoProblemExecution");
+		const { useAlgoProblemExecution } = jest.requireMock(
+			"@/features/algorithms/hooks/useAlgoProblemExecution"
+		);
 		useAlgoProblemExecution.mockReturnValue({
 			code: "function twoSum(nums, target) { return [0, 1]; }",
 			setCode: jest.fn(),
@@ -142,9 +142,9 @@ describe("Real Workspace Page", () => {
 	});
 
 	it("should handle real chat interactions", () => {
-		const {
-			useAlgoProblemExecution,
-		} = require("@/features/algorithms/hooks/useAlgoProblemExecution");
+		const { useAlgoProblemExecution } = jest.requireMock(
+			"@/features/algorithms/hooks/useAlgoProblemExecution"
+		);
 		useAlgoProblemExecution.mockReturnValue({
 			code: "function twoSum(nums, target) { return [0, 1]; }",
 			setCode: jest.fn(),

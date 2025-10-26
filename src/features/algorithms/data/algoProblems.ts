@@ -13,30 +13,25 @@ You may assume that each input would have **exactly one solution**, and you may 
 
 You can return the answer in any order.
 
-## Example 1:
-\`\`\`
-Input: nums = [2,7,11,15], target = 9
-Output: [0,1]
-Explanation: Because nums[0] + nums[1] == 9, we return [0, 1].
-\`\`\`
+#### Example 1:
+> **Input:** \`nums = [2,7,11,15]\`, \`target = 9\`
+> **Output:** \`[0,1]\`
+> **Explanation:** Because \`nums[0] + nums[1] == 9\`, we return \`[0, 1]\`.
 
-## Example 2:
-\`\`\`
-Input: nums = [3,2,4], target = 6
-Output: [1,2]
-\`\`\`
 
-## Example 3:
-\`\`\`
-Input: nums = [3,3], target = 6
-Output: [0,1]
-\`\`\`
+#### Example 2:
+> **Input:** \`nums = [3,2,4]\`, \`target = 6\`
+> **Output:** \`[1,2]\`
 
-## Constraints:
-- 2 <= nums.length <= 10^4
-- -10^9 <= nums[i] <= 10^9
-- -10^9 <= target <= 10^9
-- Only one valid answer exists.`,
+#### Example 3:
+> **Input:** \`nums = [3,3]\`, \`target = 6\`
+> **Output:** \`[0,1]\`
+
+#### Constraints:
+- \`2 <= nums.length <= 10^4\`
+- \`-10^9 <= nums[i] <= 10^9\`
+- \`-10^9 <= target <= 10^9\`
+- **Only one valid answer exists.**`,
 		topics: ["arrays", "hashmap"],
 		difficulty: "easy",
 		languages: ["javascript"],
@@ -44,6 +39,7 @@ Output: [0,1]
 			optimal_time: "O(n)",
 			acceptable_time: ["O(n log n)"],
 		},
+		parameterNames: ["nums", "target"],
 		tests: [
 			{ input: [[2, 7, 11, 15], 9], output: [0, 1] },
 			{ input: [[3, 2, 4], 6], output: [1, 2] },
@@ -52,7 +48,12 @@ Output: [0,1]
 			{ input: [[-1, -2, -3, -4, -5], -8], output: [2, 4] },
 		],
 		startingCode: {
-			javascript: `function twoSum(nums, target) {
+			javascript: `/**
+ * @param {number[]} nums
+ * @param {number} target
+ * @return {number[]}
+ */
+function twoSum(nums, target) {
   // Your code here
 }`,
 		},
@@ -116,6 +117,7 @@ Since an empty string reads the same forward and backward, it is a palindrome.
 			optimal_time: "O(n)",
 			acceptable_time: ["O(n)"],
 		},
+		parameterNames: ["s"],
 		tests: [
 			{ input: ["A man, a plan, a canal: Panama"], output: true },
 			{ input: ["race a car"], output: false },
@@ -190,6 +192,7 @@ Explanation: The subarray [5,4,-1,7,8] has the largest sum 23.
 			optimal_time: "O(n)",
 			acceptable_time: ["O(n log n)"],
 		},
+		parameterNames: ["nums"],
 		tests: [
 			{ input: [[-2, 1, -3, 4, -1, 2, 1, -5, 4]], output: 6 },
 			{ input: [[1]], output: 1 },
@@ -253,6 +256,7 @@ Output: true
 			optimal_time: "O(n)",
 			acceptable_time: ["O(n log n)"],
 		},
+		parameterNames: ["nums"],
 		tests: [
 			{ input: [[1, 2, 3, 1]], output: true },
 			{ input: [[1, 2, 3, 4]], output: false },
@@ -314,6 +318,7 @@ Output: false
 			optimal_time: "O(n)",
 			acceptable_time: ["O(n log n)"],
 		},
+		parameterNames: ["s", "t"],
 		tests: [
 			{ input: ["anagram", "nagaram"], output: true },
 			{ input: ["rat", "car"], output: false },
@@ -386,6 +391,7 @@ Output: [["a"]]
 			optimal_time: "O(n * m log m)",
 			acceptable_time: ["O(n * m log m)"],
 		},
+		parameterNames: ["strs"],
 		tests: [
 			{
 				input: [["eat", "tea", "tan", "ate", "nat", "bat"]],
@@ -454,6 +460,7 @@ Output: [1]
 			optimal_time: "O(n)",
 			acceptable_time: ["O(n log n)"],
 		},
+		parameterNames: ["nums", "k"],
 		tests: [
 			{ input: [[1, 1, 1, 2, 2, 3], 2], output: [1, 2] },
 			{ input: [[1], 1], output: [1] },
@@ -521,6 +528,7 @@ Output: [0,0,9,0,0]
 			optimal_time: "O(n)",
 			acceptable_time: ["O(n)"],
 		},
+		parameterNames: ["nums"],
 		tests: [
 			{ input: [[1, 2, 3, 4]], output: [24, 12, 8, 6] },
 			{ input: [[-1, 1, 0, -3, 3]], output: [0, 0, 9, 0, 0] },
@@ -586,6 +594,7 @@ Output: 9
 			optimal_time: "O(n)",
 			acceptable_time: ["O(n log n)"],
 		},
+		parameterNames: ["nums"],
 		tests: [
 			{ input: [[100, 4, 200, 1, 3, 2]], output: 4 },
 			{ input: [[0, 3, 7, 2, 5, 8, 4, 6, 0, 1]], output: 9 },
@@ -658,6 +667,7 @@ Explanation: Intervals [1,4] and [4,5] are considered overlapping.
 			optimal_time: "O(n log n)",
 			acceptable_time: ["O(n log n)"],
 		},
+		parameterNames: ["intervals"],
 		tests: [
 			{
 				input: [

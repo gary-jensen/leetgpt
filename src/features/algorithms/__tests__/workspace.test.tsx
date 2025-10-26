@@ -55,6 +55,7 @@ describe("Algorithm Workspace Components", () => {
 		difficulty: "easy",
 		languages: ["javascript"],
 		rubric: { optimal_time: "O(n)", acceptable_time: ["O(n log n)"] },
+		parameterNames: ["nums", "target"],
 		tests: [
 			{ input: [[2, 7, 11, 15], 9], output: [0, 1] },
 			{ input: [[3, 2, 4], 6], output: [1, 2] },

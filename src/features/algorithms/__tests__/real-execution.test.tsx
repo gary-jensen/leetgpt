@@ -57,9 +57,9 @@ describe("Real Algorithm Execution", () => {
 	});
 
 	it("should handle code execution with real test framework", async () => {
-		const {
-			questionTestDetailed,
-		} = require("@/lib/execution/questionTest");
+		const { questionTestDetailed } = jest.requireMock(
+			"@/lib/execution/questionTest"
+		);
 
 		// Mock the test framework to return real results
 		questionTestDetailed.mockReturnValue([
@@ -135,9 +135,9 @@ describe("Real Algorithm Execution", () => {
 	});
 
 	it("should update button state based on real test results", async () => {
-		const {
-			questionTestDetailed,
-		} = require("@/lib/execution/questionTest");
+		const { questionTestDetailed } = jest.requireMock(
+			"@/lib/execution/questionTest"
+		);
 
 		// Mock all tests passing
 		questionTestDetailed.mockReturnValue([

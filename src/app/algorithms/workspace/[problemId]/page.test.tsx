@@ -71,9 +71,9 @@ describe("AlgorithmWorkspacePage", () => {
 	});
 
 	it("should render workspace layout when problem exists", () => {
-		const {
-			useAlgoProblemExecution,
-		} = require("@/features/algorithms/hooks/useAlgoProblemExecution");
+		const { useAlgoProblemExecution } = jest.requireMock(
+			"@/features/algorithms/hooks/useAlgoProblemExecution"
+		);
 		useAlgoProblemExecution.mockReturnValue(mockHookReturn);
 
 		render(<AlgorithmWorkspacePage />);
@@ -97,9 +97,9 @@ describe("AlgorithmWorkspacePage", () => {
 	});
 
 	it("should handle hint button click", async () => {
-		const {
-			useAlgoProblemExecution,
-		} = require("@/features/algorithms/hooks/useAlgoProblemExecution");
+		const { useAlgoProblemExecution } = jest.requireMock(
+			"@/features/algorithms/hooks/useAlgoProblemExecution"
+		);
 		useAlgoProblemExecution.mockReturnValue(mockHookReturn);
 
 		render(<AlgorithmWorkspacePage />);
@@ -118,9 +118,9 @@ describe("AlgorithmWorkspacePage", () => {
 	});
 
 	it("should handle send message", async () => {
-		const {
-			useAlgoProblemExecution,
-		} = require("@/features/algorithms/hooks/useAlgoProblemExecution");
+		const { useAlgoProblemExecution } = jest.requireMock(
+			"@/features/algorithms/hooks/useAlgoProblemExecution"
+		);
 		useAlgoProblemExecution.mockReturnValue(mockHookReturn);
 
 		render(<AlgorithmWorkspacePage />);
@@ -141,9 +141,9 @@ describe("AlgorithmWorkspacePage", () => {
 	});
 
 	it("should handle send button click", async () => {
-		const {
-			useAlgoProblemExecution,
-		} = require("@/features/algorithms/hooks/useAlgoProblemExecution");
+		const { useAlgoProblemExecution } = jest.requireMock(
+			"@/features/algorithms/hooks/useAlgoProblemExecution"
+		);
 		useAlgoProblemExecution.mockReturnValue(mockHookReturn);
 
 		render(<AlgorithmWorkspacePage />);
@@ -163,9 +163,9 @@ describe("AlgorithmWorkspacePage", () => {
 	});
 
 	it("should not send empty messages", () => {
-		const {
-			useAlgoProblemExecution,
-		} = require("@/features/algorithms/hooks/useAlgoProblemExecution");
+		const { useAlgoProblemExecution } = jest.requireMock(
+			"@/features/algorithms/hooks/useAlgoProblemExecution"
+		);
 		useAlgoProblemExecution.mockReturnValue(mockHookReturn);
 
 		render(<AlgorithmWorkspacePage />);
@@ -181,9 +181,9 @@ describe("AlgorithmWorkspacePage", () => {
 	});
 
 	it("should show AI mentor empty state initially", () => {
-		const {
-			useAlgoProblemExecution,
-		} = require("@/features/algorithms/hooks/useAlgoProblemExecution");
+		const { useAlgoProblemExecution } = jest.requireMock(
+			"@/features/algorithms/hooks/useAlgoProblemExecution"
+		);
 		useAlgoProblemExecution.mockReturnValue(mockHookReturn);
 
 		render(<AlgorithmWorkspacePage />);
@@ -199,9 +199,9 @@ describe("AlgorithmWorkspacePage", () => {
 	});
 
 	it("should display test results when available", () => {
-		const {
-			useAlgoProblemExecution,
-		} = require("@/features/algorithms/hooks/useAlgoProblemExecution");
+		const { useAlgoProblemExecution } = jest.requireMock(
+			"@/features/algorithms/hooks/useAlgoProblemExecution"
+		);
 		useAlgoProblemExecution.mockReturnValue(mockHookReturn);
 
 		render(<AlgorithmWorkspacePage />);
@@ -217,9 +217,9 @@ describe("AlgorithmWorkspacePage", () => {
 		};
 		(getAlgoProblem as jest.Mock).mockReturnValue(hardProblem);
 
-		const {
-			useAlgoProblemExecution,
-		} = require("@/features/algorithms/hooks/useAlgoProblemExecution");
+		const { useAlgoProblemExecution } = jest.requireMock(
+			"@/features/algorithms/hooks/useAlgoProblemExecution"
+		);
 		useAlgoProblemExecution.mockReturnValue(mockHookReturn);
 
 		render(<AlgorithmWorkspacePage />);

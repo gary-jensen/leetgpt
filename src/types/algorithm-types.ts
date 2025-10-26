@@ -24,6 +24,7 @@ export interface AlgoProblemDetail extends AlgoProblemMeta {
 	statementMd: string;
 	rubric: { optimal_time: string; acceptable_time: string[] };
 	tests: { input: any[]; output: any }[];
+	parameterNames: string[]; // Names of the input parameters in order
 	startingCode: { [language: string]: string };
 	passingCode: { [language: string]: string }; // Admin debugging and testing purposes
 	// Hints are AI-generated, not stored in hardcoded data

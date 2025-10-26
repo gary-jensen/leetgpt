@@ -72,7 +72,7 @@ export async function executeAlgoTests(
 function createFunctionFromCode(
 	code: string,
 	problem: AlgoProblemDetail
-): Function | null {
+): ((...args: any[]) => any) | null {
 	try {
 		// Try to extract the main function from the code
 		const functionName = getMainFunctionName(problem);
@@ -126,7 +126,7 @@ function getMainFunctionName(problem: AlgoProblemDetail): string {
  * Run a single test case
  */
 async function runSingleTest(
-	userFunction: Function,
+	userFunction: (...args: any[]) => any,
 	testCase: { input: any[]; output: any },
 	caseNumber: number
 ): Promise<AlgoTestResult> {

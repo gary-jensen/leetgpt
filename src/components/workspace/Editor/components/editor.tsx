@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import Console from "../../Console/components/console";
 import { Button } from "@/components/ui/button";
 import { useProgress } from "@/contexts/ProgressContext";
+import { cn } from "@/lib/utils";
 
 const Editor = ({
 	code,
@@ -18,6 +19,7 @@ const Editor = ({
 	hasJustPassed = false,
 	onShowSolution,
 	showConsole = true,
+	disableBorder = false,
 }: {
 	code: string;
 	setCode: (code: string) => void;
@@ -29,6 +31,7 @@ const Editor = ({
 	hasJustPassed?: boolean;
 	onShowSolution?: () => void;
 	showConsole?: boolean;
+	disableBorder?: boolean;
 }) => {
 	const [isDebouncing, setIsDebouncing] = useState(false);
 
@@ -69,7 +72,12 @@ const Editor = ({
 			{/* <Sidebar /> */}
 			<div className="flex-3 h-full bg-backgroufnd-2 flex flex-col">
 				<div className="w-full h-full  flex flex-col inset-shadow-black/30f inseft-shadow-sm shadow-finset p-0 gap-6">
-					<div className="ff min-h-[60vh] md:min-h-0 flex flex-1 flex-col rounded-2xl border-1 overflow-hidden">
+					<div
+						className={cn(
+							"ff min-h-[60vh] md:min-h-0 flex flex-1 flex-col rounded-2xl border-1 overflow-hidden",
+							disableBorder && "border-none"
+						)}
+					>
 						<div className="w-full bg-background-2">
 							<div className="w-fit px-3 py-3.5 fh-[40px] bg-background hover:bg-card flex items-center gap-3 cursor-pointer">
 								<Image

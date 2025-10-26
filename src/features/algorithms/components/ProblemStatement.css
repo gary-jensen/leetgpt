@@ -1,0 +1,12 @@
+.chat-markdown-display.problem-statement .markdown-content {
+	.inline-code {
+		background-color: #ffffff22;
+		padding: 0.175rem 0.325rem;
+		/* color: #aaa; */
+		border: 1px solid #88888850;
+	}
+
+	.markdown-paragraph {
+		margin-bottom: 1rem;
+	}
+}

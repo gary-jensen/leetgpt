@@ -70,8 +70,7 @@
 .chat-markdown-display .markdown-content blockquote {
 	border-left: 4px solid #d1d5db;
 	padding-left: 1rem;
-	margin: 0.5rem 0;
-	font-style: italic;
+	margin: 0rem 0;
 	color: #374151;
 }
 
