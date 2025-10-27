@@ -1,5 +1,8 @@
 import { notFound } from "next/navigation";
-import { getAlgoLesson } from "@/features/algorithms/data";
+import {
+	getAlgoLessonBySlug,
+	getAlgoLessons,
+} from "@/features/algorithms/data";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Clock, ArrowLeft, ExternalLink } from "lucide-react";
@@ -7,13 +10,13 @@ import Link from "next/link";
 
 interface LessonPageProps {
 	params: Promise<{
-		lessonId: string;
+		lessonSlug: string;
 	}>;
 }
 
 export default async function LessonPage({ params }: LessonPageProps) {
-	const { lessonId } = await params;
-	const lesson = getAlgoLesson(lessonId);
+	const { lessonSlug } = await params;
+	const lesson = await getAlgoLessonBySlug(lessonSlug);
 
 	if (!lesson) {
 		notFound();
@@ -130,9 +133,11 @@ export default async function LessonPage({ params }: LessonPageProps) {
 
 // Generate static params for all lessons
 export async function generateStaticParams() {
-	const { algoLessons } = await import("@/features/algorithms/data");
+	const lessons = await getAlgoLessons();
 
-	return algoLessons.map((lesson) => ({
-		lessonId: lesson.id,
+	return lessons.map((lesson) => ({
+		lessonSlug: lesson.slug,
 	}));
 }
+
+export const dynamicParams = true;

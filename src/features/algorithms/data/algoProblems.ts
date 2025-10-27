@@ -45,7 +45,79 @@ You can return the answer in any order.
 			{ input: [[3, 2, 4], 6], output: [1, 2] },
 			{ input: [[3, 3], 6], output: [0, 1] },
 			{ input: [[1, 2, 3, 4, 5], 8], output: [2, 4] },
+			{ input: [[1, 2, 3, 4, 5], 8], output: [2, 4] },
 			{ input: [[-1, -2, -3, -4, -5], -8], output: [2, 4] },
+			{ input: [[0, 4, 3, 0], 0], output: [0, 3] },
+			{ input: [[-3, 4, 3, 90], 0], output: [0, 2] },
+			{ input: [[5, 75, 25], 100], output: [1, 2] },
+			{ input: [[2, 5, 5, 11], 10], output: [1, 2] },
+			{ input: [[1, 5, 9, 14], 10], output: [0, 2] },
+			{ input: [[8, 7, 2, 15], 9], output: [1, 2] },
+			{ input: [[1, 3, 4, 2], 6], output: [2, 3] },
+			{ input: [[10, 26, 30, 31, 47, 60], 40], output: [0, 2] },
+			{ input: [[0, 1, 2, 3, 4, 5], 9], output: [4, 5] },
+			{ input: [[1000000, 999999, 2, 3], 1999999], output: [0, 1] },
+			{ input: [[-5, -10, 5, 20], 10], output: [1, 3] },
+			//
+			{
+				input: [[1000000, 2, 3, 7, 11, 13, 17, 19], 1000019],
+				output: [0, 7],
+			},
+			{ input: [[0, 1, 2, 4, 8, 16], 17], output: [1, 5] },
+			{
+				input: [[-93, -77, -45, -41, 29, 54, -94, 43], 13],
+				output: [3, 5],
+			},
+			{
+				input: [[66, 79, 39, 7, -44, 14, 50, -29, -99], 89],
+				output: [2, 6],
+			},
+			{
+				input: [[54, -33, -89, 86, 17, 37, -69, -4, -80, 41], 54],
+				output: [4, 5],
+			},
+			{ input: [[47, -51, 80, -83, -89, 69], 29], output: [1, 2] },
+			{ input: [[-59, -6, -10, -47, 71, -32, 79], 47], output: [5, 6] },
+			{
+				input: [[-82, 55, 62, -57, 36, 86, -38, -59], -116],
+				output: [3, 7],
+			},
+			{
+				input: [[-31, 63, 76, 42, -44, 75, -17, 96, 98], 11],
+				output: [0, 3],
+			},
+			{
+				input: [[-92, -20, 2, -32, -84, -46, 45, 83, 67, 27], 128],
+				output: [6, 7],
+			},
+			{ input: [[-64, -33, -65, -37, 90, 43], 25], output: [2, 4] },
+			{ input: [[91, 49, 9, 2, -8, -44, -65], -6], output: [3, 4] },
+			{
+				input: [[-77, 93, -88, -72, -61, 60, -60, 74], -121],
+				output: [4, 6],
+			},
+			{
+				input: [[-84, -2, -3, 52, 19, 35, -36, 41, -98], 17],
+				output: [1, 4],
+			},
+			{
+				input: [[96, 64, -13, -72, -25, 11, -60, 16, -100, 84], -125],
+				output: [4, 8],
+			},
+			{ input: [[95, -55, 29, -73, 60, -24], 36], output: [4, 5] },
+			{ input: [[55, -50, -61, -5, 95, -59, 38], 133], output: [4, 6] },
+			{
+				input: [[-100, 53, -18, 25, -96, -72, -8, -22], -75],
+				output: [0, 3],
+			},
+			{
+				input: [[-39, 45, -80, -79, 87, 24, -83, 94, 36], -44],
+				output: [2, 8],
+			},
+			{
+				input: [[68, 21, 40, -58, -33, 35, 55, 8, -46, 38], -91],
+				output: [3, 4],
+			},
 		],
 		startingCode: {
 			javascript: `/**
@@ -85,30 +157,23 @@ A phrase is a **palindrome** if, after converting all uppercase letters into low
 
 Given a string \`s\`, return \`true\` if it is a palindrome, or \`false\` otherwise.
 
-## Example 1:
-\`\`\`
-Input: s = "A man, a plan, a canal: Panama"
-Output: true
-Explanation: "amanaplanacanalpanama" is a palindrome.
-\`\`\`
+#### Example 1:
+> **Input:** \`s = "A man, a plan, a canal: Panama"\`
+> **Output:** \`true\`
+> **Explanation:** "amanaplanacanalpanama" is a palindrome.
 
-## Example 2:
-\`\`\`
-Input: s = "race a car"
-Output: false
-Explanation: "raceacar" is not a palindrome.
-\`\`\`
+#### Example 2:
+> **Input:** \`s = "race a car"\`
+> **Output:** \`false\`
+> **Explanation:** "raceacar" is not a palindrome.
 
-## Example 3:
-\`\`\`
-Input: s = " "
-Output: true
-Explanation: s is an empty string "" after removing non-alphanumeric characters.
-Since an empty string reads the same forward and backward, it is a palindrome.
-\`\`\`
+#### Example 3:
+> **Input:** \`s = " "\`
+> **Output:** \`true\`
+> **Explanation:** s is an empty string "" after removing non-alphanumeric characters. Since an empty string reads the same forward and backward, it is a palindrome.
 
-## Constraints:
-- 1 <= s.length <= 2 * 10^5
+#### Constraints:
+- \`1 <= s.length <= 2 * 10^5\`
 - s consists only of printable ASCII characters.`,
 		topics: ["strings", "two-pointers"],
 		difficulty: "easy",
@@ -159,30 +224,24 @@ Since an empty string reads the same forward and backward, it is a palindrome.
 
 Given an integer array \`nums\`, find the subarray with the largest sum, and return its sum.
 
-## Example 1:
-\`\`\`
-Input: nums = [-2,1,-3,4,-1,2,1,-5,4]
-Output: 6
-Explanation: The subarray [4,-1,2,1] has the largest sum 6.
-\`\`\`
+#### Example 1:
+> **Input:** \`nums = [-2,1,-3,4,-1,2,1,-5,4]\`
+> **Output:** \`6\`
+> **Explanation:** The subarray [4,-1,2,1] has the largest sum 6.
 
-## Example 2:
-\`\`\`
-Input: nums = [1]
-Output: 1
-Explanation: The subarray [1] has the largest sum 1.
-\`\`\`
+#### Example 2:
+> **Input:** \`nums = [1]\`
+> **Output:** \`1\`
+> **Explanation:** The subarray [1] has the largest sum 1.
 
-## Example 3:
-\`\`\`
-Input: nums = [5,4,-1,7,8]
-Output: 23
-Explanation: The subarray [5,4,-1,7,8] has the largest sum 23.
-\`\`\`
+#### Example 3:
+> **Input:** \`nums = [5,4,-1,7,8]\`
+> **Output:** \`23\`
+> **Explanation:** The subarray [5,4,-1,7,8] has the largest sum 23.
 
-## Constraints:
-- 1 <= nums.length <= 10^5
-- -10^4 <= nums[i] <= 10^4
+#### Constraints:
+- \`1 <= nums.length <= 10^5\`
+- \`-10^4 <= nums[i] <= 10^4\`
 
 **Follow up:** If you have figured out the O(n) solution, try coding another solution using the **divide and conquer** approach, which is more subtle.`,
 		topics: ["arrays", "dynamic-programming", "sliding-window"],
@@ -228,27 +287,21 @@ Explanation: The subarray [5,4,-1,7,8] has the largest sum 23.
 
 Given an integer array \`nums\`, return \`true\` if any value appears **at least twice** in the array, and return \`false\` if every element is distinct.
 
-## Example 1:
-\`\`\`
-Input: nums = [1,2,3,1]
-Output: true
-\`\`\`
+#### Example 1:
+> **Input:** \`nums = [1,2,3,1]\`
+> **Output:** \`true\`
 
-## Example 2:
-\`\`\`
-Input: nums = [1,2,3,4]
-Output: false
-\`\`\`
+#### Example 2:
+> **Input:** \`nums = [1,2,3,4]\`
+> **Output:** \`false\`
 
-## Example 3:
-\`\`\`
-Input: nums = [1,1,1,3,3,4,3,2,4,2]
-Output: true
-\`\`\`
+#### Example 3:
+> **Input:** \`nums = [1,1,1,3,3,4,3,2,4,2]\`
+> **Output:** \`true\`
 
-## Constraints:
-- 1 <= nums.length <= 10^5
-- -10^9 <= nums[i] <= 10^9`,
+#### Constraints:
+- \`1 <= nums.length <= 10^5\`
+- \`-10^9 <= nums[i] <= 10^9\``,
 		topics: ["arrays", "hashmap"],
 		difficulty: "easy",
 		languages: ["javascript"],
@@ -294,20 +347,16 @@ Given two strings \`s\` and \`t\`, return \`true\` if \`t\` is an anagram of \`s
 
 An **Anagram** is a word or phrase formed by rearranging the letters of a different word or phrase, typically using all the original letters exactly once.
 
-## Example 1:
-\`\`\`
-Input: s = "anagram", t = "nagaram"
-Output: true
-\`\`\`
+#### Example 1:
+> **Input:** \`s = "anagram"\`, \`t = "nagaram"\`
+> **Output:** \`true\`
 
-## Example 2:
-\`\`\`
-Input: s = "rat", t = "car"
-Output: false
-\`\`\`
+#### Example 2:
+> **Input:** \`s = "rat"\`, \`t = "car"\`
+> **Output:** \`false\`
 
-## Constraints:
-- 1 <= s.length, t.length <= 5 * 10^4
+#### Constraints:
+- \`1 <= s.length, t.length <= 5 * 10^4\`
 - s and t consist of lowercase English letters only.
 
 **Follow up:** What if the inputs contain Unicode characters? How would you adapt your solution to such a case?`,
@@ -362,27 +411,21 @@ Given an array of strings \`strs\`, group the anagrams together. You can return 
 
 An **Anagram** is a word or phrase formed by rearranging the letters of a different word or phrase, typically using all the original letters exactly once.
 
-## Example 1:
-\`\`\`
-Input: strs = ["eat","tea","tan","ate","nat","bat"]
-Output: [["bat"],["nat","tan"],["ate","eat","tea"]]
-\`\`\`
+#### Example 1:
+> **Input:** \`strs = ["eat","tea","tan","ate","nat","bat"]\`
+> **Output:** \`[["bat"],["nat","tan"],["ate","eat","tea"]]\`
 
-## Example 2:
-\`\`\`
-Input: strs = [""]
-Output: [[""]]
-\`\`\`
+#### Example 2:
+> **Input:** \`strs = [""]\`
+> **Output:** \`[[""]]\`
 
-## Example 3:
-\`\`\`
-Input: strs = ["a"]
-Output: [["a"]]
-\`\`\`
+#### Example 3:
+> **Input:** \`strs = ["a"]\`
+> **Output:** \`[["a"]]\`
 
-## Constraints:
-- 1 <= strs.length <= 10^4
-- 0 <= strs[i].length <= 100
+#### Constraints:
+- \`1 <= strs.length <= 10^4\`
+- \`0 <= strs[i].length <= 100\`
 - strs[i] consists of lowercase English letters only.`,
 		topics: ["strings", "hashmap"],
 		difficulty: "medium",
@@ -435,20 +478,16 @@ Output: [["a"]]
 
 Given an integer array \`nums\` and an integer \`k\`, return the \`k\` most frequent elements. You may return the answer in any order.
 
-## Example 1:
-\`\`\`
-Input: nums = [1,1,1,2,2,3], k = 2
-Output: [1,2]
-\`\`\`
+#### Example 1:
+> **Input:** \`nums = [1,1,1,2,2,3]\`, \`k = 2\`
+> **Output:** \`[1,2]\`
 
-## Example 2:
-\`\`\`
-Input: nums = [1], k = 1
-Output: [1]
-\`\`\`
+#### Example 2:
+> **Input:** \`nums = [1]\`, \`k = 1\`
+> **Output:** \`[1]\`
 
-## Constraints:
-- 1 <= nums.length <= 10^5
+#### Constraints:
+- \`1 <= nums.length <= 10^5\`
 - k is in the range [1, the number of unique elements in the array].
 - It is guaranteed that the answer is unique.
 
@@ -503,21 +542,17 @@ The product of any prefix or suffix of \`nums\` is guaranteed to fit in a 32-bit
 
 You must write an algorithm that runs in O(n) time and without using the division operator.
 
-## Example 1:
-\`\`\`
-Input: nums = [1,2,3,4]
-Output: [24,12,8,6]
-\`\`\`
+#### Example 1:
+> **Input:** \`nums = [1,2,3,4]\`
+> **Output:** \`[24,12,8,6]\`
 
-## Example 2:
-\`\`\`
-Input: nums = [-1,1,0,-3,3]
-Output: [0,0,9,0,0]
-\`\`\`
+#### Example 2:
+> **Input:** \`nums = [-1,1,0,-3,3]\`
+> **Output:** \`[0,0,9,0,0]\`
 
-## Constraints:
-- 2 <= nums.length <= 10^5
-- -30 <= nums[i] <= 30
+#### Constraints:
+- \`2 <= nums.length <= 10^5\`
+- \`-30 <= nums[i] <= 30\`
 - The product of any prefix or suffix of nums is guaranteed to fit in a 32-bit integer.
 
 **Follow up:** Can you solve the problem in O(1) extra space complexity? (The output array does not count as extra space for space complexity analysis.)`,
@@ -571,22 +606,18 @@ Given an unsorted array of integers \`nums\`, return the length of the longest c
 
 You must write an algorithm that runs in O(n) time.
 
-## Example 1:
-\`\`\`
-Input: nums = [100,4,200,1,3,2]
-Output: 4
-Explanation: The longest consecutive elements sequence is [1, 2, 3, 4]. Therefore its length is 4.
-\`\`\`
+#### Example 1:
+> **Input:** \`nums = [100,4,200,1,3,2]\`
+> **Output:** \`4\`
+> **Explanation:** The longest consecutive elements sequence is [1, 2, 3, 4]. Therefore its length is 4.
 
-## Example 2:
-\`\`\`
-Input: nums = [0,3,7,2,5,8,4,6,0,1]
-Output: 9
-\`\`\`
+#### Example 2:
+> **Input:** \`nums = [0,3,7,2,5,8,4,6,0,1]\`
+> **Output:** \`9\`
 
-## Constraints:
-- 0 <= nums.length <= 10^5
-- -10^9 <= nums[i] <= 10^9`,
+#### Constraints:
+- \`0 <= nums.length <= 10^5\`
+- \`-10^9 <= nums[i] <= 10^9\``,
 		topics: ["arrays", "hashmap"],
 		difficulty: "medium",
 		languages: ["javascript"],
@@ -642,24 +673,20 @@ Output: 9
 
 Given an array of \`intervals\` where \`intervals[i] = [starti, endi]\`, merge all overlapping intervals, and return an array of the non-overlapping intervals that cover all the intervals in the input.
 
-## Example 1:
-\`\`\`
-Input: intervals = [[1,3],[2,6],[8,10],[15,18]]
-Output: [[1,6],[8,10],[15,18]]
-Explanation: Since intervals [1,3] and [2,6] overlap, merge them into [1,6].
-\`\`\`
+#### Example 1:
+> **Input:** \`intervals = [[1,3],[2,6],[8,10],[15,18]]\`
+> **Output:** \`[[1,6],[8,10],[15,18]]\`
+> **Explanation:** Since intervals [1,3] and [2,6] overlap, merge them into [1,6].
 
-## Example 2:
-\`\`\`
-Input: intervals = [[1,4],[4,5]]
-Output: [[1,5]]
-Explanation: Intervals [1,4] and [4,5] are considered overlapping.
-\`\`\`
+#### Example 2:
+> **Input:** \`intervals = [[1,4],[4,5]]\`
+> **Output:** \`[[1,5]]\`
+> **Explanation:** Intervals [1,4] and [4,5] are considered overlapping.
 
-## Constraints:
-- 1 <= intervals.length <= 10^4
-- intervals[i].length == 2
-- 0 <= starti <= endi <= 10^4`,
+#### Constraints:
+- \`1 <= intervals.length <= 10^4\`
+- \`intervals[i].length == 2\`
+- \`0 <= starti <= endi <= 10^4\``,
 		topics: ["arrays", "sorting"],
 		difficulty: "medium",
 		languages: ["javascript"],

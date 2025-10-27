@@ -2,6 +2,41 @@
 
 > Purpose: Implement the next iteration of BitSchool with a Problems List, an Integrated Workspace (problem + editor + tests + AI mentor), and Standalone Lesson pages (SEO‑friendly). **Exclude Progress and Mentor standalone pages** for now. Reuse existing BitSchool judge and auth where possible.
 
+## 📊 Implementation Status
+
+### ✅ Completed (~65%)
+
+-   **Data Storage & Admin**: Database models (AlgoProblem, AlgoLesson), CRUD admin pages, markdown-to-HTML processing, database seeding
+-   **Routing**: All pages implemented (/problems, /lessons, /workspace/[slug], /lessons/[slug])
+-   **Components**: Refactored monolithic components into modular pieces, two-tab test cases system, enhanced diffs
+-   **Performance**: Pre-processed HTML for zero loading time, SSG with generateStaticParams, server-side rendering
+-   **Test Cases**: LeetCode-style display (first 5 visible, first failure auto-revealed, pass count based on first failure)
+-   **Test Coverage**: Added 40 test cases for "Two Sum" problem, all with unique solutions and correct zero-based indexing
+
+### 🔄 In Progress
+
+-   Progress tracking (AlgoProblemProgress, AlgoLessonProgress tables not yet created)
+
+### ❌ Not Started (~35%)
+
+-   AI Coach functions (`getHint()`, `reviewOptimality()`)
+-   Analytics tracking
+-   Code persistence/autosave
+-   Keyboard shortcuts
+-   Edge case handling
+-   SEO optimization
+-   Home/Dashboard page
+
+### 📝 Recent Changes
+
+-   **2025-01**: Migrated content from hardcoded files to PostgreSQL database
+-   **2025-01**: Implemented full admin CRUD for problems and lessons
+-   **2025-01**: Refactored WorkspaceLayout into modular components
+-   **2025-01**: Converted all routing to use `slug` instead of `id`
+-   **2025-01**: Implemented pre-processed HTML for zero loading time
+-   **2025-01**: Implemented LeetCode-style test case display (first 5 visible, first failure revealed, accurate pass counting)
+-   **2025-01**: Added 40 verified test cases for "Two Sum" problem, all with unique solutions
+
 ---
 
 ## 0) High‑level Goals
@@ -29,23 +64,61 @@
 
 ## 2) Data Storage & Content Structure
 
-### Database Models (Algorithm Progress Only)
+### Database Models
 
-**Note: We already have `UserProgress` table for JavaScript lessons. We'll add algorithm-specific progress tracking:**
+**✅ Status: Content tables implemented, progress tables pending**
+
+**Content Tables (Implemented):**
 
 ```prisma
-// Add to existing User model
-model User {
-  // ... existing fields ...
-  algoProblemProgress AlgoProblemProgress[]
-  algoLessonProgress  AlgoLessonProgress[]
+// ✅ COMPLETED: Content storage in database
+model AlgoProblem {
+  id             String   @id @default(cuid())
+  slug           String   @unique
+  title          String
+  statementMd    String   @db.Text
+  statementHtml  String?  @db.Text  // Pre-processed HTML for zero loading time
+  topics         String[]
+  difficulty     String
+  languages      String[]
+  rubric         Json
+  parameterNames String[]
+  tests          Json
+  startingCode   Json
+  passingCode    Json
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([difficulty])
+  @@index([slug])
 }
 
-// Single table for algorithm problem progress (progress + code + chat)
+model AlgoLesson {
+  id             String   @id @default(cuid())
+  slug           String   @unique
+  title          String
+  summary        String
+  topics         String[]
+  difficulty     String
+  readingMinutes Int
+  bodyMd         String   @db.Text
+  bodyHtml       String?  @db.Text  // Pre-processed HTML
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([difficulty])
+  @@index([slug])
+}
+```
+
+**Progress Tables (TODO - Not yet implemented):**
+
+```prisma
+// ❌ TODO: Algorithm progress tracking
 model AlgoProblemProgress {
   id          String   @id @default(cuid())
   userId      String
-  problemId   String   // References hardcoded problem ID (e.g., "sum-to-target")
+  problemId   String   // References problem slug or ID
   language    String   // "javascript" | "python" | "typescript" | "java"
   status      String   // "not_started" | "in_progress" | "completed"
   currentCode String   @db.Text // Latest code (properly escaped)
@@ -58,11 +131,10 @@ model AlgoProblemProgress {
   @@unique([userId, problemId, language])
 }
 
-// Separate table for algorithm lesson progress (simpler, no code/chat needed)
 model AlgoLessonProgress {
   id          String   @id @default(cuid())
   userId      String
-  lessonId    String   // References hardcoded lesson ID (e.g., "hashmap-basics")
+  lessonId    String   // References lesson slug or ID
   status      String   // "not_started" | "in_progress" | "completed"
   completedAt DateTime?
   createdAt   DateTime @default(now())
@@ -73,65 +145,28 @@ model AlgoLessonProgress {
 }
 ```
 
-**Existing `UserProgress` table remains unchanged for JavaScript lessons:**
+**Note:** Existing `UserProgress` table remains unchanged for JavaScript lessons
 
--   `lessonProgress` JSON field continues to track JavaScript lesson progress
--   New algorithm progress is tracked separately in `AlgoProblemProgress` and `AlgoLessonProgress`
+### Content Files (Mixed Approach)
 
-### Hardcoded Content Structure
-
-**All lessons and problems are hardcoded in TypeScript files:**
+**Hardcoded TypeScript files (used for seeding):**
 
 -   `/src/features/algorithms/data/algoLessons.ts` — All algorithm lesson content
 -   `/src/features/algorithms/data/algoProblems.ts` — All algorithm problem content
--   `/src/features/algorithms/data/index.ts` — Content utilities and filtering
+-   `/src/features/algorithms/data/index.ts` — Content utilities (now fetches from database)
 
-**Content Organization:**
+**✅ Status**: Content migrated to database. Hardcoded files preserved for:
 
-```ts
-// /src/features/algorithms/data/algoLessons.ts
-export const algoLessons: AlgoLesson[] = [
-  {
-    id: "hashmap-basics",
-    slug: "hashmap-basics",
-    title: "Hash Maps: The O(1) Lookup",
-    summary: "Learn how hash maps provide constant-time lookups and when to use them.",
-    topics: ["hashmap", "arrays"],
-    difficulty: "easy",
-    readingMinutes: 3,
-    bodyMd: "# Hash Maps: The O(1) Lookup\n\nHash maps..."
-  },
-  // ... more lessons
-];
+-   Seeding initial content (`prisma/seed-algo-content.ts`)
+-   Creating new problems/lessons in code
+-   Backup/reference
 
-// /src/features/algorithms/data/algoProblems.ts
-export const algoProblems: AlgoProblemDetail[] = [
-  {
-    id: "sum-to-target",
-    slug: "sum-to-target",
-    title: "Sum to Target",
-    statementMd: "Given an array of integers...",
-    topics: ["arrays", "hashmap"],
-    difficulty: "easy",
-    languages: ["javascript"], // MVP: JavaScript only
-    rubric: { optimal_time: "O(n)", acceptable_time: ["O(n log n)"] },
-    tests: [
-      { input: [[2, 7, 11, 15], 9], output: [0, 1] }
-    ],
-    startingCode: {
-      javascript: "function twoSum(nums, target) {\n  // Your code here\n}"
-    }
-    // Hints are AI-generated, not hardcoded
-  },
-  // ... more problems
-];
+**Data Flow:**
 
-// /src/features/algorithms/data/index.ts
-export function getAlgoProblems(filters?: FilterOptions): AlgoProblemMeta[] { ... }
-export function getAlgoLessons(filters?: FilterOptions): AlgoLesson[] { ... }
-export function getAlgoProblem(id: string): AlgoProblemDetail | null { ... }
-export function getAlgoLesson(id: string): AlgoLesson | null { ... }
-```
+1. Content stored in PostgreSQL database
+2. Pages fetch via Prisma from database
+3. Admin panel can create/edit/delete content
+4. Markdown processed to HTML on save (for performance)
 
 ### Problem JSON schema (source of truth)
 
@@ -188,7 +223,11 @@ export function getAlgoLesson(id: string): AlgoLesson | null { ... }
 
 **Test Results Display:**
 
--   **Test Cases Tab (default):** Shows pass/fail status for each test case with input/output
+-   **Test Cases Tab:** Shows first 5 test case inputs (LeetCode-style)
+-   **Test Results Tab:** Shows the first 5 test cases + first failed case (if any)
+-   **Pass Counting:** Displays X/Y testcases passed, where X is the index of the first failure (or total if all pass)
+-   **Diff Viewing:** Element-by-element comparison for arrays, with red/green highlighting for differences
+-   **Auto-Selection:** Automatically opens to the first failed test case (or case 1 if all pass)
 -   **Console Tab (optional):** Debug console with logs, errors, and execution details (like LeetCode's debugger)
 
 **Test Case Component Design:**
@@ -456,17 +495,35 @@ Store minimally and anonymize where possible.
 
 ### **New Algorithm-Specific Components**
 
--   `PageShell` (header/nav, container)
--   `FiltersBar`, `SearchInput`, `PillTag`, `DifficultyBadge`
--   `ProblemsTable`, `ProblemCard`
--   `LessonCard`, `LessonContent` (Markdown renderer)
--   `WorkspaceLayout` (left/center/right/bottom regions)
--   `TestResultsDisplay` (test cases with pass/fail status)
--   `TestCaseItem` (individual test case display)
--   `ConsoleTab` (optional debug console - reuse existing Console component)
--   `ChatPanel` (AI coach with input)
--   `Toolbar` (Run/Submit/Reset/Hint/Optimal)
--   `Modal` (Optimal approach opt‑in)
+**✅ Completed:**
+
+-   ✅ `WorkspaceLayout` — Refactored into modular components
+-   ✅ `ProblemHeader` — Title, difficulty, topics, actions
+-   ✅ `LeftColumnPanel` — Contains ProblemStatement + TestCasesPanel
+-   ✅ `EditorPanel` — Code editor with toolbar
+-   ✅ `AIChatPanel` — AI chat interface
+-   ✅ `ProblemStatement` — Markdown renderer for problem descriptions
+-   ✅ `TestCasesPanel` — Two-tab system (Test Cases / Test Results) with LeetCode-style display
+-   ✅ `TestCaseTab` — Shows first 5 test case inputs with syntax highlighting
+-   ✅ `TestResultsTab` — Shows first 5 + first failure, with accurate pass counting
+-   ✅ Auto-selection of first failed test case
+-   ✅ Element-by-element diff comparison with red/green highlighting
+-   ✅ `ProblemForm`, `LessonForm` — Admin CRUD forms
+-   ✅ `ProblemsList`, `LessonsList` — Client components for filtering
+-   ✅ `ProblemsTableRow`, `LessonsTableRow` — Individual row components
+-   ✅ `DeleteProblemButton`, `DeleteLessonButton` — Delete actions
+-   ✅ `useTestTab` — Hook for managing test tab state and auto-switching
+-   ✅ `useProcessedStatement` — Hook for optimized markdown processing
+-   ✅ `diffUtils` — Utility for creating element-by-element diffs
+-   ✅ `testStatusUtils` — Utility for calculating test status
+
+**❌ Not Yet Implemented:**
+
+-   ❌ `PageShell` (header/nav, container)
+-   ❌ `FiltersBar`, `SearchInput`, `PillTag`, `DifficultyBadge` (standalone components)
+-   ❌ `ConsoleTab` (optional debug console)
+-   ❌ `ChatPanel` AI integration (infrastructure exists, needs AI coach functions)
+-   ❌ `Modal` (Optimal approach opt‑in)
 
 ---
 
@@ -654,19 +711,29 @@ export async function saveUserCode(
 
 ## 15) Phased Delivery Plan
 
-**Phase 1 (Core loop)**
+**Phase 1 (Core loop) - ✅ COMPLETED**
 
--   `/problems`, `/workspace/[problemId]` basic, server functions for judge, hardcoded content.
--   Seed 10 original problems (arrays/hashmaps/strings/linked list) in TypeScript files.
+-   ✅ `/problems`, `/workspace/[problemSlug]` implemented with full UI
+-   ✅ `/lessons`, `/lessons/[lessonSlug]` implemented with SSG
+-   ✅ All pages are server components, fetch data from database
+-   ✅ 10 original problems seeded in database (arrays/hashmaps/strings)
+-   ✅ Admin CRUD interface for creating/editing/deleting content
+-   ❌ Progress tracking database tables not yet created
 
-**Phase 2 (Lessons + Coach)**
+**Phase 2 (Lessons + Coach) - 🟡 PARTIALLY COMPLETE**
 
--   `/lessons`, `/lessons/[lessonId]` SSG, hardcoded lesson content.
--   Coach server functions with tiering + guardrails; ChatPanel UI.
+-   ✅ `/lessons`, `/lessons/[lessonSlug]` SSG implemented
+-   ✅ Lessons stored in database (not hardcoded)
+-   ❌ Coach server functions (`getHint()`, `reviewOptimality()`) not implemented
+-   ❌ ChatPanel AI integration not implemented
 
-**Phase 3 (Polish + Analytics)**
+**Phase 3 (Polish + Analytics) - ❌ NOT STARTED**
 
--   Optimal approach flow, throttling, autosave code per language, analytics events, SEO polish.
+-   ❌ Optimal approach flow
+-   ❌ Throttling for hints
+-   ❌ Autosave code per language
+-   ❌ Analytics events tracking
+-   ❌ SEO polish (meta tags, JSON-LD, etc.)
 
 ---
 

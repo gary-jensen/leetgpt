@@ -2,20 +2,27 @@
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { WorkspaceLayout } from "@/features/algorithms/components/WorkspaceLayout";
-import { TestResult } from "@/features/algorithms/components/TestResultsDisplay";
-import { useAlgoProblemExecution } from "@/features/algorithms/hooks/useAlgoProblemExecution";
-import { getAlgoProblem } from "@/features/algorithms/data";
-import { AlgoProblemDetail } from "@/types/algorithm-types";
+import { WorkspaceLayout } from "./WorkspaceLayout";
+import { TestResult } from "./TestResultsDisplay";
+import { useAlgoProblemExecution } from "../hooks/useAlgoProblemExecution";
 import { getHint } from "@/lib/actions/algoCoach";
 import { Button } from "@/components/ui/button";
-import { Lightbulb } from "lucide-react";
+import { AlgoProblemDetail } from "@/types/algorithm-types";
 
-export default function AlgorithmWorkspacePage() {
-	const params = useParams();
-	const problemId = params.problemId as string;
+interface AlgorithmWorkspaceProps {
+	problem: AlgoProblemDetail;
+}
 
-	const problem = getAlgoProblem(problemId);
+export function AlgorithmWorkspace({ problem }: AlgorithmWorkspaceProps) {
+	console.log(
+		"🔍 AlgorithmWorkspace - problem.statementHtml:",
+		problem.statementHtml
+			? `✅ EXISTS (${problem.statementHtml.length} chars)`
+			: "❌ NULL"
+	);
+	console.log("🔍 AlgorithmWorkspace - problem.id:", problem.id);
+	console.log("🔍 AlgorithmWorkspace - problem.slug:", problem.slug);
+
 	const [chatMessages, setChatMessages] = useState<any[]>([]);
 	const [isThinking, setIsThinking] = useState(false);
 
@@ -34,12 +41,10 @@ export default function AlgorithmWorkspacePage() {
 	} = useAlgoProblemExecution(problem);
 
 	const handleHint = async () => {
-		if (!problem) return;
-
 		setIsThinking(true);
 		try {
 			const hint = await getHint(
-				problemId,
+				problem.id,
 				code,
 				chatMessages,
 				getFailureSummary(testResults)
@@ -96,24 +101,6 @@ export default function AlgorithmWorkspacePage() {
 			setChatMessages((prev) => [...prev, aiResponse]);
 		}, 1000);
 	};
-
-	if (!problem) {
-		return (
-			<div className="h-screen flex items-center justify-center">
-				<div className="text-center">
-					<h1 className="text-2xl font-bold mb-4">
-						Problem Not Found
-					</h1>
-					<p className="text-muted-foreground mb-4">
-						The problem you&apos;re looking for doesn&apos;t exist.
-					</p>
-					<Button onClick={() => window.history.back()}>
-						Go Back
-					</Button>
-				</div>
-			</div>
-		);
-	}
 
 	return (
 		<WorkspaceLayout

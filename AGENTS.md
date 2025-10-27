@@ -4,11 +4,26 @@ Please use these notes as a guide for the project structure and rules
 
 ## React / Next.js Best Practices
 
--   Avoid `useEffect` unless necessary; prefer data fetching in `getServerSideProps` / `getStaticProps`.
--   Break large components into subcomponents.
--   Extract helper logic to respective `utils/` files.
--   Keep pages clean; logic should mostly be in components or hooks.
--   Use named exports for components and utils.
+### Server-Side Pages
+
+-   **All `page.tsx` files MUST be server-side only** - no client-side hooks, interactivity, or browser APIs
+-   Client-side interactivity should be extracted into sub-components
+-   Use `"use client"` directive ONLY on sub-components, never on `page.tsx` files
+-   Prefer server-side data fetching - fetch data in `page.tsx` and pass as props to client components
+
+### Data Fetching
+
+-   Fetch data server-side in `page.tsx` files whenever possible
+-   Avoid `useEffect` for data fetching; prefer fetching in `getServerSideProps` / `getStaticProps` (Pages Router) or directly in server components (App Router)
+-   Prefer to only use `useEffect` for client-side effects that truly require it (e.g., event listeners, subscriptions)
+-   Pass fetched data as props to client components
+
+### Component Organization
+
+-   Break large components into subcomponents
+-   Extract helper logic to respective `utils/` files
+-   Keep `page.tsx` files clean; logic should mostly be in components or hooks
+-   Use named exports for components and utils
 
 ## Project Structure
 

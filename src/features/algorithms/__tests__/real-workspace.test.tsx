@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { useParams } from "next/navigation";
-import AlgorithmWorkspacePage from "@/app/algorithms/workspace/[problemId]/page";
+import AlgorithmWorkspacePage from "@/app/algorithms/problems/[problemSlug]/page";
 import { getAlgoProblem } from "@/features/algorithms/data";
 
 // Mock the real dependencies

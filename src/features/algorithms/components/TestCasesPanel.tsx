@@ -21,6 +21,7 @@ export function TestCasesPanel({
 	setActiveTestTab,
 }: TestCasesPanelProps) {
 	const [selectedTestIndex, setSelectedTestIndex] = useState(0);
+	const [processedInputs, setProcessedInputs] = useState<string[]>([]);
 
 	// Auto-select first failed case when switching to results tab
 	useEffect(() => {
@@ -36,6 +37,22 @@ export function TestCasesPanel({
 			}
 		}
 	}, [activeTestTab, testResults]);
+
+	useEffect(() => {
+		if (problem.tests[selectedTestIndex]) {
+			const processInputs = async () => {
+				const inputs = problem.tests[selectedTestIndex].input.map(
+					async (value) => {
+						const jsonStr = JSON.stringify(value);
+						const markdown = `\`\`\`json\n${jsonStr}\n\`\`\``;
+						return await processMarkdown(markdown);
+					}
+				);
+				setProcessedInputs(await Promise.all(inputs));
+			};
+			processInputs();
+		}
+	}, [selectedTestIndex, problem.tests]);
 
 	return (
 		<div className="bg-background flex flex-col rounded-2xl border-[#2f2f2f] border-1 overflow-hidden h-full">
@@ -69,6 +86,7 @@ export function TestCasesPanel({
 						problem={problem}
 						selectedTestIndex={selectedTestIndex}
 						setSelectedTestIndex={setSelectedTestIndex}
+						processedInputs={processedInputs}
 					/>
 				) : (
 					<TestResultsTab
@@ -76,6 +94,7 @@ export function TestCasesPanel({
 						testResults={testResults}
 						selectedTestIndex={selectedTestIndex}
 						setSelectedTestIndex={setSelectedTestIndex}
+						processedInputs={processedInputs}
 					/>
 				)}
 			</div>
@@ -87,43 +106,27 @@ interface TestCaseTabProps {
 	problem: AlgoProblemDetail;
 	selectedTestIndex: number;
 	setSelectedTestIndex: (index: number) => void;
+	processedInputs: string[];
 }
 
 function TestCaseTab({
 	problem,
 	selectedTestIndex,
 	setSelectedTestIndex,
+	processedInputs,
 }: TestCaseTabProps) {
-	const [processedInputs, setProcessedInputs] = useState<string[]>([]);
-
-	useEffect(() => {
-		if (problem.tests[selectedTestIndex]) {
-			const processInputs = async () => {
-				const inputs = problem.tests[selectedTestIndex].input.map(
-					async (value) => {
-						const jsonStr = JSON.stringify(value);
-						const markdown = `\`\`\`json\n${jsonStr}\n\`\`\``;
-						return await processMarkdown(markdown);
-					}
-				);
-				setProcessedInputs(await Promise.all(inputs));
-			};
-			processInputs();
-		}
-	}, [selectedTestIndex, problem.tests]);
-
 	return (
 		<div className="flex-1 flex flex-col overflow-hidden">
-			{/* Test Case Selection Tabs */}
+			{/* Test Case Selection Tabs - Show only first 5 */}
 			<div className="flex mx-4 my-4 gap-2">
-				{problem.tests.map((_, index) => {
+				{problem.tests.slice(0, 5).map((_, index) => {
 					const isSelected = selectedTestIndex === index;
 					return (
 						<button
 							key={index}
 							onClick={() => setSelectedTestIndex(index)}
 							className={cn(
-								"px-3 py-1.5 rounded-md text-sm font-medium hover:bg-white/15 hover:cursor-pointer",
+								"px-3 py-1.5 rounded-md text-sm text-nowrap font-medium hover:bg-white/15 hover:cursor-pointer",
 								isSelected
 									? "bg-white/10 text-white"
 									: "text-muted-foreground hover:text-foreground "
@@ -188,6 +191,7 @@ interface TestResultsTabProps {
 	testResults: TestResult[];
 	selectedTestIndex: number;
 	setSelectedTestIndex: (index: number) => void;
+	processedInputs: string[];
 }
 
 function TestResultsTab({
@@ -195,6 +199,7 @@ function TestResultsTab({
 	testResults,
 	selectedTestIndex,
 	setSelectedTestIndex,
+	processedInputs,
 }: TestResultsTabProps) {
 	const status = getOverallStatus(testResults);
 	if (status === "pending") {
@@ -231,46 +236,87 @@ function TestResultsTab({
 								? "Wrong Answer"
 								: "Pending"}
 						</span>
-						{testResults.length > 0 && (
+						{/* Runtime is not a working metric. */}
+						{/* {testResults.length > 0 && (
 							<span className="text-sm text-muted-foreground">
 								Runtime: 0 ms
 							</span>
-						)}
+						)} */}
+						{testResults.length > 0 &&
+							(() => {
+								const firstFailedIndex = testResults.findIndex(
+									(result) => !result.passed
+								);
+								const passedCount =
+									firstFailedIndex === -1
+										? testResults.length
+										: firstFailedIndex + 1;
+
+								return (
+									<span className="text-sm text-muted-foreground">
+										{passedCount}/{testResults.length}{" "}
+										testcases passed
+									</span>
+								);
+							})()}
 					</div>
 				</div>
 			</div>
 
 			{/* Test Case Selection Tabs */}
 			<div className="flex mx-4 my-4 gap-2">
-				{problem.tests.map((_, index) => {
-					const status = getTestStatus(testResults, index);
-					const isSelected = selectedTestIndex === index;
-					return (
-						<button
-							key={index}
-							onClick={() => setSelectedTestIndex(index)}
-							className={cn(
-								"px-3 py-1.5 rounded-md text-sm font-medium hover:bg-white/15 hover:cursor-pointer",
-								isSelected
-									? "bg-white/10 text-white"
-									: "text-muted-foreground hover:text-foreground"
-							)}
-						>
-							<div className="flex items-center gap-2">
-								{status === "passed" && (
-									<span className="text-green-500">✔</span>
-								)}
-								{status === "failed" && (
-									<span className="text-red-500">❌</span>
-								)}
-								{status === "pending" && (
-									<span className="text-gray-400">○</span>
-								)}
-								Case {index + 1}
-							</div>
-						</button>
+				{/* Only show the first 5 test cases by default, or the FIRST failed case */}
+				{(() => {
+					const MAX_VISIBLE_TESTS = 5;
+					const visibleIndices = problem.tests
+						.map((_, index) => index)
+						.slice(0, MAX_VISIBLE_TESTS);
+					const firstFailedIndex = testResults.findIndex(
+						(result) => !result.passed
 					);
-				})}
+
+					// Combine visible indices with the first failed index (if any)
+					const allVisibleIndices = Array.from(
+						new Set([
+							...visibleIndices,
+							...(firstFailedIndex !== -1
+								? [firstFailedIndex]
+								: []),
+						])
+					).sort((a, b) => a - b);
+
+					return allVisibleIndices.map((index) => {
+						const status = getTestStatus(testResults, index);
+						const isSelected = selectedTestIndex === index;
+						return (
+							<button
+								key={index}
+								onClick={() => setSelectedTestIndex(index)}
+								className={cn(
+									"px-3 py-1.5 rounded-md text-sm text-nowrap font-medium hover:bg-white/15 hover:cursor-pointer",
+									isSelected
+										? "bg-white/10 text-white"
+										: "text-muted-foreground hover:text-foreground"
+								)}
+							>
+								<div className="flex items-center gap-2">
+									{status === "passed" && (
+										<span className="text-green-500">
+											✔
+										</span>
+									)}
+									{status === "failed" && (
+										<span className="text-red-500">❌</span>
+									)}
+									{status === "pending" && (
+										<span className="text-gray-400">○</span>
+									)}
+									Case {index + 1}
+								</div>
+							</button>
+						);
+					});
+				})()}
 			</div>
 
 			{/* Test Results Content */}
@@ -293,9 +339,24 @@ function TestResultsTab({
 												=
 											</span>
 											<div className="mt-1 bg-[#ffffff22] rounded-md p-3">
-												<pre className="text-sm text-white overflow-x-auto">
-													{JSON.stringify(value)}
-												</pre>
+												{processedInputs[index] ? (
+													<div
+														className="text-sm overflow-x-auto"
+														dangerouslySetInnerHTML={{
+															__html:
+																processedInputs[
+																	index
+																] || "",
+														}}
+													/>
+												) : (
+													<pre
+														className="text-sm text-white 
+                                        overflow-x-auto"
+													>
+														{JSON.stringify(value)}
+													</pre>
+												)}
 											</div>
 										</div>
 									)

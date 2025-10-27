@@ -141,3 +141,42 @@ model AlgoLessonProgress {
 
     @@unique([userId, lessonId])
 }
+
+// Algorithm content models
+model AlgoProblem {
+    id             String   @id @default(cuid())
+    slug           String   @unique
+    title          String
+    statementMd    String   @db.Text
+    statementHtml  String?  @db.Text
+    topics         String[]
+    difficulty     String
+    languages      String[]
+    rubric         Json
+    parameterNames String[]
+    tests          Json
+    startingCode   Json
+    passingCode    Json
+    createdAt      DateTime @default(now())
+    updatedAt      DateTime @updatedAt
+
+    @@index([difficulty])
+    @@index([slug])
+}
+
+model AlgoLesson {
+    id             String   @id @default(cuid())
+    slug           String   @unique
+    title          String
+    summary        String
+    topics         String[]
+    difficulty     String
+    readingMinutes Int
+    bodyMd         String   @db.Text
+    bodyHtml       String?  @db.Text
+    createdAt      DateTime @default(now())
+    updatedAt      DateTime @updatedAt
+
+    @@index([difficulty])
+    @@index([slug])
+}

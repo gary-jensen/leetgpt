@@ -1,0 +1,219 @@
+"use server";
+
+import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/auth";
+import { processMarkdown } from "@/components/MarkdownEditor/markdown-processor";
+import { revalidatePath } from "next/cache";
+import { AlgoLesson, AlgoProblemDetail } from "@/types/algorithm-types";
+
+interface AlgoProblemData {
+	slug: string;
+	title: string;
+	statementMd: string;
+	topics: string[];
+	difficulty: string;
+	languages: string[];
+	rubric: { optimal_time: string; acceptable_time: string[] };
+	parameterNames: string[];
+	tests: { input: any[]; output: any }[];
+	startingCode: { [key: string]: string };
+	passingCode: { [key: string]: string };
+}
+
+interface AlgoLessonData {
+	slug: string;
+	title: string;
+	summary: string;
+	topics: string[];
+	difficulty: string;
+	readingMinutes: number;
+	bodyMd: string;
+}
+
+// AlgoProblem Actions
+export async function createAlgoProblem(data: AlgoProblemData) {
+	try {
+		requireAdmin();
+
+		// Process markdown to HTML
+		const statementHtml = await processMarkdown(data.statementMd);
+
+		// Create problem with both markdown and HTML
+		const problem = await prisma.algoProblem.create({
+			data: {
+				...data,
+				statementHtml,
+			},
+		});
+
+		// Revalidate algorithm pages
+		revalidatePath("/algorithms");
+		revalidatePath("/algorithms/problems");
+
+		return { success: true, data: problem };
+	} catch (error: any) {
+		return { success: false, error: error.message };
+	}
+}
+
+export async function updateAlgoProblem(id: string, data: AlgoProblemData) {
+	try {
+		requireAdmin();
+
+		// Process markdown to HTML
+		const statementHtml = await processMarkdown(data.statementMd);
+
+		// Update problem with both markdown and HTML
+		const problem = await prisma.algoProblem.update({
+			where: { id },
+			data: {
+				...data,
+				statementHtml,
+			},
+		});
+
+		// Revalidate algorithm pages
+		revalidatePath("/algorithms");
+		revalidatePath("/algorithms/problems");
+
+		return { success: true, data: problem };
+	} catch (error: any) {
+		return { success: false, error: error.message };
+	}
+}
+
+export async function deleteAlgoProblem(id: string) {
+	try {
+		requireAdmin();
+
+		await prisma.algoProblem.delete({
+			where: { id },
+		});
+
+		// Revalidate algorithm pages
+		revalidatePath("/algorithms");
+		revalidatePath("/algorithms/problems");
+
+		return { success: true };
+	} catch (error: any) {
+		return { success: false, error: error.message };
+	}
+}
+
+export async function getAlgoProblem(slug: string) {
+	try {
+		const problem = await prisma.algoProblem.findUnique({
+			where: { slug },
+		});
+
+		return { success: true, data: problem };
+	} catch (error: any) {
+		return { success: false, error: error.message };
+	}
+}
+
+export async function getAllAlgoProblems() {
+	try {
+		const problems = await prisma.algoProblem.findMany({
+			orderBy: { createdAt: "desc" },
+		});
+
+		return problems;
+	} catch (error) {
+		return null;
+	}
+}
+
+// AlgoLesson Actions
+export async function createAlgoLesson(data: AlgoLessonData) {
+	try {
+		requireAdmin();
+
+		// Process markdown to HTML
+		const bodyHtml = await processMarkdown(data.bodyMd);
+
+		// Create lesson with both markdown and HTML
+		const lesson = await prisma.algoLesson.create({
+			data: {
+				...data,
+				bodyHtml,
+			},
+		});
+
+		// Revalidate algorithm pages
+		revalidatePath("/algorithms");
+		revalidatePath("/algorithms/lessons");
+
+		return { success: true, data: lesson };
+	} catch (error: any) {
+		return { success: false, error: error.message };
+	}
+}
+
+export async function updateAlgoLesson(id: string, data: AlgoLessonData) {
+	try {
+		requireAdmin();
+
+		// Process markdown to HTML
+		const bodyHtml = await processMarkdown(data.bodyMd);
+
+		// Update lesson with both markdown and HTML
+		const lesson = await prisma.algoLesson.update({
+			where: { id },
+			data: {
+				...data,
+				bodyHtml,
+			},
+		});
+
+		// Revalidate algorithm pages
+		revalidatePath("/algorithms");
+		revalidatePath("/algorithms/lessons");
+
+		return { success: true, data: lesson };
+	} catch (error: any) {
+		return { success: false, error: error.message };
+	}
+}
+
+export async function deleteAlgoLesson(id: string) {
+	try {
+		requireAdmin();
+
+		await prisma.algoLesson.delete({
+			where: { id },
+		});
+
+		// Revalidate algorithm pages
+		revalidatePath("/algorithms");
+		revalidatePath("/algorithms/lessons");
+
+		return { success: true };
+	} catch (error: any) {
+		return { success: false, error: error.message };
+	}
+}
+
+export async function getAlgoLesson(slug: string) {
+	try {
+		const lesson = await prisma.algoLesson.findUnique({
+			where: { slug },
+		});
+
+		return { success: true, data: lesson };
+	} catch (error: any) {
+		return { success: false, error: error.message };
+	}
+}
+
+export async function getAllAlgoLessons() {
+	try {
+		const lessons = await prisma.algoLesson.findMany({
+			orderBy: { createdAt: "desc" },
+		});
+
+		return lessons;
+	} catch (error) {
+		return null;
+	}
+}

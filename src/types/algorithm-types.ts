@@ -9,6 +9,7 @@ export interface AlgoLesson {
 	difficulty: Difficulty;
 	readingMinutes: number;
 	bodyMd: string;
+	bodyHtml?: string | null;
 }
 
 export interface AlgoProblemMeta {
@@ -22,6 +23,7 @@ export interface AlgoProblemMeta {
 
 export interface AlgoProblemDetail extends AlgoProblemMeta {
 	statementMd: string;
+	statementHtml?: string | null; // Pre-processed HTML (from database)
 	rubric: { optimal_time: string; acceptable_time: string[] };
 	tests: { input: any[]; output: any }[];
 	parameterNames: string[]; // Names of the input parameters in order
