@@ -6,7 +6,7 @@ import {
 	getAllTopics,
 	getDifficultyLevels,
 } from "../index";
-import { algoProblems } from "../algoProblems";
+import { algoProblems } from "../problems/algoProblems";
 import { algoLessons } from "../algoLessons";
 
 // Mock the data files

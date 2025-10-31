@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { processMarkdown } from "@/components/MarkdownEditor/markdown-processor";
-import { algoProblems } from "../src/features/algorithms/data/algoProblems";
+import { algoProblems } from "../src/features/algorithms/data/problems/algoProblems";
 import { algoLessons } from "../src/features/algorithms/data/algoLessons";
 
 const prisma = new PrismaClient();

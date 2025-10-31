@@ -30,7 +30,7 @@ import {
 	DrawerTitle,
 	DrawerTrigger,
 } from "@/components/ui/drawer";
-import { algoProblems } from "@/features/algorithms/data/algoProblems";
+import { algoProblems } from "@/features/algorithms/data/problems/algoProblems";
 import type { AlgoProblemMeta } from "@/types/algorithm-types";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -208,11 +208,7 @@ export function WorkspaceNavbar() {
 										</span>
 										<Tooltip>
 											<TooltipTrigger asChild>
-												<Button
-													variant="outline"
-													size="icon"
-													className="hidden group-hover:flex h-fit w-fit rounded-[4px] bg-white/10 hover:bg-white/15 hover:border-white/1"
-												>
+												<div className="border shadow-xs hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 size-9 hidden group-hover:flex h-fit w-fit rounded-[4px] bg-white/10 hover:bg-white/15 hover:border-white/1">
 													<Link
 														href="/algorithms/problems"
 														className="p-0.5"
@@ -222,7 +218,7 @@ export function WorkspaceNavbar() {
 															size={12}
 														/>
 													</Link>
-												</Button>
+												</div>
 											</TooltipTrigger>
 											<TooltipContent className="pointer-events-none">
 												<p>Open in new tab</p>

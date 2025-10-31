@@ -1,6 +1,6 @@
 import { renderHook, act } from "@testing-library/react";
 import { useAlgoProblemExecution } from "../hooks/useAlgoProblemExecution";
-import { algoProblems } from "../data/algoProblems";
+import { algoProblems } from "../data/problems/algoProblems";
 
 describe("Show Solution Feature", () => {
 	it("should set code to passingCode when showSolution is called", () => {

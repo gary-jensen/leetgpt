@@ -4,7 +4,7 @@ import {
 	AlgoProblemDetail,
 } from "@/types/algorithm-types";
 import { algoLessons } from "./algoLessons";
-import { algoProblems } from "./algoProblems";
+import { algoProblems } from "./problems/algoProblems";
 import { prisma } from "@/lib/prisma";
 import { unstable_cache as nextCache, revalidateTag } from "next/cache";
 import { processMarkdown } from "@/components/MarkdownEditor/markdown-processor";

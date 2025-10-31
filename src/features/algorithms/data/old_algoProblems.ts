@@ -1,17 +1,15 @@
 import { AlgoProblemDetail } from "@/types/algorithm-types";
 
-export const algoProblems: AlgoProblemDetail[] = [
+export const old_algoProblems: AlgoProblemDetail[] = [
 	{
 		id: "two-sum",
 		slug: "two-sum",
 		title: "Two Sum",
-		statementMd: `# Two Sum
-
-Given an array of integers \`nums\` and an integer \`target\`, return indices of the two numbers such that they add up to \`target\`.
+		statementMd: `Given an array of integers \`nums\` and an integer \`target\`, return indices of the two numbers such that they add up to \`target\`.
 
 You may assume that each input would have **exactly one solution**, and you may not use the same element twice.
 
-You c^an^ return the answer in any order.
+You can return the answer in any order.
 
 #### Example 1:
 > **Input:** \`nums = [2,7,11,15]\`, \`target = 9\`
@@ -28,9 +26,9 @@ You c^an^ return the answer in any order.
 > **Output:** \`[0,1]\`
 
 #### Constraints:
-- \`2 <= nums.length <= 10^4^\`
-- \`-10^9^ <= nums[i] <= 10^9^\`
-- \`-10^9^ <= target <= 10^9^\`
+- 2 <= nums.length <= 10^4^
+- -10^9^ <= nums[i] <= 10^9^
+- -10^9^ <= target <= 10^9^
 - **Only one valid answer exists.**`,
 		topics: ["arrays", "hashmap"],
 		difficulty: "easy",
@@ -151,9 +149,7 @@ function twoSum(nums, target) {
 		id: "valid-palindrome",
 		slug: "valid-palindrome",
 		title: "Valid Palindrome",
-		statementMd: `# Valid Palindrome
-
-A phrase is a **palindrome** if, after converting all uppercase letters into lowercase letters and removing all non-alphanumeric characters, it reads the same forward and backward.
+		statementMd: `A phrase is a **palindrome** if, after converting all uppercase letters into lowercase letters and removing all non-alphanumeric characters, it reads the same forward and backward.
 
 Given a string \`s\`, return \`true\` if it is a palindrome, or \`false\` otherwise.
 
@@ -173,7 +169,7 @@ Given a string \`s\`, return \`true\` if it is a palindrome, or \`false\` otherw
 > **Explanation:** s is an empty string "" after removing non-alphanumeric characters. Since an empty string reads the same forward and backward, it is a palindrome.
 
 #### Constraints:
-- \`1 <= s.length <= 2 * 10^5\`
+- 1 <= s.length <= 2 * 10^5^
 - s consists only of printable ASCII characters.`,
 		topics: ["strings", "two-pointers"],
 		difficulty: "easy",
@@ -192,7 +188,11 @@ Given a string \`s\`, return \`true\` if it is a palindrome, or \`false\` otherw
 			{ input: ["hello"], output: false },
 		],
 		startingCode: {
-			javascript: `function isPalindrome(s) {
+			javascript: `/**
+ * @param {string} s
+ * @return {boolean}
+ */
+function isPalindrome(s) {
   // Your code here
 }`,
 		},
@@ -221,9 +221,7 @@ Given a string \`s\`, return \`true\` if it is a palindrome, or \`false\` otherw
 		id: "max-subarray",
 		slug: "max-subarray",
 		title: "Maximum Subarray",
-		statementMd: `# Maximum Subarray
-
-Given an integer array \`nums\`, find the subarray with the largest sum, and return its sum.
+		statementMd: `Given an integer array \`nums\`, find the subarray with the largest sum, and return its sum.
 
 #### Example 1:
 > **Input:** \`nums = [-2,1,-3,4,-1,2,1,-5,4]\`
@@ -241,8 +239,8 @@ Given an integer array \`nums\`, find the subarray with the largest sum, and ret
 > **Explanation:** The subarray [5,4,-1,7,8] has the largest sum 23.
 
 #### Constraints:
-- \`1 <= nums.length <= 10^5\`
-- \`-10^4 <= nums[i] <= 10^4\`
+- 1 <= nums.length <= 10^5^
+- -10^4^ <= nums[i] <= 10^4^
 
 **Follow up:** If you have figured out the O(n) solution, try coding another solution using the **divide and conquer** approach, which is more subtle.`,
 		topics: ["arrays", "dynamic-programming", "sliding-window"],
@@ -262,7 +260,11 @@ Given an integer array \`nums\`, find the subarray with the largest sum, and ret
 			{ input: [[-2, -1]], output: -1 },
 		],
 		startingCode: {
-			javascript: `function maxSubArray(nums) {
+			javascript: `/**
+ * @param {number[]} nums
+ * @return {number}
+ */
+function maxSubArray(nums) {
   // Your code here
 }`,
 		},
@@ -285,9 +287,7 @@ Given an integer array \`nums\`, find the subarray with the largest sum, and ret
 		id: "contains-duplicate",
 		slug: "contains-duplicate",
 		title: "Contains Duplicate",
-		statementMd: `# Contains Duplicate
-
-Given an integer array \`nums\`, return \`true\` if any value appears **at least twice** in the array, and return \`false\` if every element is distinct.
+		statementMd: `Given an integer array \`nums\`, return \`true\` if any value appears **at least twice** in the array, and return \`false\` if every element is distinct.
 
 #### Example 1:
 > **Input:** \`nums = [1,2,3,1]\`
@@ -302,8 +302,8 @@ Given an integer array \`nums\`, return \`true\` if any value appears **at least
 > **Output:** \`true\`
 
 #### Constraints:
-- \`1 <= nums.length <= 10^5\`
-- \`-10^9 <= nums[i] <= 10^9\``,
+- 1 <= nums.length <= 10^5^
+- -10^9^ <= nums[i] <= 10^9^`,
 		topics: ["arrays", "hashmap"],
 		difficulty: "easy",
 		languages: ["javascript"],
@@ -321,7 +321,11 @@ Given an integer array \`nums\`, return \`true\` if any value appears **at least
 			{ input: [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]], output: false },
 		],
 		startingCode: {
-			javascript: `function containsDuplicate(nums) {
+			javascript: `/**
+ * @param {number[]} nums
+ * @return {boolean}
+ */
+function containsDuplicate(nums) {
   // Your code here
 }`,
 		},
@@ -344,9 +348,7 @@ Given an integer array \`nums\`, return \`true\` if any value appears **at least
 		id: "valid-anagram",
 		slug: "valid-anagram",
 		title: "Valid Anagram",
-		statementMd: `# Valid Anagram
-
-Given two strings \`s\` and \`t\`, return \`true\` if \`t\` is an anagram of \`s\`, and \`false\` otherwise.
+		statementMd: `Given two strings \`s\` and \`t\`, return \`true\` if \`t\` is an anagram of \`s\`, and \`false\` otherwise.
 
 An **Anagram** is a word or phrase formed by rearranging the letters of a different word or phrase, typically using all the original letters exactly once.
 
@@ -359,7 +361,7 @@ An **Anagram** is a word or phrase formed by rearranging the letters of a differ
 > **Output:** \`false\`
 
 #### Constraints:
-- \`1 <= s.length, t.length <= 5 * 10^4\`
+- 1 <= s.length, t.length <= 5 * 10^4^
 - s and t consist of lowercase English letters only.
 
 **Follow up:** What if the inputs contain Unicode characters? How would you adapt your solution to such a case?`,
@@ -380,7 +382,12 @@ An **Anagram** is a word or phrase formed by rearranging the letters of a differ
 			{ input: ["a", "a"], output: true },
 		],
 		startingCode: {
-			javascript: `function isAnagram(s, t) {
+			javascript: `/**
+ * @param {string} s
+ * @param {string} t
+ * @return {boolean}
+ */
+function isAnagram(s, t) {
   // Your code here
 }`,
 		},
@@ -409,9 +416,7 @@ An **Anagram** is a word or phrase formed by rearranging the letters of a differ
 		id: "group-anagrams",
 		slug: "group-anagrams",
 		title: "Group Anagrams",
-		statementMd: `# Group Anagrams
-
-Given an array of strings \`strs\`, group the anagrams together. You can return the answer in any order.
+		statementMd: `Given an array of strings \`strs\`, group the anagrams together. You can return the answer in any order.
 
 An **Anagram** is a word or phrase formed by rearranging the letters of a different word or phrase, typically using all the original letters exactly once.
 
@@ -428,8 +433,8 @@ An **Anagram** is a word or phrase formed by rearranging the letters of a differ
 > **Output:** \`[["a"]]\`
 
 #### Constraints:
-- \`1 <= strs.length <= 10^4\`
-- \`0 <= strs[i].length <= 100\`
+- 1 <= strs.length <= 10^4^
+- 0 <= strs[i].length <= 100
 - strs[i] consists of lowercase English letters only.`,
 		topics: ["strings", "hashmap"],
 		difficulty: "medium",
@@ -453,7 +458,11 @@ An **Anagram** is a word or phrase formed by rearranging the letters of a differ
 			},
 		],
 		startingCode: {
-			javascript: `function groupAnagrams(strs) {
+			javascript: `/**
+ * @param {string[]} strs
+ * @return {string[][]}
+ */
+function groupAnagrams(strs) {
   // Your code here
 }`,
 		},
@@ -479,9 +488,7 @@ An **Anagram** is a word or phrase formed by rearranging the letters of a differ
 		id: "top-k-frequent",
 		slug: "top-k-frequent",
 		title: "Top K Frequent Elements",
-		statementMd: `# Top K Frequent Elements
-
-Given an integer array \`nums\` and an integer \`k\`, return the \`k\` most frequent elements. You may return the answer in any order.
+		statementMd: `Given an integer array \`nums\` and an integer \`k\`, return the \`k\` most frequent elements. You may return the answer in any order.
 
 #### Example 1:
 > **Input:** \`nums = [1,1,1,2,2,3]\`, \`k = 2\`
@@ -492,7 +499,7 @@ Given an integer array \`nums\` and an integer \`k\`, return the \`k\` most freq
 > **Output:** \`[1]\`
 
 #### Constraints:
-- \`1 <= nums.length <= 10^5\`
+- 1 <= nums.length <= 10^5^
 - k is in the range [1, the number of unique elements in the array].
 - It is guaranteed that the answer is unique.
 
@@ -513,7 +520,12 @@ Given an integer array \`nums\` and an integer \`k\`, return the \`k\` most freq
 			{ input: [[4, 1, -1, 2, -1, 2, 3], 2], output: [-1, 2] },
 		],
 		startingCode: {
-			javascript: `function topKFrequent(nums, k) {
+			javascript: `/**
+ * @param {number[]} nums
+ * @param {number} k
+ * @return {number[]}
+ */
+function topKFrequent(nums, k) {
   // Your code here
 }`,
 		},
@@ -540,9 +552,7 @@ Given an integer array \`nums\` and an integer \`k\`, return the \`k\` most freq
 		id: "product-except-self",
 		slug: "product-except-self",
 		title: "Product of Array Except Self",
-		statementMd: `# Product of Array Except Self
-
-Given an integer array \`nums\`, return an array \`answer\` such that \`answer[i]\` is equal to the product of all the elements of \`nums\` except \`nums[i]\`.
+		statementMd: `Given an integer array \`nums\`, return an array \`answer\` such that \`answer[i]\` is equal to the product of all the elements of \`nums\` except \`nums[i]\`.
 
 The product of any prefix or suffix of \`nums\` is guaranteed to fit in a 32-bit integer.
 
@@ -557,8 +567,8 @@ You must write an algorithm that runs in O(n) time and without using the divisio
 > **Output:** \`[0,0,9,0,0]\`
 
 #### Constraints:
-- \`2 <= nums.length <= 10^5\`
-- \`-30 <= nums[i] <= 30\`
+- 2 <= nums.length <= 10^5^
+- -30 <= nums[i] <= 30
 - The product of any prefix or suffix of nums is guaranteed to fit in a 32-bit integer.
 
 **Follow up:** Can you solve the problem in O(1) extra space complexity? (The output array does not count as extra space for space complexity analysis.)`,
@@ -578,7 +588,11 @@ You must write an algorithm that runs in O(n) time and without using the divisio
 			{ input: [[1, 2]], output: [2, 1] },
 		],
 		startingCode: {
-			javascript: `function productExceptSelf(nums) {
+			javascript: `/**
+ * @param {number[]} nums
+ * @return {number[]}
+ */
+function productExceptSelf(nums) {
   // Your code here
 }`,
 		},
@@ -607,9 +621,7 @@ You must write an algorithm that runs in O(n) time and without using the divisio
 		id: "longest-consecutive",
 		slug: "longest-consecutive",
 		title: "Longest Consecutive Sequence",
-		statementMd: `# Longest Consecutive Sequence
-
-Given an unsorted array of integers \`nums\`, return the length of the longest consecutive elements sequence.
+		statementMd: `Given an unsorted array of integers \`nums\`, return the length of the longest consecutive elements sequence.
 
 You must write an algorithm that runs in O(n) time.
 
@@ -623,8 +635,8 @@ You must write an algorithm that runs in O(n) time.
 > **Output:** \`9\`
 
 #### Constraints:
-- \`0 <= nums.length <= 10^5\`
-- \`-10^9 <= nums[i] <= 10^9\``,
+- 0 <= nums.length <= 10^5^
+- -10^9^ <= nums[i] <= 10^9^`,
 		topics: ["arrays", "hashmap"],
 		difficulty: "medium",
 		languages: ["javascript"],
@@ -642,7 +654,11 @@ You must write an algorithm that runs in O(n) time.
 			{ input: [[1, 2, 0, 1]], output: 3 },
 		],
 		startingCode: {
-			javascript: `function longestConsecutive(nums) {
+			javascript: `/**
+ * @param {number[]} nums
+ * @return {number}
+ */
+function longestConsecutive(nums) {
   // Your code here
 }`,
 		},
@@ -677,9 +693,7 @@ You must write an algorithm that runs in O(n) time.
 		id: "merge-intervals",
 		slug: "merge-intervals",
 		title: "Merge Intervals",
-		statementMd: `# Merge Intervals
-
-Given an array of \`intervals\` where \`intervals[i] = [starti, endi]\`, merge all overlapping intervals, and return an array of the non-overlapping intervals that cover all the intervals in the input.
+		statementMd: `Given an array of \`intervals\` where \`intervals[i] = [starti, endi]\`, merge all overlapping intervals, and return an array of the non-overlapping intervals that cover all the intervals in the input.
 
 #### Example 1:
 > **Input:** \`intervals = [[1,3],[2,6],[8,10],[15,18]]\`
@@ -692,9 +706,9 @@ Given an array of \`intervals\` where \`intervals[i] = [starti, endi]\`, merge a
 > **Explanation:** Intervals [1,4] and [4,5] are considered overlapping.
 
 #### Constraints:
-- \`1 <= intervals.length <= 10^4\`
-- \`intervals[i].length == 2\`
-- \`0 <= starti <= endi <= 10^4\``,
+- 1 <= intervals.length <= 10^4^
+- intervals[i].length == 2
+- 0 <= starti <= endi <= 10^4^`,
 		topics: ["arrays", "sorting"],
 		difficulty: "medium",
 		languages: ["javascript"],
@@ -758,7 +772,11 @@ Given an array of \`intervals\` where \`intervals[i] = [starti, endi]\`, merge a
 			},
 		],
 		startingCode: {
-			javascript: `function merge(intervals) {
+			javascript: `/**
+ * @param {number[][]} intervals
+ * @return {number[][]}
+ */
+function merge(intervals) {
   // Your code here
 }`,
 		},
