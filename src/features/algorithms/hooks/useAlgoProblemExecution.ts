@@ -5,11 +5,21 @@ import useConsole from "@/hooks/workspace/useConsole";
 import { TestResult } from "../components/TestResultsDisplay";
 import { AlgoProblemDetail } from "@/types/algorithm-types";
 import { executeAlgoTests } from "@/lib/execution/algoTestExecutor";
+import { useSession } from "next-auth/react";
+import { useProgress } from "@/contexts/ProgressContext";
+import {
+	createSubmission,
+	markProblemCompleted,
+	updateAlgoProblemProgress,
+} from "@/lib/actions/algoProgress";
+import { trackAlgoProblemRun } from "@/lib/analytics";
 
 export function useAlgoProblemExecution(problem: AlgoProblemDetail | null) {
 	const [testResults, setTestResults] = useState<TestResult[]>([]);
 	const [isExecuting, setIsExecuting] = useState(false);
 	const [code, setCode] = useState(problem?.startingCode?.javascript || "");
+	const { data: session } = useSession();
+	const progress = useProgress();
 
 	// Mock lesson for useConsole compatibility
 	const mockLesson = problem
@@ -61,6 +71,7 @@ export function useAlgoProblemExecution(problem: AlgoProblemDetail | null) {
 						? result.actualLogs.join("\n")
 						: undefined,
 					error: result.error,
+					runtime: result.runtime, // Include runtime for each test case
 				})
 			);
 
@@ -124,10 +135,52 @@ export function useAlgoProblemExecution(problem: AlgoProblemDetail | null) {
 						expected: testResult.expected,
 						actual: testResult.actual,
 						error: testResult.error,
+						runtime: testResult.runtime, // Include runtime from test results
 					})
 				);
 
 				setTestResults(formattedResults);
+
+				// Create submission if user is authenticated
+				if (session?.user?.id && problem) {
+					try {
+						const passed = formattedResults.every((r) => r.passed);
+						const testsPassed = formattedResults.filter(
+							(r) => r.passed
+						).length;
+
+						// Mark as completed on first successful run
+						if (passed && session?.user?.id) {
+							await markProblemCompleted(
+								session.user.id,
+								problem.id,
+								"javascript"
+							);
+						}
+
+						await createSubmission(
+							session.user.id,
+							problem.id,
+							"javascript",
+							code,
+							passed,
+							result.runMs,
+							testsPassed,
+							problem.tests.length
+						);
+						// Track run event
+						trackAlgoProblemRun(
+							problem.id,
+							problem.title,
+							testsPassed,
+							problem.tests.length,
+							result.runMs || 0
+						);
+					} catch (error) {
+						console.error("Error creating submission:", error);
+						// Don't throw, submission creation failure shouldn't block the UI
+					}
+				}
 			}
 		} catch (error) {
 			console.error("Execution error:", error);
@@ -146,7 +199,7 @@ export function useAlgoProblemExecution(problem: AlgoProblemDetail | null) {
 		} finally {
 			setIsExecuting(false);
 		}
-	}, [code, problem]);
+	}, [code, problem, session?.user?.id]);
 
 	const resetCode = useCallback(() => {
 		if (!problem) return;

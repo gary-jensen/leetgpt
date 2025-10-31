@@ -20,6 +20,7 @@ const Editor = ({
 	onShowSolution,
 	showConsole = true,
 	disableBorder = false,
+	hideActionButtons = false,
 }: {
 	code: string;
 	setCode: (code: string) => void;
@@ -32,6 +33,7 @@ const Editor = ({
 	onShowSolution?: () => void;
 	showConsole?: boolean;
 	disableBorder?: boolean;
+	hideActionButtons?: boolean;
 }) => {
 	const [isDebouncing, setIsDebouncing] = useState(false);
 
@@ -74,7 +76,8 @@ const Editor = ({
 				<div className="w-full h-full  flex flex-col inset-shadow-black/30f inseft-shadow-sm shadow-finset p-0 gap-6">
 					<div
 						className={cn(
-							"ff min-h-[60vh] md:min-h-0 flex flex-1 flex-col rounded-2xl border-1 overflow-hidden",
+							"ff min-h-[60vh] md:min-h-0 flex flex-1 flex-col border-1 overflow-hidden",
+							!hideActionButtons && "rounded-2xl",
 							disableBorder && "border-none"
 						)}
 					>
@@ -95,38 +98,40 @@ const Editor = ({
 							className="w-full md:flex-1 bg-background [&>*]:flex-1"
 							focusOnLoad={true}
 						/>
-						<div className="flex md:hidden xl:flex w-full h-[64px] px-3 bg-background-2 items-center gap-2 border-t-1">
-							<Button
-								onClick={handleRunClick}
-								variant={buttonVariant}
-								disabled={buttonDisabled}
-							>
-								Run
-							</Button>
-							{onShowSolution && (
+						{!hideActionButtons && (
+							<div className="flex md:hidden xl:flex w-full h-[64px] px-3 bg-background-2 items-center gap-2 border-t-1">
 								<Button
-									onClick={onShowSolution}
-									variant="outline"
+									onClick={handleRunClick}
+									variant={buttonVariant}
 									disabled={buttonDisabled}
-									className="text-orange-600 border-orange-200 hover:bg-orange-50"
 								>
-									Show Solution
+									Run
 								</Button>
-							)}
+								{onShowSolution && (
+									<Button
+										onClick={onShowSolution}
+										variant="outline"
+										disabled={buttonDisabled}
+										className="text-orange-600 border-orange-200 hover:bg-orange-50"
+									>
+										Show Solution
+									</Button>
+								)}
 
-							{/* <Button
-								onClick={handleDebugLevelUp}
-								variant="outline"
-							>
-								Debug Level Up
-							</Button>
-							<Button onClick={handleAdd33XP} variant="outline">
-								+33 XP
-							</Button>
-							<Button onClick={handleAdd3XP} variant="outline">
-								+3 XP
-							</Button> */}
-						</div>
+								{/* <Button
+									onClick={handleDebugLevelUp}
+									variant="outline"
+								>
+									Debug Level Up
+								</Button>
+								<Button onClick={handleAdd33XP} variant="outline">
+									+33 XP
+								</Button>
+								<Button onClick={handleAdd3XP} variant="outline">
+									+3 XP
+								</Button> */}
+							</div>
+						)}
 					</div>
 					{showConsole && (
 						<Console

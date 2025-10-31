@@ -21,6 +21,7 @@ interface ProblemFormProps {
 		tests: any[];
 		startingCode: any;
 		passingCode: any;
+		order: number;
 	};
 }
 
@@ -52,6 +53,7 @@ export function ProblemForm({ onSubmit, initialData }: ProblemFormProps) {
 	const [passingCode, setPassingCode] = useState(
 		JSON.stringify(initialData?.passingCode || {}, null, 2)
 	);
+	const [order, setOrder] = useState(initialData?.order?.toString() || "1");
 	const [error, setError] = useState("");
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -74,6 +76,7 @@ export function ProblemForm({ onSubmit, initialData }: ProblemFormProps) {
 				tests: JSON.parse(tests),
 				startingCode: JSON.parse(startingCode),
 				passingCode: JSON.parse(passingCode),
+				order: parseInt(order, 10) || 1,
 			};
 
 			const result = await onSubmit(data);
@@ -95,7 +98,7 @@ export function ProblemForm({ onSubmit, initialData }: ProblemFormProps) {
 				</Alert>
 			)}
 
-			<div className="grid grid-cols-2 gap-4">
+			<div className="grid grid-cols-3 gap-4">
 				<div>
 					<Label htmlFor="slug">Slug</Label>
 					<Input
@@ -113,6 +116,18 @@ export function ProblemForm({ onSubmit, initialData }: ProblemFormProps) {
 						value={title}
 						onChange={(e) => setTitle(e.target.value)}
 						required
+					/>
+				</div>
+
+				<div>
+					<Label htmlFor="order">Order</Label>
+					<Input
+						id="order"
+						type="number"
+						value={order}
+						onChange={(e) => setOrder(e.target.value)}
+						required
+						min="1"
 					/>
 				</div>
 			</div>
@@ -229,4 +244,3 @@ export function ProblemForm({ onSubmit, initialData }: ProblemFormProps) {
 		</form>
 	);
 }
-

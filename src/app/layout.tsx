@@ -3,6 +3,7 @@ import SessionProvider from "@/components/SessionProvider";
 import { ProgressProvider } from "@/contexts/ProgressContext";
 import { lessonMetadata } from "@/features/Workspace/lesson-data/lessons";
 import { getSession, setLessonMetadata } from "@/lib/auth";
+import { getAlgoProgress } from "@/lib/actions/algoProgress";
 import type { Metadata } from "next";
 import { DM_Sans, Inter } from "next/font/google";
 import { Analytics as VercelAnalytics } from "@vercel/analytics/next";
@@ -57,6 +58,9 @@ export default async function RootLayout({
 	children: React.ReactNode;
 }>) {
 	const session = await getSession();
+	const initialAlgo = session?.user?.id
+		? await getAlgoProgress(session.user.id)
+		: { problemProgress: [], lessonProgress: [], submissions: [] };
 
 	return (
 		<html lang="en">
@@ -67,6 +71,9 @@ export default async function RootLayout({
 					<ProgressProvider
 						lessonMetadata={lessonMetadata}
 						session={session}
+						initialAlgoProblemProgress={initialAlgo.problemProgress}
+						initialAlgoLessonProgress={initialAlgo.lessonProgress}
+						initialAlgoSubmissions={initialAlgo.submissions}
 					>
 						<Analytics />
 						<VercelAnalytics />

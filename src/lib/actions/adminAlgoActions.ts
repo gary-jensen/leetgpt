@@ -18,6 +18,7 @@ interface AlgoProblemData {
 	tests: { input: any[]; output: any }[];
 	startingCode: { [key: string]: string };
 	passingCode: { [key: string]: string };
+	order: number;
 }
 
 interface AlgoLessonData {

@@ -7,9 +7,232 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import { BookOpen, Code, Lightbulb, Target } from "lucide-react";
+import { BookOpen, Code, Lightbulb, Target, ArrowRight } from "lucide-react";
+import { getSession } from "@/lib/auth";
+import { getAlgoProgress } from "@/lib/actions/algoProgress";
+import { getAlgoProblems, getAlgoLessons } from "@/features/algorithms/data";
 
-export default function AlgorithmsPage() {
+export default async function AlgorithmsPage() {
+	const session = await getSession();
+
+	// Get user progress if authenticated
+	let progress = null;
+	let recentProblem = null;
+	let recentLesson = null;
+	let stats = {
+		problemsCompleted: 0,
+		problemsInProgress: 0,
+		lessonsCompleted: 0,
+		totalSubmissions: 0,
+	};
+
+	if (session?.user?.id) {
+		const userProgress = await getAlgoProgress(session.user.id);
+		stats.problemsCompleted = userProgress.problemProgress.filter(
+			(p) => p.status === "completed"
+		).length;
+		stats.problemsInProgress = userProgress.problemProgress.filter(
+			(p) => p.status === "in_progress"
+		).length;
+		stats.lessonsCompleted = userProgress.lessonProgress.filter(
+			(l) => l.status === "completed"
+		).length;
+		stats.totalSubmissions = userProgress.submissions.length;
+
+		// Get most recently accessed problem
+		if (userProgress.problemProgress.length > 0) {
+			const recent = userProgress.problemProgress[0];
+			const problemMeta = await getAlgoProblems();
+			recentProblem = problemMeta.find((p) => p.id === recent.problemId);
+		}
+
+		// Get most recently accessed lesson
+		if (userProgress.lessonProgress.length > 0) {
+			const recent = userProgress.lessonProgress[0];
+			const lessonMeta = await getAlgoLessons();
+			recentLesson = lessonMeta.find((l) => l.id === recent.lessonId);
+		}
+	}
+
+	// Get recommended problems
+	const allProblems = await getAlgoProblems();
+	const recommendedProblems = allProblems.slice(0, 3);
+	// Render personalized dashboard for authenticated users
+	if (session?.user?.id) {
+		return (
+			<div className="min-h-screen bg-background">
+				{/* Header */}
+				<div className="border-b border-border bg-background">
+					<div className="container mx-auto px-4 py-8">
+						<h1 className="text-4xl font-bold mb-2">
+							Welcome back, {session.user.name || "User"}!
+						</h1>
+						<p className="text-muted-foreground">
+							Continue your algorithm learning journey
+						</p>
+					</div>
+				</div>
+
+				<div className="container mx-auto px-4 py-8">
+					{/* Stats Section */}
+					<div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+						<Card>
+							<CardHeader className="pb-2">
+								<CardDescription>Completed</CardDescription>
+								<CardTitle className="text-3xl">
+									{stats.problemsCompleted}
+								</CardTitle>
+							</CardHeader>
+						</Card>
+						<Card>
+							<CardHeader className="pb-2">
+								<CardDescription>In Progress</CardDescription>
+								<CardTitle className="text-3xl">
+									{stats.problemsInProgress}
+								</CardTitle>
+							</CardHeader>
+						</Card>
+						<Card>
+							<CardHeader className="pb-2">
+								<CardDescription>Lessons</CardDescription>
+								<CardTitle className="text-3xl">
+									{stats.lessonsCompleted}
+								</CardTitle>
+							</CardHeader>
+						</Card>
+						<Card>
+							<CardHeader className="pb-2">
+								<CardDescription>Submissions</CardDescription>
+								<CardTitle className="text-3xl">
+									{stats.totalSubmissions}
+								</CardTitle>
+							</CardHeader>
+						</Card>
+					</div>
+
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+						{/* Continue Section */}
+						<div>
+							<h2 className="text-2xl font-bold mb-4">
+								Continue Learning
+							</h2>
+							{recentProblem ? (
+								<Card>
+									<CardHeader>
+										<CardTitle className="flex items-center gap-2">
+											<Code className="w-5 h-5 text-primary" />
+											{recentProblem.title}
+										</CardTitle>
+										<CardDescription>
+											Last accessed problem
+										</CardDescription>
+									</CardHeader>
+									<CardContent>
+										<Link
+											href={`/algorithms/workspace/${recentProblem.slug}`}
+										>
+											<Button className="w-full">
+												Continue Problem
+												<ArrowRight className="w-4 h-4 ml-2" />
+											</Button>
+										</Link>
+									</CardContent>
+								</Card>
+							) : recentLesson ? (
+								<Card>
+									<CardHeader>
+										<CardTitle className="flex items-center gap-2">
+											<BookOpen className="w-5 h-5 text-primary" />
+											{recentLesson.title}
+										</CardTitle>
+										<CardDescription>
+											Last accessed lesson
+										</CardDescription>
+									</CardHeader>
+									<CardContent>
+										<Link
+											href={`/algorithms/lessons/${recentLesson.slug}`}
+										>
+											<Button className="w-full">
+												Continue Lesson
+												<ArrowRight className="w-4 h-4 ml-2" />
+											</Button>
+										</Link>
+									</CardContent>
+								</Card>
+							) : (
+								<Card>
+									<CardHeader>
+										<CardTitle>Get Started</CardTitle>
+										<CardDescription>
+											Start your learning journey
+										</CardDescription>
+									</CardHeader>
+									<CardContent className="flex gap-2">
+										<Link href="/algorithms/problems">
+											<Button
+												variant="outline"
+												className="flex-1"
+											>
+												Browse Problems
+											</Button>
+										</Link>
+										<Link href="/algorithms/lessons">
+											<Button
+												variant="outline"
+												className="flex-1"
+											>
+												Browse Lessons
+											</Button>
+										</Link>
+									</CardContent>
+								</Card>
+							)}
+						</div>
+
+						{/* Recommended Problems */}
+						<div>
+							<h2 className="text-2xl font-bold mb-4">
+								Recommended Problems
+							</h2>
+							<div className="space-y-3">
+								{recommendedProblems.map((problem) => (
+									<Card key={problem.id}>
+										<CardContent className="p-4">
+											<div className="flex items-center justify-between">
+												<div>
+													<h3 className="font-semibold">
+														{problem.title}
+													</h3>
+													<p className="text-sm text-muted-foreground">
+														{problem.topics.join(
+															", "
+														)}
+													</p>
+												</div>
+												<Link
+													href={`/algorithms/workspace/${problem.slug}`}
+												>
+													<Button
+														size="sm"
+														variant="outline"
+													>
+														Start
+													</Button>
+												</Link>
+											</div>
+										</CardContent>
+									</Card>
+								))}
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		);
+	}
+
+	// Render public landing page for unauthenticated users
 	return (
 		<div className="min-h-screen bg-background">
 			{/* Hero Section */}
@@ -27,24 +250,24 @@ export default function AlgorithmsPage() {
 						</p>
 
 						<div className="flex gap-4 justify-center">
-							<Link href="/algorithms/problems">
+							<Link href="/login">
 								<Button
 									size="lg"
 									className="flex items-center gap-2"
 								>
 									<Code className="w-5 h-5" />
-									Start Solving Problems
+									Sign In to Start
 								</Button>
 							</Link>
 
-							<Link href="/algorithms/lessons">
+							<Link href="/algorithms/problems">
 								<Button
 									size="lg"
 									variant="outline"
 									className="flex items-center gap-2"
 								>
 									<BookOpen className="w-5 h-5" />
-									Browse Lessons
+									Browse Problems
 								</Button>
 							</Link>
 						</div>
@@ -109,100 +332,6 @@ export default function AlgorithmsPage() {
 							</CardDescription>
 						</CardHeader>
 					</Card>
-				</div>
-			</div>
-
-			{/* Quick Start Section */}
-			<div className="bg-muted">
-				<div className="container mx-auto px-4 py-16">
-					<div className="text-center mb-12">
-						<h2 className="text-3xl font-bold mb-4">
-							Get Started Today
-						</h2>
-						<p className="text-muted-foreground max-w-2xl mx-auto">
-							Choose your learning path and start building your
-							algorithmic thinking skills.
-						</p>
-					</div>
-
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-						<Card className="p-6">
-							<div className="text-center">
-								<BookOpen className="w-12 h-12 text-primary mx-auto mb-4" />
-								<h3 className="text-xl font-semibold mb-2">
-									Learn the Fundamentals
-								</h3>
-								<p className="text-muted-foreground mb-6">
-									Start with our comprehensive lessons
-									covering essential algorithmic concepts like
-									hash maps, two pointers, and sliding window
-									techniques.
-								</p>
-								<Link href="/algorithms/lessons">
-									<Button className="w-full">
-										Browse Lessons
-									</Button>
-								</Link>
-							</div>
-						</Card>
-
-						<Card className="p-6">
-							<div className="text-center">
-								<Code className="w-12 h-12 text-primary mx-auto mb-4" />
-								<h3 className="text-xl font-semibold mb-2">
-									Practice with Problems
-								</h3>
-								<p className="text-muted-foreground mb-6">
-									Jump straight into solving coding problems
-									with our interactive workspace, AI hints,
-									and real-time feedback.
-								</p>
-								<Link href="/algorithms/problems">
-									<Button className="w-full">
-										Start Solving
-									</Button>
-								</Link>
-							</div>
-						</Card>
-					</div>
-				</div>
-			</div>
-
-			{/* Stats Section */}
-			<div className="container mx-auto px-4 py-16">
-				<div className="text-center">
-					<h2 className="text-3xl font-bold mb-12">
-						Platform Statistics
-					</h2>
-
-					<div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-2xl mx-auto">
-						<div className="text-center">
-							<div className="text-4xl font-bold text-primary mb-2">
-								10+
-							</div>
-							<div className="text-muted-foreground">
-								Algorithm Problems
-							</div>
-						</div>
-
-						<div className="text-center">
-							<div className="text-4xl font-bold text-primary mb-2">
-								3
-							</div>
-							<div className="text-muted-foreground">
-								Core Lessons
-							</div>
-						</div>
-
-						<div className="text-center">
-							<div className="text-4xl font-bold text-primary mb-2">
-								AI
-							</div>
-							<div className="text-muted-foreground">
-								Powered Hints
-							</div>
-						</div>
-					</div>
 				</div>
 			</div>
 		</div>

@@ -42,6 +42,12 @@ import {
 } from "@/lib/analytics";
 // import { playLevelUpSound } from "@/lib/soundManager";
 import { clearGuestId } from "@/lib/guestId";
+import {
+	AlgoProblemProgress,
+	AlgoLessonProgress,
+	AlgoProblemSubmission,
+} from "@/types/algorithm-types";
+import { getAlgoProgress } from "@/lib/actions/algoProgress";
 
 interface ProgressContextType {
 	progress: UserProgress;
@@ -84,6 +90,16 @@ interface ProgressContextType {
 	getCompletedLessons: () => string[];
 	isLessonCompleted: (lessonId: string) => boolean;
 	getCurrentStep: (lessonId: string) => number;
+	// Algorithm progress
+	algoProblemProgress: AlgoProblemProgress[];
+	algoLessonProgress: AlgoLessonProgress[];
+	algoSubmissions: AlgoProblemSubmission[];
+	getAlgoProblemProgress: (
+		problemId: string,
+		language: string
+	) => AlgoProblemProgress | null;
+	getAlgoLessonProgress: (lessonId: string) => AlgoLessonProgress | null;
+	getAlgoSubmissions: (problemId: string) => AlgoProblemSubmission[];
 }
 
 const ProgressContext = createContext<ProgressContextType | undefined>(
@@ -291,6 +307,9 @@ interface ProgressProviderProps {
 	children: ReactNode;
 	lessonMetadata?: { id: string; skillNodeId: string }[];
 	session: Session | null;
+    initialAlgoProblemProgress?: AlgoProblemProgress[];
+    initialAlgoLessonProgress?: AlgoLessonProgress[];
+    initialAlgoSubmissions?: AlgoProblemSubmission[];
 }
 
 function getInitialProgress(
@@ -336,6 +355,9 @@ export function ProgressProvider({
 	children,
 	lessonMetadata,
 	session: serverSession,
+    initialAlgoProblemProgress,
+    initialAlgoLessonProgress,
+    initialAlgoSubmissions,
 }: ProgressProviderProps) {
 	const { data: session, status } = useSession();
 	// Use server session for initial render, then client session after hydration
@@ -350,6 +372,17 @@ export function ProgressProvider({
 	const hasMigratedRef = useRef(false);
 	const prevLevelRef = useRef(state.level);
 	const hasInitializedLevelTracking = useRef(false);
+
+	// Algorithm progress state
+    const [algoProblemProgress, setAlgoProblemProgress] = useState<
+		AlgoProblemProgress[]
+    >(initialAlgoProblemProgress || []);
+    const [algoLessonProgress, setAlgoLessonProgress] = useState<
+		AlgoLessonProgress[]
+    >(initialAlgoLessonProgress || []);
+    const [algoSubmissions, setAlgoSubmissions] = useState<
+		AlgoProblemSubmission[]
+    >(initialAlgoSubmissions || []);
 
 	// Compute loading state based on whether we need to check migration/localStorage
 	const needsAsyncLoad = activeSession?.user?.id
@@ -393,6 +426,8 @@ export function ProgressProvider({
 			localStorage.removeItem("bitschool-progress");
 			localStorage.removeItem("bitschool-progress-checksum");
 			clearGuestId();
+
+            // Algorithm progress is preloaded in layout when available
 			return;
 		}
 
@@ -451,6 +486,26 @@ export function ProgressProvider({
 						}
 
 						setIsProgressLoading(false);
+
+						// Load algorithm progress after migration
+						if (activeSession?.user?.id) {
+							getAlgoProgress(activeSession.user.id)
+								.then((algoData) => {
+									setAlgoProblemProgress(
+										algoData.problemProgress
+									);
+									setAlgoLessonProgress(
+										algoData.lessonProgress
+									);
+									setAlgoSubmissions(algoData.submissions);
+								})
+								.catch((error) => {
+									console.error(
+										"Error loading algorithm progress:",
+										error
+									);
+								});
+						}
 						return;
 					}
 				}
@@ -482,6 +537,8 @@ export function ProgressProvider({
 			}
 
 			setIsProgressLoading(false);
+
+            // Algorithm progress is preloaded in layout when available
 		};
 
 		loadProgress();
@@ -670,6 +727,34 @@ export function ProgressProvider({
 		[state.lessonProgress]
 	);
 
+	// Algorithm progress helpers
+	const getAlgoProblemProgressHelper = useCallback(
+		(problemId: string, language: string) => {
+			return (
+				algoProblemProgress.find(
+					(p) => p.problemId === problemId && p.language === language
+				) || null
+			);
+		},
+		[algoProblemProgress]
+	);
+
+	const getAlgoLessonProgressHelper = useCallback(
+		(lessonId: string) => {
+			return (
+				algoLessonProgress.find((l) => l.lessonId === lessonId) || null
+			);
+		},
+		[algoLessonProgress]
+	);
+
+	const getAlgoSubmissionsHelper = useCallback(
+		(problemId: string) => {
+			return algoSubmissions.filter((s) => s.problemId === problemId);
+		},
+		[algoSubmissions]
+	);
+
 	const value: ProgressContextType = {
 		progress: state,
 		isProgressLoading,
@@ -698,6 +783,13 @@ export function ProgressProvider({
 		getCompletedLessons: getCompletedLessonsHelper,
 		isLessonCompleted: isLessonCompletedHelper,
 		getCurrentStep: getCurrentStepHelper,
+		// Algorithm progress
+		algoProblemProgress,
+		algoLessonProgress,
+		algoSubmissions,
+		getAlgoProblemProgress: getAlgoProblemProgressHelper,
+		getAlgoLessonProgress: getAlgoLessonProgressHelper,
+		getAlgoSubmissions: getAlgoSubmissionsHelper,
 	};
 
 	return (

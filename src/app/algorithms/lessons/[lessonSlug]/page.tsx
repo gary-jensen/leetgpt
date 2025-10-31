@@ -5,13 +5,47 @@ import {
 } from "@/features/algorithms/data";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, ArrowLeft, ExternalLink } from "lucide-react";
+import { Clock, ArrowLeft, ExternalLink, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
+import { Metadata } from "next";
+import { MarkLessonCompleteButton } from "@/features/algorithms/components/MarkLessonCompleteButton";
+import { LessonTracker } from "@/features/algorithms/components/LessonTracker";
 
 interface LessonPageProps {
 	params: Promise<{
 		lessonSlug: string;
 	}>;
+}
+
+export async function generateMetadata({
+	params,
+}: LessonPageProps): Promise<Metadata> {
+	const { lessonSlug } = await params;
+	const lesson = await getAlgoLessonBySlug(lessonSlug);
+
+	if (!lesson) {
+		return {
+			title: "Lesson Not Found",
+		};
+	}
+
+	return {
+		title: `${lesson.title} | Algorithm Lessons | BitSchool`,
+		description: lesson.summary,
+		openGraph: {
+			title: lesson.title,
+			description: lesson.summary,
+			type: "article",
+			publishedTime: new Date().toISOString(),
+			authors: ["BitSchool"],
+			tags: lesson.topics,
+		},
+		twitter: {
+			card: "summary",
+			title: lesson.title,
+			description: lesson.summary,
+		},
+	};
 }
 
 export default async function LessonPage({ params }: LessonPageProps) {
@@ -21,6 +55,21 @@ export default async function LessonPage({ params }: LessonPageProps) {
 	if (!lesson) {
 		notFound();
 	}
+
+	// JSON-LD structured data
+	const jsonLd = {
+		"@context": "https://schema.org",
+		"@type": "Course",
+		name: lesson.title,
+		description: lesson.summary,
+		provider: {
+			"@type": "Organization",
+			name: "BitSchool",
+		},
+		timeRequired: `PT${lesson.readingMinutes}M`,
+		teaches: lesson.topics,
+		educationalLevel: lesson.difficulty,
+	};
 
 	const getDifficultyColor = (difficulty: string) => {
 		switch (difficulty) {
@@ -37,6 +86,15 @@ export default async function LessonPage({ params }: LessonPageProps) {
 
 	return (
 		<div className="min-h-screen bg-background">
+			{/* Analytics Tracker */}
+			<LessonTracker lessonId={lesson.id} lessonTitle={lesson.title} />
+
+			{/* JSON-LD Structured Data */}
+			<script
+				type="application/ld+json"
+				dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+			/>
+
 			{/* Header */}
 			<div className="border-b border-border bg-background">
 				<div className="container mx-auto px-4 py-6">
@@ -87,6 +145,12 @@ export default async function LessonPage({ params }: LessonPageProps) {
 								</div>
 							</div>
 						</div>
+
+						{/* Mark as Complete Button */}
+						<MarkLessonCompleteButton
+							lessonId={lesson.id}
+							lessonTitle={lesson.title}
+						/>
 					</div>
 				</div>
 			</div>

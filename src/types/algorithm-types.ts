@@ -19,6 +19,7 @@ export interface AlgoProblemMeta {
 	topics: string[];
 	difficulty: Difficulty;
 	languages: string[];
+	order: number;
 }
 
 export interface AlgoProblemDetail extends AlgoProblemMeta {
@@ -32,6 +33,12 @@ export interface AlgoProblemDetail extends AlgoProblemMeta {
 	// Hints are AI-generated, not stored in hardcoded data
 }
 
+export interface ChatSession {
+	id: string;
+	createdAt: Date;
+	messages: ChatMessage[];
+}
+
 export interface AlgoProblemProgress {
 	id: string;
 	userId: string;
@@ -39,7 +46,7 @@ export interface AlgoProblemProgress {
 	language: "javascript"; // MVP: JavaScript only
 	status: "not_started" | "in_progress" | "completed";
 	currentCode: string;
-	chatHistory: ChatMessage[];
+	chatHistory: ChatSession[];
 	completedAt?: Date;
 	createdAt: Date;
 	updatedAt: Date;
@@ -53,6 +60,19 @@ export interface AlgoLessonProgress {
 	completedAt?: Date;
 	createdAt: Date;
 	updatedAt: Date;
+}
+
+export interface AlgoProblemSubmission {
+	id: string;
+	userId: string;
+	problemId: string;
+	language: string;
+	code: string;
+	passed: boolean;
+	runtime?: number;
+	testsPassed: number;
+	testsTotal: number;
+	submittedAt: Date;
 }
 
 export interface ChatMessage {

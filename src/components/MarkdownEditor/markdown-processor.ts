@@ -273,7 +273,12 @@ async function processCodeBlocks(text: string): Promise<string> {
 		async (match, language, code) => {
 			const lang = language || "javascript";
 			// DON'T process character codes yet - let them stay as &#42; for now
-			const trimmedCode = code.trim();
+			let trimmedCode = code.trim();
+
+			// Process superscript patterns BEFORE syntax highlighting
+			// Replace ^content^ with temporary HTML-like tags that will survive highlighting
+			// Use a tag name that won't conflict with actual HTML
+			trimmedCode = trimmedCode.replace(/\^(.*?)\^/g, '<__sup__>$1</__sup__>');
 
 			try {
 				// Use shared highlighter instance
@@ -285,11 +290,19 @@ async function processCodeBlocks(text: string): Promise<string> {
 				});
 
 				// Apply Monaco color transformations
-				const monacoHtml = applyMonacoColors(html);
+				let monacoHtml = applyMonacoColors(html);
+
+				// Replace temporary tags with actual <sup> tags AFTER syntax highlighting
+				// Match opening and closing tags separately to handle cases where content is split across spans
+				monacoHtml = monacoHtml.replace(/<__sup__>/g, '<sup>');
+				monacoHtml = monacoHtml.replace(/<\/__sup__>/g, '</sup>');
+
 				return `<div class="code-block-wrapper monaco-colors">${monacoHtml}</div>`;
 			} catch (error) {
 				console.warn("Failed to highlight code block:", error);
-				return `<pre class="code-block"><code>${trimmedCode}</code></pre>`;
+				// If highlighting fails, process superscript in plain code
+				const codeWithSuperscript = trimmedCode.replace(/<__sup__>(.*?)<\/__sup__>/g, '<sup>$1</sup>');
+				return `<pre class="code-block"><code>${codeWithSuperscript}</code></pre>`;
 			}
 		}
 	);

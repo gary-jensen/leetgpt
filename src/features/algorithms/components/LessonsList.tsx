@@ -5,7 +5,16 @@ import { AlgoLesson } from "@/types/algorithm-types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter, Clock, BookOpen } from "lucide-react";
+import { Search, Filter, Clock, BookOpen, ArrowUpDown } from "lucide-react";
+import {
+	DropdownMenu,
+	DropdownMenuTrigger,
+	DropdownMenuContent,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
+} from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 
 interface LessonsListProps {
@@ -15,11 +24,14 @@ interface LessonsListProps {
 
 export function LessonsList({ lessons, allTopics }: LessonsListProps) {
 	const [searchTerm, setSearchTerm] = useState("");
-	const [selectedTopic, setSelectedTopic] = useState<string>("");
-	const [selectedDifficulty, setSelectedDifficulty] = useState<string>("");
+	const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+	const [selectedDifficulties, setSelectedDifficulties] = useState<string[]>(
+		[]
+	);
 	const [sortBy, setSortBy] = useState<
 		"difficulty" | "title" | "readingMinutes"
 	>("difficulty");
+	const [filterSearch, setFilterSearch] = useState("");
 
 	const difficultyLevels = ["easy", "medium", "hard"];
 
@@ -27,15 +39,15 @@ export function LessonsList({ lessons, allTopics }: LessonsListProps) {
 		let filtered = [...lessons];
 
 		// Apply filters
-		if (selectedTopic) {
+		if (selectedTopics.length > 0) {
 			filtered = filtered.filter((lesson) =>
-				lesson.topics.includes(selectedTopic)
+				lesson.topics.some((t) => selectedTopics.includes(t))
 			);
 		}
 
-		if (selectedDifficulty) {
-			filtered = filtered.filter(
-				(lesson) => lesson.difficulty === selectedDifficulty
+		if (selectedDifficulties.length > 0) {
+			filtered = filtered.filter((lesson) =>
+				selectedDifficulties.includes(lesson.difficulty)
 			);
 		}
 
@@ -67,26 +79,13 @@ export function LessonsList({ lessons, allTopics }: LessonsListProps) {
 		});
 
 		return filtered;
-	}, [lessons, searchTerm, selectedTopic, selectedDifficulty, sortBy]);
+	}, [lessons, searchTerm, selectedTopics, selectedDifficulties, sortBy]);
 
 	return (
-		<div className="min-h-screen bg-background">
-			{/* Header */}
-			<div className="border-b border-border bg-background">
-				<div className="container mx-auto px-4 py-6">
-					<h1 className="text-3xl font-bold mb-2">
-						Algorithm Lessons
-					</h1>
-					<p className="text-muted-foreground">
-						Learn core algorithmic concepts and patterns
-					</p>
-				</div>
-			</div>
-
-			<div className="container mx-auto px-4 py-6">
-				{/* Filters */}
-				<div className="mb-6 space-y-4">
-					{/* Search */}
+		<div className="min-hf-screen bg-background rounded-2xl border-[#2f2f2f] border-1">
+			<div className="container mx-auto px-4 py-4">
+				{/* Controls Row */}
+				<div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-start gap-3">
 					<div className="relative">
 						<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
 						<Input
@@ -96,67 +95,174 @@ export function LessonsList({ lessons, allTopics }: LessonsListProps) {
 							className="pl-10"
 						/>
 					</div>
-
-					{/* Filter Controls */}
-					<div className="flex flex-wrap gap-4">
-						{/* Topic Filter */}
-						<div className="flex items-center gap-2">
-							<Filter className="w-4 h-4 text-muted-foreground" />
-							<select
-								value={selectedTopic}
-								onChange={(e) =>
-									setSelectedTopic(e.target.value)
-								}
-								className="px-3 py-2 border border-border rounded-md bg-background"
+					<div className="flex items-center gap-2">
+						{/* Unified Filter Dropdown */}
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button
+									variant="outline"
+									size="icon"
+									aria-label="Filters"
+								>
+									<Filter className="w-4 h-4" />
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent
+								align="start"
+								className="w-[420px] p-2"
 							>
-								<option value="">All Topics</option>
-								{allTopics.map((topic) => (
-									<option key={topic} value={topic}>
-										{topic.charAt(0).toUpperCase() +
-											topic.slice(1)}
-									</option>
-								))}
-							</select>
-						</div>
+								{/* Search inside filter */}
+								<div className="relative mb-2">
+									<Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+									<Input
+										value={filterSearch}
+										onChange={(e) =>
+											setFilterSearch(e.target.value)
+										}
+										placeholder="search"
+										className="pl-8 h-8"
+									/>
+								</div>
+								<DropdownMenuLabel className="px-0">
+									Topics
+								</DropdownMenuLabel>
+								<div className="flex flex-wrap gap-2 mb-2 max-h-40 overflow-auto pr-1">
+									{allTopics
+										.filter((t) =>
+											t
+												.toLowerCase()
+												.includes(
+													filterSearch.toLowerCase()
+												)
+										)
+										.map((topic) => {
+											const active =
+												selectedTopics.includes(topic);
+											return (
+												<Button
+													key={topic}
+													size="sm"
+													variant={
+														active
+															? "default"
+															: "secondary"
+													}
+													className={
+														active
+															? "bg-white/20"
+															: ""
+													}
+													onClick={() => {
+														setSelectedTopics(
+															(prev) =>
+																prev.includes(
+																	topic
+																)
+																	? prev.filter(
+																			(
+																				t
+																			) =>
+																				t !==
+																				topic
+																	  )
+																	: [
+																			...prev,
+																			topic,
+																	  ]
+														);
+													}}
+												>
+													{topic}
+												</Button>
+											);
+										})}
+								</div>
+								<DropdownMenuSeparator />
+								<DropdownMenuLabel className="px-0">
+									Difficulty
+								</DropdownMenuLabel>
+								<div className="flex flex-wrap gap-2 mb-2">
+									{difficultyLevels.map((level) => {
+										const active =
+											selectedDifficulties.includes(
+												level
+											);
+										return (
+											<Button
+												key={level}
+												size="sm"
+												variant={
+													active
+														? "default"
+														: "secondary"
+												}
+												className="capitalize"
+												onClick={() => {
+													setSelectedDifficulties(
+														(prev) =>
+															prev.includes(level)
+																? prev.filter(
+																		(l) =>
+																			l !==
+																			level
+																  )
+																: [
+																		...prev,
+																		level,
+																  ]
+													);
+												}}
+											>
+												{level}
+											</Button>
+										);
+									})}
+								</div>
+								<div className="flex items-center justify-end gap-2 pt-2 border-t border-border mt-2">
+									<Button
+										variant="ghost"
+										size="sm"
+										onClick={() => {
+											setSelectedTopics([]);
+											setSelectedDifficulties([]);
+											setFilterSearch("");
+										}}
+									>
+										Reset
+									</Button>
+								</div>
+							</DropdownMenuContent>
+						</DropdownMenu>
 
-						{/* Difficulty Filter */}
-						<select
-							value={selectedDifficulty}
-							onChange={(e) =>
-								setSelectedDifficulty(e.target.value)
-							}
-							className="px-3 py-2 border border-border rounded-md bg-background"
-						>
-							<option value="">All Difficulties</option>
-							{difficultyLevels.map((level) => (
-								<option key={level} value={level}>
-									{level.charAt(0).toUpperCase() +
-										level.slice(1)}
-								</option>
-							))}
-						</select>
-
-						{/* Sort */}
-						<select
-							value={sortBy}
-							onChange={(e) =>
-								setSortBy(
-									e.target.value as
-										| "difficulty"
-										| "title"
-										| "readingMinutes"
-								)
-							}
-							className="px-3 py-2 border border-border rounded-md bg-background"
-						>
-							<option value="difficulty">
-								Sort by Difficulty
-							</option>
-							<option value="title">Sort by Title</option>
-							<option value="readingMinutes">
-								Sort by Reading Time
-							</option>
-						</select>
+						{/* Sort Dropdown */}
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button
+									variant="outline"
+									size="icon"
+									aria-label="Sort"
+								>
+									<ArrowUpDown className="w-4 h-4" />
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="start">
+								<DropdownMenuLabel>Sort By</DropdownMenuLabel>
+								<DropdownMenuRadioGroup
+									value={sortBy}
+									onValueChange={(v) => setSortBy(v as any)}
+								>
+									<DropdownMenuRadioItem value="difficulty">
+										Difficulty
+									</DropdownMenuRadioItem>
+									<DropdownMenuRadioItem value="title">
+										Title
+									</DropdownMenuRadioItem>
+									<DropdownMenuRadioItem value="readingMinutes">
+										Reading Time
+									</DropdownMenuRadioItem>
+								</DropdownMenuRadioGroup>
+							</DropdownMenuContent>
+						</DropdownMenu>
 					</div>
 				</div>
 
@@ -179,8 +285,8 @@ export function LessonsList({ lessons, allTopics }: LessonsListProps) {
 						<Button
 							onClick={() => {
 								setSearchTerm("");
-								setSelectedTopic("");
-								setSelectedDifficulty("");
+								setSelectedTopics([]);
+								setSelectedDifficulties([]);
 							}}
 							variant="outline"
 						>

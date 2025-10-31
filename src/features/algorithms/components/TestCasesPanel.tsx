@@ -6,6 +6,13 @@ import { createDiff } from "../utils/diffUtils";
 import { cn } from "@/lib/utils";
 import { processMarkdown } from "@/components/MarkdownEditor/markdown-processor";
 import "@/components/MarkdownEditor/MarkdownDisplay.css";
+import {
+	CheckCircle,
+	XCircle,
+	Circle as CircleIcon,
+	XIcon,
+	CheckIcon,
+} from "lucide-react";
 
 interface TestCasesPanelProps {
 	problem: AlgoProblemDetail;
@@ -116,7 +123,13 @@ function TestCaseTab({
 	processedInputs,
 }: TestCaseTabProps) {
 	return (
-		<div className="flex-1 flex flex-col overflow-hidden">
+		<div
+			className="flex-1 flex flex-col overflow-hidden overflow-y-auto dark-scrollbar"
+			style={{
+				scrollbarWidth: "thin",
+				scrollbarColor: "#9f9f9f #2C2C2C",
+			}}
+		>
 			{/* Test Case Selection Tabs - Show only first 5 */}
 			<div className="flex mx-4 my-4 gap-2">
 				{problem.tests.slice(0, 5).map((_, index) => {
@@ -139,13 +152,7 @@ function TestCaseTab({
 			</div>
 
 			{/* Test Case Input Content */}
-			<div
-				className="flex-1 overflow-auto p-4 pt-0 dark-scrollbar"
-				style={{
-					scrollbarWidth: "thin",
-					scrollbarColor: "#9f9f9f #2C2C2C",
-				}}
-			>
+			<div className="flex-1 p-4 pt-0">
 				{problem.tests[selectedTestIndex] && (
 					<div className="space-y-4">
 						{problem.tests[selectedTestIndex].input.map(
@@ -222,11 +229,11 @@ function TestResultsTab({
 				<div className="flex items-center justify-between">
 					<div className="flex items-center gap-2">
 						<span
-							className={`text-lg font-semibold ${
+							className={`text-lg font-medium ${
 								getOverallStatus(testResults) === "accepted"
 									? "text-green-500"
 									: getOverallStatus(testResults) === "wrong"
-									? "text-red-500"
+									? "text-[#ef4743]"
 									: "text-gray-500"
 							}`}
 						>
@@ -236,12 +243,21 @@ function TestResultsTab({
 								? "Wrong Answer"
 								: "Pending"}
 						</span>
-						{/* Runtime is not a working metric. */}
-						{/* {testResults.length > 0 && (
-							<span className="text-sm text-muted-foreground">
-								Runtime: 0 ms
-							</span>
-						)} */}
+						{testResults.length > 0 &&
+							(() => {
+								// Calculate total runtime across all test cases
+								const totalRuntime = testResults.reduce(
+									(sum, result) =>
+										sum + (result.runtime || 0),
+									0
+								);
+
+								return (
+									<span className="text-sm text-muted-foreground">
+										Runtime: {totalRuntime} ms
+									</span>
+								);
+							})()}
 						{testResults.length > 0 &&
 							(() => {
 								const firstFailedIndex = testResults.findIndex(
@@ -293,20 +309,18 @@ function TestResultsTab({
 								key={index}
 								onClick={() => setSelectedTestIndex(index)}
 								className={cn(
-									"px-3 py-1.5 rounded-md text-sm text-nowrap font-medium hover:bg-white/15 hover:cursor-pointer",
+									"px-2.5 pl-1.5 py-1 rounded-md text-sm text-nowrap font-medium hover:bg-white/15 hover:cursor-pointer",
 									isSelected
 										? "bg-white/10 text-white"
 										: "text-muted-foreground hover:text-foreground"
 								)}
 							>
-								<div className="flex items-center gap-2">
+								<div className="flex items-center gap-1">
 									{status === "passed" && (
-										<span className="text-green-500">
-											✔
-										</span>
+										<CheckIcon className="h-4 w-4 text-green-500" />
 									)}
 									{status === "failed" && (
-										<span className="text-red-500">❌</span>
+										<XIcon className="h-f4 w-4f text-red-500" />
 									)}
 									{status === "pending" && (
 										<span className="text-gray-400">○</span>

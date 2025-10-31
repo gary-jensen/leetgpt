@@ -7,6 +7,7 @@ export interface AlgoTestResult {
 	expected: any;
 	actual?: any;
 	error?: string;
+	runtime?: number; // Runtime in milliseconds for this specific test case
 }
 
 export interface AlgoExecutionResult {
@@ -130,12 +131,15 @@ async function runSingleTest(
 	testCase: { input: any[]; output: any },
 	caseNumber: number
 ): Promise<AlgoTestResult> {
+	const startTime = Date.now();
+
 	try {
 		// Call the user's function with the test input
 		const actual = userFunction(...testCase.input);
 
 		// Compare actual vs expected
 		const passed = deepEqual(actual, testCase.output);
+		const runtime = Date.now() - startTime;
 
 		return {
 			case: caseNumber,
@@ -143,14 +147,18 @@ async function runSingleTest(
 			input: testCase.input,
 			expected: testCase.output,
 			actual: actual,
+			runtime,
 		};
 	} catch (error) {
+		const runtime = Date.now() - startTime;
+
 		return {
 			case: caseNumber,
 			passed: false,
 			input: testCase.input,
 			expected: testCase.output,
 			error: error instanceof Error ? error.message : String(error),
+			runtime,
 		};
 	}
 }

@@ -13,6 +13,7 @@ export interface TestResult {
 	expected: any;
 	actual?: any;
 	error?: string;
+	runtime?: number; // Runtime in milliseconds for this specific test case
 }
 
 interface TestResultsDisplayProps {

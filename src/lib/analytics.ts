@@ -274,6 +274,97 @@ export const trackLandingCTAClick = (ctaLocation: string) => {
 	});
 };
 
+// Algorithm Problem tracking
+export const trackAlgoProblemViewed = (
+	problemId: string,
+	problemTitle: string,
+	difficulty: string
+) => {
+	trackEvent(
+		"AlgoProblem",
+		"problem_viewed",
+		`${problemId} - ${problemTitle}`,
+		undefined,
+		{
+			problemId,
+			problemTitle,
+			difficulty,
+		}
+	);
+};
+
+export const trackAlgoProblemRun = (
+	problemId: string,
+	problemTitle: string,
+	testsPassed: number,
+	testsTotal: number,
+	runtime: number
+) => {
+	trackEvent(
+		"AlgoProblem",
+		"problem_run",
+		`${problemId} - ${problemTitle}`,
+		testsPassed,
+		{
+			problemId,
+			problemTitle,
+			testsPassed,
+			testsTotal,
+			runtime,
+			passRate: testsPassed / testsTotal,
+		}
+	);
+};
+
+export const trackAlgoHintRequested = (
+	problemId: string,
+	problemTitle: string
+) => {
+	trackEvent(
+		"AlgoProblem",
+		"hint_requested",
+		`${problemId} - ${problemTitle}`,
+		undefined,
+		{
+			problemId,
+			problemTitle,
+		}
+	);
+};
+
+// Algorithm Lesson tracking
+export const trackAlgoLessonViewed = (
+	lessonId: string,
+	lessonTitle: string
+) => {
+	trackEvent(
+		"AlgoLesson",
+		"lesson_viewed",
+		`${lessonId} - ${lessonTitle}`,
+		undefined,
+		{
+			lessonId,
+			lessonTitle,
+		}
+	);
+};
+
+export const trackAlgoLessonCompleted = (
+	lessonId: string,
+	lessonTitle: string
+) => {
+	trackEvent(
+		"AlgoLesson",
+		"lesson_completed",
+		`${lessonId} - ${lessonTitle}`,
+		undefined,
+		{
+			lessonId,
+			lessonTitle,
+		}
+	);
+};
+
 // Time tracking
 let sessionStartTime: number | null = null;
 let activeTime = 0;

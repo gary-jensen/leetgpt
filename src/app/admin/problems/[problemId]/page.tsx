@@ -50,6 +50,7 @@ export default async function EditProblemPage({
 					tests: problem.tests as any,
 					startingCode: problem.startingCode as any,
 					passingCode: problem.passingCode as any,
+					order: problem.order,
 				}}
 			/>
 		</div>

@@ -29,6 +29,7 @@ async function seedAlgoContent() {
 						id: problem.id, // Use hardcoded ID to match
 						slug: problem.slug,
 						title: problem.title,
+						order: problem.order,
 						statementMd: problem.statementMd,
 						statementHtml,
 						topics: problem.topics,
@@ -51,6 +52,7 @@ async function seedAlgoContent() {
 					id: problem.id, // Use hardcoded ID to match
 					slug: problem.slug,
 					title: problem.title,
+					order: problem.order,
 					statementMd: problem.statementMd,
 					statementHtml,
 					topics: problem.topics,

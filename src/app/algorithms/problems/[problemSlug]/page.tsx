@@ -2,6 +2,7 @@ import { AlgorithmWorkspace } from "@/features/algorithms/components/AlgorithmWo
 import {
 	getAlgoProblemBySlug,
 	getAlgoProblems,
+	getLessonsByTopics,
 } from "@/features/algorithms/data";
 import { redirect } from "next/navigation";
 
@@ -22,16 +23,12 @@ export default async function AlgorithmWorkspacePage({
 		redirect("/algorithms/problems");
 	}
 
-	console.log(
-		"🟢 Server - problem.statementHtml:",
-		problem.statementHtml
-			? `✅ EXISTS (${problem.statementHtml.length} chars)`
-			: "❌ NULL"
-	);
-	console.log("🟢 Server - problem.id:", problem.id);
-	console.log("🟢 Server - problem.slug:", problem.slug);
+	// Fetch related lessons for this problem's topics
+	const relatedLessons = await getLessonsByTopics(problem.topics);
 
-	return <AlgorithmWorkspace problem={problem} />;
+	return (
+		<AlgorithmWorkspace problem={problem} relatedLessons={relatedLessons} />
+	);
 }
 
 // Generate static params for all problems

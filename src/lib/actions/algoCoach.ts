@@ -1,7 +1,40 @@
 "use server";
 
+import OpenAI from "openai";
 import { ChatMessage, HintResponse } from "@/types/algorithm-types";
 import { getAlgoProblem } from "@/features/algorithms/data";
+import { getSession } from "@/lib/auth";
+import { checkRateLimit, getRateLimitKey } from "@/lib/rateLimit";
+
+const openai = new OpenAI({
+	apiKey: process.env.OPENAI_API_KEY,
+});
+
+const COACH_SYSTEM_PROMPT = `You are a coding mentor for algorithm interview prep. Your job is to guide students without revealing the solution directly.
+
+Style Guidelines:
+- Keep responses SHORT and SWEET - aim for 2-4 sentences max
+- Use markdown formatting to make text easy to read:
+  * Use **bold** for emphasis on key concepts
+  * Use *italics* for gentle suggestions
+  * Use \`code\` backticks for technical terms
+  * Use bullet points (•) for lists
+  * Use line breaks to separate ideas
+- Write in a friendly, conversational tone
+- Make complex ideas simple and digestible
+
+Rules:
+1. Give concise hints (<= 200 characters). Prefer Socratic questions over statements.
+2. Never output full code unless explicitly requested to show the solution.
+3. Use chat history to avoid repeating previous hints.
+4. When asked about optimality, describe Big-O complexity and name the pattern (without code).
+5. If tests fail, focus on the smallest failing case or likely bug location.
+6. Be concise, friendly, and constructive.
+7. Help students discover the solution through guided questioning.
+8. Always format your responses with markdown for better readability.
+
+Example good hint: "What **data structure** could help you look up values quickly? Think about *constant-time* operations."
+Example bad hint: "Use a hashmap to store nums[i] as keys and i as values"`;
 
 export async function getHint(
 	problemId: string,
@@ -9,7 +42,28 @@ export async function getHint(
 	chatHistory?: ChatMessage[],
 	failureSummary?: string
 ): Promise<HintResponse> {
-	const problem = getAlgoProblem(problemId);
+	// Check authentication
+	const session = await getSession();
+	if (!session?.user?.id) {
+		throw new Error("Authentication required to use AI coach");
+	}
+
+	// Check rate limit (60/hour per user)
+	const rateLimitKey = getRateLimitKey(
+		session.user.id,
+		null,
+		"algo-coach-hint"
+	);
+	const rateLimitCheck = await checkRateLimit(rateLimitKey, 60, 3600000); // 60 requests per 3600 seconds (1 hour)
+	if (!rateLimitCheck.allowed) {
+		throw new Error(
+			`Rate limit exceeded. You've used all 60 hints for this hour. Try again in ${Math.ceil(
+				(rateLimitCheck.resetTime - Date.now()) / 60000
+			)} minutes.`
+		);
+	}
+
+	const problem = await getAlgoProblem(problemId);
 
 	if (!problem) {
 		throw new Error("Problem not found");
@@ -23,13 +77,29 @@ export async function getHint(
 		failureSummary
 	);
 
-	// For MVP, we'll use a simple rule-based hint system
-	// In production, this would call an AI service
-	const hint = generateHint(problem, code, failureSummary);
+	// Call OpenAI API
+	const completion = await openai.chat.completions.create({
+		model: "gpt-4o-mini",
+		messages: [
+			{ role: "system", content: COACH_SYSTEM_PROMPT },
+			{ role: "user", content: context },
+		],
+		temperature: 0.7,
+		max_tokens: 300,
+	});
+
+	const aiResponse = completion.choices[0]?.message?.content || "";
+
+	// Parse AI response for hint and follow-up question
+	// Split by newline or question mark to separate hint from question
+	const parts = aiResponse.split(/[\n\n]+/).filter((p) => p.trim());
+	const message = parts[0]?.trim() || aiResponse.slice(0, 200);
+	const followUpQuestion =
+		parts.length > 1 ? parts[1]?.trim().slice(0, 200) : undefined;
 
 	return {
-		message: hint.message,
-		followUpQuestion: hint.followUpQuestion,
+		message,
+		followUpQuestion,
 	};
 }
 
@@ -42,13 +112,34 @@ export async function reviewOptimality(
 	summary: string;
 	suggestion?: string;
 }> {
-	const problem = getAlgoProblem(problemId);
+	// Check authentication
+	const session = await getSession();
+	if (!session?.user?.id) {
+		throw new Error("Authentication required to use AI coach");
+	}
+
+	// Check rate limit (60/hour per user)
+	const rateLimitKey = getRateLimitKey(
+		session.user.id,
+		null,
+		"algo-coach-optimality"
+	);
+	const rateLimitCheck = await checkRateLimit(rateLimitKey, 60, 3600000); // 60 requests per 3600 seconds (1 hour)
+	if (!rateLimitCheck.allowed) {
+		throw new Error(
+			`Rate limit exceeded. You've used all 60 reviews for this hour. Try again in ${Math.ceil(
+				(rateLimitCheck.resetTime - Date.now()) / 60000
+			)} minutes.`
+		);
+	}
+
+	const problem = await getAlgoProblem(problemId);
 
 	if (!problem) {
 		throw new Error("Problem not found");
 	}
 
-	// Simple analysis for MVP
+	// Simple analysis for MVP (can upgrade to AI analysis later)
 	const analysis = analyzeCodeOptimality(code, problem);
 
 	return {
@@ -163,6 +254,85 @@ function generateHint(
 					"What data structure or approach might help you solve this efficiently?",
 			};
 	}
+}
+
+export async function getChatResponse(
+	problemId: string,
+	userMessage: string,
+	code?: string,
+	chatHistory?: ChatMessage[],
+	testResults?: any
+): Promise<ChatMessage> {
+	// Check authentication
+	const session = await getSession();
+	if (!session?.user?.id) {
+		throw new Error("Authentication required to use AI coach");
+	}
+
+	// Check rate limit (60/hour per user)
+	const rateLimitKey = getRateLimitKey(
+		session.user.id,
+		null,
+		"algo-coach-chat"
+	);
+	const rateLimitCheck = await checkRateLimit(rateLimitKey, 60, 3600000); // 60 requests per hour
+	if (!rateLimitCheck.allowed) {
+		throw new Error(
+			`Rate limit exceeded. You've used all 60 chat requests for this hour. Try again in ${Math.ceil(
+				(rateLimitCheck.resetTime - Date.now()) / 60000
+			)} minutes.`
+		);
+	}
+
+	const problem = await getAlgoProblem(problemId);
+
+	if (!problem) {
+		throw new Error("Problem not found");
+	}
+
+	// Build context for AI
+	let context = `Problem: ${problem.title}\n`;
+	context += `Statement: ${problem.statementMd}\n`;
+	context += `Topics: ${problem.topics.join(", ")}\n`;
+	context += `Difficulty: ${problem.difficulty}\n`;
+
+	if (code) {
+		context += `\nUser's current code:\n${code}\n`;
+	}
+
+	if (testResults && testResults.length > 0) {
+		const passedCount = testResults.filter((r: any) => r.passed).length;
+		context += `\nTest results: ${passedCount}/${testResults.length} tests passing\n`;
+	}
+
+	if (chatHistory && chatHistory.length > 0) {
+		context += `\nPrevious conversation:\n`;
+		chatHistory.forEach((msg) => {
+			context += `${msg.role}: ${msg.content}\n`;
+		});
+	}
+
+	context += `\nUser's question: ${userMessage}\n`;
+
+	// Call OpenAI API
+	const completion = await openai.chat.completions.create({
+		model: "gpt-4o-mini",
+		messages: [
+			{ role: "system", content: COACH_SYSTEM_PROMPT },
+			{ role: "user", content: context },
+		],
+		temperature: 0.7,
+		max_tokens: 500,
+	});
+
+	const aiResponse = completion.choices[0]?.message?.content || "";
+
+	return {
+		id: Date.now().toString(),
+		role: "assistant",
+		content: aiResponse,
+		timestamp: new Date(),
+	};
 }
 
 function analyzeCodeOptimality(

@@ -11,7 +11,7 @@ Given an array of integers \`nums\` and an integer \`target\`, return indices of
 
 You may assume that each input would have **exactly one solution**, and you may not use the same element twice.
 
-You can return the answer in any order.
+You c^an^ return the answer in any order.
 
 #### Example 1:
 > **Input:** \`nums = [2,7,11,15]\`, \`target = 9\`
@@ -28,13 +28,14 @@ You can return the answer in any order.
 > **Output:** \`[0,1]\`
 
 #### Constraints:
-- \`2 <= nums.length <= 10^4\`
-- \`-10^9 <= nums[i] <= 10^9\`
-- \`-10^9 <= target <= 10^9\`
+- \`2 <= nums.length <= 10^4^\`
+- \`-10^9^ <= nums[i] <= 10^9^\`
+- \`-10^9^ <= target <= 10^9^\`
 - **Only one valid answer exists.**`,
 		topics: ["arrays", "hashmap"],
 		difficulty: "easy",
 		languages: ["javascript"],
+		order: 1,
 		rubric: {
 			optimal_time: "O(n)",
 			acceptable_time: ["O(n log n)"],
@@ -44,7 +45,6 @@ You can return the answer in any order.
 			{ input: [[2, 7, 11, 15], 9], output: [0, 1] },
 			{ input: [[3, 2, 4], 6], output: [1, 2] },
 			{ input: [[3, 3], 6], output: [0, 1] },
-			{ input: [[1, 2, 3, 4, 5], 8], output: [2, 4] },
 			{ input: [[1, 2, 3, 4, 5], 8], output: [2, 4] },
 			{ input: [[-1, -2, -3, -4, -5], -8], output: [2, 4] },
 			{ input: [[0, 4, 3, 0], 0], output: [0, 3] },
@@ -178,6 +178,7 @@ Given a string \`s\`, return \`true\` if it is a palindrome, or \`false\` otherw
 		topics: ["strings", "two-pointers"],
 		difficulty: "easy",
 		languages: ["javascript"],
+		order: 2,
 		rubric: {
 			optimal_time: "O(n)",
 			acceptable_time: ["O(n)"],
@@ -247,6 +248,7 @@ Given an integer array \`nums\`, find the subarray with the largest sum, and ret
 		topics: ["arrays", "dynamic-programming", "sliding-window"],
 		difficulty: "medium",
 		languages: ["javascript"],
+		order: 3,
 		rubric: {
 			optimal_time: "O(n)",
 			acceptable_time: ["O(n log n)"],
@@ -305,6 +307,7 @@ Given an integer array \`nums\`, return \`true\` if any value appears **at least
 		topics: ["arrays", "hashmap"],
 		difficulty: "easy",
 		languages: ["javascript"],
+		order: 4,
 		rubric: {
 			optimal_time: "O(n)",
 			acceptable_time: ["O(n log n)"],
@@ -363,6 +366,7 @@ An **Anagram** is a word or phrase formed by rearranging the letters of a differ
 		topics: ["strings", "hashmap"],
 		difficulty: "easy",
 		languages: ["javascript"],
+		order: 5,
 		rubric: {
 			optimal_time: "O(n)",
 			acceptable_time: ["O(n log n)"],
@@ -430,6 +434,7 @@ An **Anagram** is a word or phrase formed by rearranging the letters of a differ
 		topics: ["strings", "hashmap"],
 		difficulty: "medium",
 		languages: ["javascript"],
+		order: 6,
 		rubric: {
 			optimal_time: "O(n * m log m)",
 			acceptable_time: ["O(n * m log m)"],
@@ -495,6 +500,7 @@ Given an integer array \`nums\` and an integer \`k\`, return the \`k\` most freq
 		topics: ["arrays", "hashmap", "sorting"],
 		difficulty: "medium",
 		languages: ["javascript"],
+		order: 7,
 		rubric: {
 			optimal_time: "O(n)",
 			acceptable_time: ["O(n log n)"],
@@ -559,6 +565,7 @@ You must write an algorithm that runs in O(n) time and without using the divisio
 		topics: ["arrays", "prefix-sum"],
 		difficulty: "medium",
 		languages: ["javascript"],
+		order: 8,
 		rubric: {
 			optimal_time: "O(n)",
 			acceptable_time: ["O(n)"],
@@ -621,6 +628,7 @@ You must write an algorithm that runs in O(n) time.
 		topics: ["arrays", "hashmap"],
 		difficulty: "medium",
 		languages: ["javascript"],
+		order: 9,
 		rubric: {
 			optimal_time: "O(n)",
 			acceptable_time: ["O(n log n)"],
@@ -690,6 +698,7 @@ Given an array of \`intervals\` where \`intervals[i] = [starti, endi]\`, merge a
 		topics: ["arrays", "sorting"],
 		difficulty: "medium",
 		languages: ["javascript"],
+		order: 10,
 		rubric: {
 			optimal_time: "O(n log n)",
 			acceptable_time: ["O(n log n)"],

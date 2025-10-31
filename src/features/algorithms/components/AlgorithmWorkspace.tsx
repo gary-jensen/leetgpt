@@ -27,23 +27,20 @@ export function AlgorithmWorkspace({
 	problem,
 	relatedLessons,
 }: AlgorithmWorkspaceProps) {
-	console.log(
-		"🔍 AlgorithmWorkspace - problem.statementHtml:",
-		problem.statementHtml
-			? `✅ EXISTS (${problem.statementHtml.length} chars)`
-			: "❌ NULL"
-	);
-	console.log("🔍 AlgorithmWorkspace - problem.id:", problem.id);
-	console.log("🔍 AlgorithmWorkspace - problem.slug:", problem.slug);
-
 	const [chatMessages, setChatMessages] = useState<any[]>([]);
 	const [isThinking, setIsThinking] = useState(false);
 	const [currentSessionId, setCurrentSessionId] = useState<string>("");
 	const [consecutiveFailures, setConsecutiveFailures] = useState(0);
 	const [hasShownStuckMessage, setHasShownStuckMessage] = useState(false);
 	const previousFailureCountRef = useRef(0);
+	const chatMessagesRef = useRef<any[]>([]);
 	const { data: session } = useSession();
 	const progress = useProgress();
+
+	// Keep ref in sync with state
+	useEffect(() => {
+		chatMessagesRef.current = chatMessages;
+	}, [chatMessages]);
 
 	const {
 		code,
@@ -91,19 +88,10 @@ export function AlgorithmWorkspace({
 				) {
 					setHasShownStuckMessage(true);
 
-					// Build help message based on related lessons (formatted with markdown)
-					let helpMessage = "";
-					if (relatedLessons.length > 0) {
-						const lessonList = relatedLessons
-							.slice(0, 3)
-							.map((l) => `• **${l.title}**`)
-							.join("\n");
-						helpMessage = `I notice you've had some trouble with the test cases. Here are some **related lessons** that might help:\n\n${lessonList}\n\n💡 You can review these lessons using the **"Review Lessons"** button in the problem statement panel, or ask me any questions!`;
-					} else {
-						helpMessage = `I notice you've had some trouble with the test cases. Would you like some **help**?\n\nI can provide hints or explain concepts that might be useful. Just ask me anything! 💭`;
-					}
+					// Build help message (short and sweet - lesson buttons will appear below automatically)
+					const helpMessage = `I notice you've had some trouble with the test cases. Would you like some **help**?`;
 
-					// Add AI assistant message to chat
+					// Add AI assistant message to chat (update state immediately)
 					const stuckMessage = {
 						id: `stuck-${Date.now()}`,
 						role: "assistant" as const,
@@ -111,11 +99,15 @@ export function AlgorithmWorkspace({
 						timestamp: new Date(),
 					};
 
-					setChatMessages((prev) => {
-						const updated = [...prev, stuckMessage];
+					// Update state immediately (no blocking)
+					const updatedMessages = [...chatMessages, stuckMessage];
+					setChatMessages(updatedMessages);
+					chatMessagesRef.current = updatedMessages;
 
-						// Persist to database if authenticated
-						if (session?.user?.id && currentSessionId) {
+					// Persist to database asynchronously after state update (don't block UI)
+					if (session?.user?.id && currentSessionId) {
+						// Schedule database save for next tick to not block state update
+						Promise.resolve().then(async () => {
 							try {
 								const savedProgress =
 									progress.getAlgoProblemProgress?.(
@@ -128,9 +120,11 @@ export function AlgorithmWorkspace({
 								const currentSession = {
 									id: currentSessionId,
 									createdAt: new Date(),
-									messages: updated,
+									// Use computed updatedMessages directly
+									messages: updatedMessages,
 								};
 
+								// Update database asynchronously (fire and forget)
 								updateAlgoProblemProgress(
 									session.user.id,
 									problem.id,
@@ -153,10 +147,8 @@ export function AlgorithmWorkspace({
 									error
 								);
 							}
-						}
-
-						return updated;
-					});
+						});
+					}
 				}
 			}
 		}

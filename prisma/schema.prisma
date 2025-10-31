@@ -17,22 +17,23 @@ enum Role {
 }
 
 model User {
-    id                 String           @id @default(uuid())
-    email              String           @unique
-    name               String?
-    image              String?
-    emailVerified      DateTime?
-    emailNotifications Boolean          @default(false)
-    createdAt          DateTime         @default(now())
-    updatedAt          DateTime         @updatedAt
-    role               Role             @default(PRO)
-    progress           UserProgress?
-    sessions           UserSession[]
-    analyticsEvents    AnalyticsEvent[]
-    accounts           Account[]
-    sessions_auth      Session[]
-    algoProblemProgress AlgoProblemProgress[]
-    algoLessonProgress  AlgoLessonProgress[]
+    id                     String                  @id @default(uuid())
+    email                  String                  @unique
+    name                   String?
+    image                  String?
+    emailVerified          DateTime?
+    emailNotifications     Boolean                 @default(false)
+    createdAt              DateTime                @default(now())
+    updatedAt              DateTime                @updatedAt
+    role                   Role                    @default(PRO)
+    progress               UserProgress?
+    sessions               UserSession[]
+    analyticsEvents        AnalyticsEvent[]
+    accounts               Account[]
+    sessions_auth          Session[]
+    algoProblemProgress    AlgoProblemProgress[]
+    algoLessonProgress     AlgoLessonProgress[]
+    algoProblemSubmissions AlgoProblemSubmission[]
 }
 
 model UserProgress {
@@ -114,30 +115,30 @@ model VerificationToken {
 
 // Algorithm progress models
 model AlgoProblemProgress {
-    id          String   @id @default(cuid())
+    id          String    @id @default(cuid())
     userId      String
-    problemId   String   // References hardcoded problem ID (e.g., "sum-to-target")
-    language    String   // "javascript" for MVP
-    status      String   // "not_started" | "in_progress" | "completed"
-    currentCode String   @db.Text // Latest code (properly escaped)
-    chatHistory Json    // Array of chat messages with AI
+    problemId   String // References hardcoded problem ID (e.g., "sum-to-target")
+    language    String // "javascript" for MVP
+    status      String // "not_started" | "in_progress" | "completed"
+    currentCode String    @db.Text // Latest code (properly escaped)
+    chatHistory Json // Array of chat messages with AI
     completedAt DateTime?
-    createdAt   DateTime @default(now())
-    updatedAt   DateTime @updatedAt
-    user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    createdAt   DateTime  @default(now())
+    updatedAt   DateTime  @updatedAt
+    user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@unique([userId, problemId, language])
 }
 
 model AlgoLessonProgress {
-    id          String   @id @default(cuid())
+    id          String    @id @default(cuid())
     userId      String
-    lessonId    String   // References hardcoded lesson ID (e.g., "hashmap-basics")
-    status      String   // "not_started" | "in_progress" | "completed"
+    lessonId    String // References hardcoded lesson ID (e.g., "hashmap-basics")
+    status      String // "not_started" | "in_progress" | "completed"
     completedAt DateTime?
-    createdAt   DateTime @default(now())
-    updatedAt   DateTime @updatedAt
-    user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    createdAt   DateTime  @default(now())
+    updatedAt   DateTime  @updatedAt
+    user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@unique([userId, lessonId])
 }
@@ -147,6 +148,7 @@ model AlgoProblem {
     id             String   @id @default(cuid())
     slug           String   @unique
     title          String
+    order          Int
     statementMd    String   @db.Text
     statementHtml  String?  @db.Text
     topics         String[]
@@ -162,6 +164,7 @@ model AlgoProblem {
 
     @@index([difficulty])
     @@index([slug])
+    @@index([order])
 }
 
 model AlgoLesson {
@@ -179,4 +182,21 @@ model AlgoLesson {
 
     @@index([difficulty])
     @@index([slug])
+}
+
+model AlgoProblemSubmission {
+    id          String   @id @default(cuid())
+    userId      String
+    problemId   String
+    language    String
+    code        String   @db.Text
+    passed      Boolean
+    runtime     Int?
+    testsPassed Int
+    testsTotal  Int
+    submittedAt DateTime @default(now())
+    user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([userId, problemId])
+    @@index([submittedAt])
 }

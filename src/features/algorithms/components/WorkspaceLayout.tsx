@@ -5,11 +5,10 @@ import {
 	ResizableHandle,
 } from "@/components/ui/resizable";
 import "@/components/workspace/Chat/components/ChatMarkdownDisplay.css";
-import { AlgoProblemDetail } from "@/types/algorithm-types";
+import { AlgoProblemDetail, AlgoLesson } from "@/types/algorithm-types";
 import { TestResult } from "./TestResultsDisplay";
-import { useTestTab } from "../hooks/useTestTab";
 import { useProcessedStatement } from "../hooks/useProcessedStatement";
-import { ProblemHeader } from "./ProblemHeader";
+import { WorkspaceNavbar } from "./WorkspaceNavbar";
 import { LeftColumnPanel } from "./LeftColumnPanel";
 import { EditorPanel } from "./EditorPanel";
 import { AIChatPanel } from "./AIChatPanel";
@@ -31,6 +30,7 @@ interface WorkspaceLayoutProps {
 	chatMessages: any[];
 	onSendMessage: (message: string) => void;
 	isThinking: boolean;
+	relatedLessons: AlgoLesson[];
 }
 
 export function WorkspaceLayout({
@@ -49,57 +49,53 @@ export function WorkspaceLayout({
 	chatMessages,
 	onSendMessage,
 	isThinking,
+	relatedLessons,
 }: WorkspaceLayoutProps) {
 	const processedStatement = useProcessedStatement(problem);
-	const { activeTestTab, setActiveTestTab } = useTestTab(
-		testResults,
-		isExecuting
-	);
 
 	return (
-		<div className="w-screen h-fit md:h-screen md:max-h-screen flex flex-col bg-background-4">
-			<ProblemHeader
-				problem={problem}
-				onReset={onReset}
-				onHint={onHint}
-			/>
+		<div className="w-screen h-screen max-h-screen flex flex-col bg-background-4 overflow-hidden">
+			<WorkspaceNavbar />
 
 			{/* Main Content */}
-			<div className="h-fit md:h-[calc(100vh-65px)] flex items-start justify-center pb-6">
-				<div className="w-[95%] h-[99%] max-h-[99%] rounded-xl md:overflow-hidden pt-4">
+			<div className="flex-1 flex items-center justify-center overflow-hidden pb-6">
+				<div className="w-[95%] h-full max-h-full rounded-xl overflow-hidden pt-4">
 					<ResizablePanelGroup
 						direction="horizontal"
-						className="h-full gap-2"
+						className="h-full gapf-2"
 					>
-						{/* Left Column - Two Separate Panels */}
+						{/* Left Column - Problem Statement */}
 						<LeftColumnPanel
 							problem={problem}
-							testResults={testResults}
 							processedStatement={processedStatement}
-							activeTestTab={activeTestTab}
-							setActiveTestTab={setActiveTestTab}
+							relatedLessons={relatedLessons}
 						/>
 
-						<ResizableHandle className="w-3 bg-transparent hover:bg-blue-800/60" />
+						<ResizableHandle className="w-3 bg-transparent hover:bg-blue-800/60 rounded-md" />
 
-						{/* Center Panel - Editor */}
+						{/* Center Panel - Editor and Test Cases */}
 						<EditorPanel
 							code={code}
 							setCode={setCode}
 							testResults={testResults}
 							isExecuting={isExecuting}
 							onRun={onRun}
+							onReset={onReset}
+							onHint={onHint}
 							onShowSolution={onShowSolution}
 							iframeRef={iframeRef}
 							isThinking={isThinking}
+							problem={problem}
 						/>
 
-						<ResizableHandle className="w-3 bg-transparent hover:bg-blue-800/60" />
+						<ResizableHandle className="w-3 bg-transparent hover:bg-blue-800/60 rounded-md" />
 
 						{/* Right Panel - AI Chat */}
 						<AIChatPanel
 							chatMessages={chatMessages}
 							onSendMessage={onSendMessage}
+							isThinking={isThinking}
+							relatedLessons={relatedLessons}
 						/>
 					</ResizablePanelGroup>
 				</div>
