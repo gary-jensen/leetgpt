@@ -18,9 +18,14 @@ export default async function AdminProblemsPage() {
 		<div>
 			<div className="flex items-center justify-between mb-6">
 				<h2 className="text-3xl font-bold">Problems</h2>
-				<Link href="/admin/problems/new">
-					<Button>Create New Problem</Button>
-				</Link>
+				<div className="flex gap-2">
+					<Link href="/admin/problems/test">
+						<Button variant="outline">Test All Problems</Button>
+					</Link>
+					<Link href="/admin/problems/new">
+						<Button>Create New Problem</Button>
+					</Link>
+				</div>
 			</div>
 
 			<div className="border rounded-lg">
