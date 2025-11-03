@@ -6,6 +6,7 @@ import { createDiff } from "../utils/diffUtils";
 import { cn } from "@/lib/utils";
 import { processMarkdown } from "@/components/MarkdownEditor/markdown-processor";
 import "@/components/MarkdownEditor/MarkdownDisplay.css";
+import { ChatMarkdownDisplay } from "@/components/workspace/Chat/components/ChatMarkdownDisplay";
 import {
 	CheckCircle,
 	XCircle,
@@ -17,8 +18,8 @@ import {
 interface TestCasesPanelProps {
 	problem: AlgoProblemDetail;
 	testResults: TestResult[];
-	activeTestTab: "testcase" | "results";
-	setActiveTestTab: (tab: "testcase" | "results") => void;
+	activeTestTab: "examples" | "testcase" | "results";
+	setActiveTestTab: (tab: "examples" | "testcase" | "results") => void;
 }
 
 export function TestCasesPanel({
@@ -66,6 +67,15 @@ export function TestCasesPanel({
 			<div className="flex items-center justify-between p-3 py-1.5 border-b border-border">
 				<div className="flex gap-4">
 					<button
+						onClick={() => setActiveTestTab("examples")}
+						className={`px-2 py-1 rounded-md hover:bg-white/10 hover:cursor-pointer ${
+							activeTestTab !== "examples" &&
+							"text-muted-foreground"
+						}`}
+					>
+						Examples
+					</button>
+					<button
 						onClick={() => setActiveTestTab("testcase")}
 						className={`px-2 py-1 rounded-md hover:bg-white/10 hover:cursor-pointer ${
 							activeTestTab !== "testcase" &&
@@ -88,7 +98,9 @@ export function TestCasesPanel({
 
 			<div className="flex-1 flex flex-col overflow-hidden">
 				{/* Tab Content */}
-				{activeTestTab === "testcase" ? (
+				{activeTestTab === "examples" ? (
+					<ExamplesTab problem={problem} />
+				) : activeTestTab === "testcase" ? (
 					<TestCaseTab
 						problem={problem}
 						selectedTestIndex={selectedTestIndex}
@@ -104,6 +116,80 @@ export function TestCasesPanel({
 						processedInputs={processedInputs}
 					/>
 				)}
+			</div>
+		</div>
+	);
+}
+
+interface ExamplesTabProps {
+	problem: AlgoProblemDetail;
+}
+
+function ExamplesTab({ problem }: ExamplesTabProps) {
+	const [
+		processedExamplesAndConstraints,
+		setProcessedExamplesAndConstraints,
+	] = useState<string>("");
+
+	useEffect(() => {
+		const processExamplesAndConstraints = async () => {
+			if (problem.examplesAndConstraintsHtml) {
+				setProcessedExamplesAndConstraints(
+					problem.examplesAndConstraintsHtml
+				);
+				return;
+			}
+
+			if (problem.examplesAndConstraintsMd) {
+				try {
+					const html = await processMarkdown(
+						problem.examplesAndConstraintsMd,
+						{
+							allowInlineHtml: true,
+							codeBackgroundInChoices: true,
+						}
+					);
+					setProcessedExamplesAndConstraints(html);
+				} catch (error) {
+					console.error(
+						"Error processing examples/constraints:",
+						error
+					);
+					setProcessedExamplesAndConstraints("");
+				}
+			} else {
+				setProcessedExamplesAndConstraints("");
+			}
+		};
+
+		processExamplesAndConstraints();
+	}, [problem]);
+
+	if (!processedExamplesAndConstraints) {
+		return (
+			<div className="flex-1 flex flex-col items-center justify-center h-full">
+				<p className="text-muted-foreground">
+					Examples and constraints will appear here
+				</p>
+			</div>
+		);
+	}
+
+	return (
+		<div
+			className="flex-1 flex flex-col overflow-hidden overflow-y-auto dark-scrollbar p-4"
+			style={{
+				scrollbarWidth: "thin",
+				scrollbarColor: "#9f9f9f #2C2C2C",
+			}}
+		>
+			<div className="chat-markdown-display">
+				<div
+					className="markdown-content"
+					dangerouslySetInnerHTML={{
+						__html: processedExamplesAndConstraints,
+					}}
+				/>
 			</div>
 		</div>
 	);
@@ -216,6 +302,34 @@ function TestResultsTab({
 			</div>
 		);
 	}
+
+	// Check if there's an error - if so, show only the error
+	const firstFailedTest = testResults.find((result) => !result.passed);
+	const hasError = firstFailedTest?.error;
+
+	if (hasError) {
+		return (
+			<div
+				className="flex-1 flex flex-col overflow-auto p-4"
+				style={{
+					scrollbarWidth: "thin",
+					scrollbarColor: "#9f9f9f #2C2C2C",
+				}}
+			>
+				<div>
+					<h4 className="text-xl font-medium text-red-400 mb-2">
+						Error
+					</h4>
+					<div className="mt-1 bg-red-500/10 border border-red-500/20 rounded-md p-3">
+						<pre className="text-sm text-red-300 overflow-x-auto whitespace-pre-wrap">
+							{firstFailedTest.error}
+						</pre>
+					</div>
+				</div>
+			</div>
+		);
+	}
+
 	return (
 		<div
 			className="flex-1 flex flex-col overflow-auto"
@@ -335,106 +449,112 @@ function TestResultsTab({
 
 			{/* Test Results Content */}
 			<div className="flex-1 p-4 pt-0 dark-scrollbar">
-				{problem.tests[selectedTestIndex] && (
-					<div className="space-y-4">
-						{/* Input Section */}
-						<div>
-							<h4 className="text-sm font-medium text-muted-foreground mb-2">
-								Input
-							</h4>
-							<div className="space-y-2">
-								{problem.tests[selectedTestIndex].input.map(
-									(value, index) => (
-										<div key={index}>
-											<span className="text-sm font-medium text-foreground">
-												{problem.parameterNames[
-													index
-												] || `param${index + 1}`}{" "}
-												=
-											</span>
-											<div className="mt-1 bg-[#ffffff22] rounded-md p-3">
-												{processedInputs[index] ? (
-													<div
-														className="text-sm overflow-x-auto"
-														dangerouslySetInnerHTML={{
-															__html:
-																processedInputs[
-																	index
-																] || "",
-														}}
-													/>
-												) : (
-													<pre
-														className="text-sm text-white 
+				{problem.tests[selectedTestIndex] &&
+					testResults[selectedTestIndex] && (
+						<div className="space-y-4">
+							{/* Input Section */}
+							<div>
+								<h4 className="text-sm font-medium text-muted-foreground mb-2">
+									Input
+								</h4>
+								<div className="space-y-2">
+									{problem.tests[selectedTestIndex].input.map(
+										(value, index) => (
+											<div key={index}>
+												<span className="text-sm font-medium text-foreground">
+													{problem.parameterNames[
+														index
+													] ||
+														`param${
+															index + 1
+														}`}{" "}
+													=
+												</span>
+												<div className="mt-1 bg-[#ffffff22] rounded-md p-3">
+													{processedInputs[index] ? (
+														<div
+															className="text-sm overflow-x-auto"
+															dangerouslySetInnerHTML={{
+																__html:
+																	processedInputs[
+																		index
+																	] || "",
+															}}
+														/>
+													) : (
+														<pre
+															className="text-sm text-white 
                                         overflow-x-auto"
-													>
-														{JSON.stringify(value)}
-													</pre>
-												)}
+														>
+															{JSON.stringify(
+																value
+															)}
+														</pre>
+													)}
+												</div>
 											</div>
-										</div>
-									)
-								)}
+										)
+									)}
+								</div>
 							</div>
-						</div>
 
-						{/* Output Section */}
-						<div>
-							<h4 className="text-sm font-medium text-muted-foreground mb-2">
-								Output
-							</h4>
-							<div className="mt-1 bg-[#ffffff22] rounded-md p-3">
-								<pre
-									className="text-sm overflow-x-auto"
-									dangerouslySetInnerHTML={{
-										__html:
-											testResults[selectedTestIndex]
-												?.actual !== undefined
-												? createDiff(
-														testResults[
-															selectedTestIndex
-														].actual,
-														problem.tests[
-															selectedTestIndex
-														].output
-												  ).output
-												: '<span class="text-gray-400">undefined</span>',
-									}}
-								/>
+							{/* Output Section */}
+							<div>
+								<h4 className="text-sm font-medium text-muted-foreground mb-2">
+									Output
+								</h4>
+								<div className="mt-1 bg-[#ffffff22] rounded-md p-3">
+									<pre
+										className="text-sm overflow-x-auto"
+										dangerouslySetInnerHTML={{
+											__html:
+												testResults[selectedTestIndex]
+													?.actual !== undefined
+													? createDiff(
+															testResults[
+																selectedTestIndex
+															].actual,
+															problem.tests[
+																selectedTestIndex
+															].output
+													  ).output
+													: '<span class="text-gray-400">undefined</span>',
+										}}
+									/>
+								</div>
 							</div>
-						</div>
 
-						{/* Expected Section */}
-						<div>
-							<h4 className="text-sm font-medium text-muted-foreground mb-2">
-								Expected
-							</h4>
-							<div className="mt-1 bg-[#ffffff22] rounded-md p-3">
-								<pre
-									className="text-sm overflow-x-auto"
-									dangerouslySetInnerHTML={{
-										__html:
-											testResults[selectedTestIndex]
-												?.actual !== undefined
-												? createDiff(
-														testResults[
-															selectedTestIndex
-														].actual,
-														problem.tests[
-															selectedTestIndex
-														].output
-												  ).expected
-												: `<span class="text-green-400">${JSON.stringify(
-														problem.tests[
-															selectedTestIndex
-														].output
-												  )}</span>`,
-									}}
-								/>
+							{/* Expected Section */}
+							<div>
+								<h4 className="text-sm font-medium text-muted-foreground mb-2">
+									Expected
+								</h4>
+								<div className="mt-1 bg-[#ffffff22] rounded-md p-3">
+									<pre
+										className="text-sm overflow-x-auto"
+										dangerouslySetInnerHTML={{
+											__html:
+												testResults[selectedTestIndex]
+													?.actual !== undefined
+													? createDiff(
+															testResults[
+																selectedTestIndex
+															].actual,
+															problem.tests[
+																selectedTestIndex
+															].output
+													  ).expected
+													: `<span class="text-green-400">${JSON.stringify(
+															problem.tests[
+																selectedTestIndex
+															].output
+													  )}</span>`,
+										}}
+									/>
+								</div>
 							</div>
 						</div>
-					</div>
-				)}
+					)}
 			</div>
 		</div>
 	);

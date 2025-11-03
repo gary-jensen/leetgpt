@@ -1,7 +1,11 @@
 "use server";
 
 import OpenAI from "openai";
-import { ChatMessage, HintResponse } from "@/types/algorithm-types";
+import {
+	AlgoProblemDetail,
+	ChatMessage,
+	HintResponse,
+} from "@/types/algorithm-types";
 import { getAlgoProblem } from "@/features/algorithms/data";
 import { getSession } from "@/lib/auth";
 import { checkRateLimit, getRateLimitKey } from "@/lib/rateLimit";
@@ -37,7 +41,7 @@ Example good hint: "What **data structure** could help you look up values quickl
 Example bad hint: "Use a hashmap to store nums[i] as keys and i as values"`;
 
 export async function getHint(
-	problemId: string,
+	problem: AlgoProblemDetail,
 	code?: string,
 	chatHistory?: ChatMessage[],
 	failureSummary?: string
@@ -63,7 +67,7 @@ export async function getHint(
 		);
 	}
 
-	const problem = await getAlgoProblem(problemId);
+	// const problem = await getAlgoProblem(problemId);
 
 	if (!problem) {
 		throw new Error("Problem not found");
@@ -104,13 +108,15 @@ export async function getHint(
 }
 
 export async function reviewOptimality(
-	problemId: string,
+	problem: AlgoProblemDetail,
 	code: string,
 	language: "javascript"
 ): Promise<{
 	isOptimal: boolean;
 	summary: string;
 	suggestion?: string;
+	currentComplexity: string;
+	suggestedComplexity: string;
 }> {
 	// Check authentication
 	const session = await getSession();
@@ -133,7 +139,7 @@ export async function reviewOptimality(
 		);
 	}
 
-	const problem = await getAlgoProblem(problemId);
+	// const problem = await getAlgoProblem(problemId);
 
 	if (!problem) {
 		throw new Error("Problem not found");
@@ -145,7 +151,9 @@ export async function reviewOptimality(
 	return {
 		isOptimal: analysis.isOptimal,
 		summary: analysis.summary,
-		suggestion: analysis.suggestion,
+		suggestion: analysis.suggestion, // Keep for backward compatibility, but won't be used in nudges
+		currentComplexity: analysis.currentComplexity || "",
+		suggestedComplexity: analysis.suggestedComplexity || "",
 	};
 }
 
@@ -335,6 +343,105 @@ export async function getChatResponse(
 	};
 }
 
+export async function getSubmissionResponse(
+	problem: AlgoProblemDetail,
+	submissionData: {
+		allPassed: boolean;
+		testsPassed: number;
+		testsTotal: number;
+		runtime?: number;
+	},
+	code?: string,
+	chatHistory?: ChatMessage[]
+): Promise<ChatMessage> {
+	// Check authentication
+	const session = await getSession();
+	if (!session?.user?.id) {
+		throw new Error("Authentication required to use AI coach");
+	}
+
+	// Check rate limit (60/hour per user)
+	const rateLimitKey = getRateLimitKey(
+		session.user.id,
+		null,
+		"algo-coach-submission"
+	);
+	const rateLimitCheck = await checkRateLimit(rateLimitKey, 60, 3600000);
+	if (!rateLimitCheck.allowed) {
+		throw new Error(
+			`Rate limit exceeded. You've used all 60 responses for this hour. Try again in ${Math.ceil(
+				(rateLimitCheck.resetTime - Date.now()) / 60000
+			)} minutes.`
+		);
+	}
+
+	// const problem = await getAlgoProblem(problemId);
+	if (!problem) {
+		throw new Error("Problem not found");
+	}
+
+	let context = `Problem: ${problem.title}\n`;
+	context += `Statement: ${problem.statementMd}\n`;
+	context += `Topics: ${problem.topics.join(", ")}\n`;
+	context += `Difficulty: ${problem.difficulty}\n`;
+	context += `\nTest Results: ${submissionData.testsPassed}/${submissionData.testsTotal} tests passed\n`;
+
+	if (code) {
+		context += `\nUser's code:\n${code}\n`;
+	}
+
+	if (chatHistory && chatHistory.length > 0) {
+		context += `\nPrevious conversation:\n`;
+		chatHistory.forEach((msg) => {
+			context += `${msg.role}: ${msg.content}\n`;
+		});
+	}
+
+	// Build prompt based on submission status
+	let userPrompt = "";
+	if (submissionData.allPassed) {
+		// Check optimality for passing solutions
+		let optimalityInfo = "";
+		if (code) {
+			try {
+				const optimality = await reviewOptimality(
+					problem,
+					code,
+					"javascript"
+				);
+				optimalityInfo = `\nOptimality Review:\n- Current Complexity: ${optimality.currentComplexity}\n- Optimal Complexity: ${optimality.suggestedComplexity}\n- Is Optimal: ${optimality.isOptimal}\n`;
+				context += optimalityInfo;
+			} catch (error) {
+				console.error("Error reviewing optimality:", error);
+			}
+		}
+
+		userPrompt = `${context}\n\nThe user's solution passed all tests. Provide an encouraging response. If the solution is not optimal (complexity mismatch), give a gentle nudge (e.g., "Your solution runs in O(n²) time. Can you try solving it with O(n) complexity?"). Do NOT give specific suggestions or hints - just mention the complexity difference and encourage trying a more optimal approach. Keep it short (2-4 sentences max).`;
+	} else {
+		userPrompt = `${context}\n\nThe user's solution failed some tests (${submissionData.testsPassed}/${submissionData.testsTotal} passed). Provide an encouraging message. Do NOT give hints unless explicitly asked. Just acknowledge their progress and encourage them to keep trying. Keep it short (2-3 sentences max).`;
+	}
+
+	// Call OpenAI API
+	const completion = await openai.chat.completions.create({
+		model: "gpt-4o-mini",
+		messages: [
+			{ role: "system", content: COACH_SYSTEM_PROMPT },
+			{ role: "user", content: userPrompt },
+		],
+		temperature: 0.7,
+		max_tokens: 200,
+	});
+
+	const aiResponse = completion.choices[0]?.message?.content || "";
+
+	return {
+		id: Date.now().toString(),
+		role: "assistant",
+		content: aiResponse,
+		timestamp: new Date(),
+	};
+}
+
 function analyzeCodeOptimality(
 	code: string,
 	problem: any
@@ -342,6 +449,8 @@ function analyzeCodeOptimality(
 	isOptimal: boolean;
 	summary: string;
 	suggestion?: string;
+	currentComplexity?: string;
+	suggestedComplexity?: string;
 } {
 	// Simple analysis for MVP
 	const hasNestedLoops =
@@ -389,5 +498,14 @@ function analyzeCodeOptimality(
 		summary = "Looks efficient for this problem";
 	}
 
-	return { isOptimal, summary, suggestion };
+	const currentComplexity = summary.split(" - ")[0] || "";
+	const suggestedComplexity = expectedTime || "";
+
+	return {
+		isOptimal,
+		summary,
+		suggestion,
+		currentComplexity,
+		suggestedComplexity,
+	};
 }

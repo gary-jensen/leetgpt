@@ -129,6 +129,8 @@ export async function getAlgoProblem(
 		order: dbProblem.order,
 		statementMd: dbProblem.statementMd,
 		statementHtml: dbProblem.statementHtml || null,
+		examplesAndConstraintsMd: (dbProblem as any).examplesAndConstraintsMd || null,
+		examplesAndConstraintsHtml: (dbProblem as any).examplesAndConstraintsHtml || null,
 		rubric: dbProblem.rubric as {
 			optimal_time: string;
 			acceptable_time: string[];
@@ -212,6 +214,8 @@ export async function getAlgoProblemBySlug(
 		order: dbProblem.order,
 		statementMd: dbProblem.statementMd,
 		statementHtml: dbProblem.statementHtml || null,
+		examplesAndConstraintsMd: (dbProblem as any).examplesAndConstraintsMd || null,
+		examplesAndConstraintsHtml: (dbProblem as any).examplesAndConstraintsHtml || null,
 		rubric: dbProblem.rubric as {
 			optimal_time: string;
 			acceptable_time: string[];

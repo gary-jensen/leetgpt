@@ -25,6 +25,8 @@ export interface AlgoProblemMeta {
 export interface AlgoProblemDetail extends AlgoProblemMeta {
 	statementMd: string;
 	statementHtml?: string | null; // Pre-processed HTML (from database)
+	examplesAndConstraintsMd?: string | null; // Examples and constraints markdown
+	examplesAndConstraintsHtml?: string | null; // Pre-processed HTML for examples/constraints
 	rubric: { optimal_time: string; acceptable_time: string[] };
 	tests: { input: any[]; output: any }[];
 	parameterNames: string[]; // Names of the input parameters in order

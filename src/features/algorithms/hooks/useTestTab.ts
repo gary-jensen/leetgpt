@@ -3,9 +3,9 @@ import type { ImperativePanelHandle } from "react-resizable-panels";
 import { TestResult } from "../components/TestResultsDisplay";
 
 export function useTestTab(testResults: TestResult[], isExecuting: boolean) {
-	const [activeTestTab, setActiveTestTab] = useState<"testcase" | "results">(
-		"testcase"
-	);
+	const [activeTestTab, setActiveTestTab] = useState<
+		"examples" | "testcase" | "results"
+	>("examples");
 	const testCasesPanelRef = useRef<ImperativePanelHandle | null>(null);
 
 	// Auto-switch to results tab when tests are run
@@ -33,7 +33,9 @@ export function useTestTab(testResults: TestResult[], isExecuting: boolean) {
 	}, [isExecuting, testCasesPanelRef]);
 
 	// Wrap setActiveTestTab to expand panel when switching to results
-	const handleSetActiveTestTab = (tab: "testcase" | "results") => {
+	const handleSetActiveTestTab = (
+		tab: "examples" | "testcase" | "results"
+	) => {
 		setActiveTestTab(tab);
 
 		// Resize panel to 35% when switching to results tab (only if collapsed)

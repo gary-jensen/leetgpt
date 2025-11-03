@@ -5,11 +5,58 @@ import {
 	getLessonsByTopics,
 } from "@/features/algorithms/data";
 import { redirect } from "next/navigation";
+import { Metadata } from "next";
 
 interface AlgorithmWorkspacePageProps {
 	params: Promise<{
 		problemSlug: string;
 	}>;
+}
+
+export async function generateMetadata({
+	params,
+}: AlgorithmWorkspacePageProps): Promise<Metadata> {
+	const { problemSlug } = await params;
+	const problem = await getAlgoProblemBySlug(problemSlug);
+
+	if (!problem) {
+		return {
+			title: "Problem Not Found",
+		};
+	}
+
+	// Create description from problem statement (first 160 chars)
+	const description = problem.statementMd
+		.replace(/[#*`]/g, "")
+		.replace(/\n/g, " ")
+		.trim()
+		.slice(0, 160);
+
+	return {
+		title: `${problem.title} - Algorithm Practice | BitSchool`,
+		description:
+			description ||
+			`Practice ${problem.difficulty} algorithm problem: ${problem.title}`,
+		keywords: [
+			...problem.topics,
+			problem.difficulty,
+			"algorithm",
+			"coding practice",
+			"leetcode",
+			"interview preparation",
+		].join(", "),
+		openGraph: {
+			title: problem.title,
+			description:
+				description ||
+				`Practice ${problem.difficulty} algorithm problem`,
+			type: "website",
+		},
+		other: {
+			"algorithm:difficulty": problem.difficulty,
+			"algorithm:topics": problem.topics.join(", "),
+		},
+	};
 }
 
 export default async function AlgorithmWorkspacePage({

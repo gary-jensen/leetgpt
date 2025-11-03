@@ -145,22 +145,24 @@ model AlgoLessonProgress {
 
 // Algorithm content models
 model AlgoProblem {
-    id             String   @id @default(cuid())
-    slug           String   @unique
-    title          String
-    order          Int
-    statementMd    String   @db.Text
-    statementHtml  String?  @db.Text
-    topics         String[]
-    difficulty     String
-    languages      String[]
-    rubric         Json
-    parameterNames String[]
-    tests          Json
-    startingCode   Json
-    passingCode    Json
-    createdAt      DateTime @default(now())
-    updatedAt      DateTime @updatedAt
+    id                         String   @id @default(cuid())
+    slug                       String   @unique
+    title                      String
+    order                      Int
+    statementMd                String   @db.Text
+    statementHtml              String?  @db.Text
+    examplesAndConstraintsMd   String?  @db.Text
+    examplesAndConstraintsHtml String?  @db.Text
+    topics                     String[]
+    difficulty                 String
+    languages                  String[]
+    rubric                     Json
+    parameterNames             String[]
+    tests                      Json
+    startingCode               Json
+    passingCode                Json
+    createdAt                  DateTime @default(now())
+    updatedAt                  DateTime @updatedAt
 
     @@index([difficulty])
     @@index([slug])

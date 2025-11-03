@@ -5,7 +5,11 @@ import { useEffect, useState, useRef } from "react";
 import { WorkspaceLayout } from "./WorkspaceLayout";
 import { TestResult } from "./TestResultsDisplay";
 import { useAlgoProblemExecution } from "../hooks/useAlgoProblemExecution";
-import { getHint, getChatResponse } from "@/lib/actions/algoCoach";
+import {
+	getHint,
+	getChatResponse,
+	getSubmissionResponse,
+} from "@/lib/actions/algoCoach";
 import { Button } from "@/components/ui/button";
 import { AlgoProblemDetail, AlgoLesson } from "@/types/algorithm-types";
 import { useProgress } from "@/contexts/ProgressContext";
@@ -34,6 +38,8 @@ export function AlgorithmWorkspace({
 	const [hasShownStuckMessage, setHasShownStuckMessage] = useState(false);
 	const previousFailureCountRef = useRef(0);
 	const chatMessagesRef = useRef<any[]>([]);
+	const lastSubmissionRef = useRef<string>(""); // Track last submission to avoid duplicates
+	const previousIsExecutingRef = useRef(false);
 	const { data: session } = useSession();
 	const progress = useProgress();
 
@@ -56,16 +62,119 @@ export function AlgorithmWorkspace({
 		allTestsPassed,
 	} = useAlgoProblemExecution(problem);
 
-	// Create new chat session on mount
+	// Create new chat session on mount and initialize with problem statement
 	useEffect(() => {
 		const sessionId = `session_${Date.now()}_${Math.random()
 			.toString(36)
 			.substring(7)}`;
 		setCurrentSessionId(sessionId);
-		setChatMessages([]); // Start with fresh chat
+
+		// Initialize chat with problem statement and examples/constraints
+		const initialMessages: any[] = [
+			{
+				id: "problem-statement",
+				role: "assistant" as const,
+				content: problem.statementHtml || problem.statementMd,
+				timestamp: new Date(),
+				type: "problem_statement",
+			},
+		];
+
+		// Add examples/constraints if available
+		if (
+			problem.examplesAndConstraintsHtml ||
+			problem.examplesAndConstraintsMd
+		) {
+			initialMessages.push({
+				id: "examples-constraints",
+				role: "assistant" as const,
+				content:
+					problem.examplesAndConstraintsHtml ||
+					problem.examplesAndConstraintsMd ||
+					"",
+				timestamp: new Date(),
+				type: "examples_constraints",
+			});
+		}
+
+		setChatMessages(initialMessages);
 		setConsecutiveFailures(0); // Reset failure count on new session
 		setHasShownStuckMessage(false); // Reset stuck message flag
-	}, []); // Only run once on mount
+	}, [problem.id]); // Re-initialize when problem changes
+
+	// Create submission message when code execution completes
+	useEffect(() => {
+		// Only create submission message after execution completes (transition from executing to done)
+		if (!isExecuting && previousIsExecutingRef.current) {
+			// Create submission message if we have test results OR if execution just finished
+			// This ensures errors are shown even if testResults is empty or errors occurred
+			if (testResults.length > 0) {
+				// Create a unique key for this submission based on test results signature
+				// Include error messages in signature to detect different errors
+				const testSignature = testResults
+					.map((r) => `${r.case}-${r.passed}-${r.error || ""}`)
+					.join(",");
+				const submissionKey = testSignature;
+
+				// Avoid duplicate submissions (only if different from last one)
+				if (lastSubmissionRef.current !== submissionKey) {
+					lastSubmissionRef.current = submissionKey;
+
+					const testsPassed = testResults.filter(
+						(r) => r.passed
+					).length;
+					const allPassed = testsPassed === testResults.length;
+					const totalRuntime = testResults.reduce(
+						(sum, r) => sum + (r.runtime || 0),
+						0
+					);
+
+					// Debug: log test results to verify errors are present
+					const hasErrors = testResults.some((r) => r.error);
+					if (hasErrors) {
+						console.log(
+							"Creating submission message with errors:",
+							testResults
+						);
+					}
+
+					const submissionMessage = {
+						id: `submission-${Date.now()}`,
+						role: "user" as const,
+						type: "submission",
+						content: "Submitted code solution",
+						timestamp: new Date(),
+						submissionData: {
+							allPassed,
+							testsPassed,
+							testsTotal: testResults.length,
+							runtime: totalRuntime, // Always include runtime, even if 0
+							testResults,
+						},
+					};
+
+					setChatMessages((prev) => {
+						const updated = [...prev, submissionMessage];
+						chatMessagesRef.current = updated;
+						return updated;
+					});
+
+					// Auto-trigger AI response after submission (async, don't await)
+					handleSubmissionResponse(submissionMessage).catch(
+						(error) => {
+							console.error(
+								"Error handling submission response:",
+								error
+							);
+						}
+					);
+				}
+			}
+		}
+
+		// Update previous execution state
+		previousIsExecutingRef.current = isExecuting;
+	}, [testResults, isExecuting]);
 
 	// Track consecutive failures and trigger AI help message
 	useEffect(() => {
@@ -213,7 +322,7 @@ export function AlgorithmWorkspace({
 		trackAlgoHintRequested(problem.id, problem.title);
 		try {
 			const hint = await getHint(
-				problem.id,
+				problem,
 				code,
 				chatMessages,
 				getFailureSummary(testResults)
@@ -252,6 +361,67 @@ export function AlgorithmWorkspace({
 			} else {
 				toast.error("An unexpected error occurred");
 			}
+		} finally {
+			setIsThinking(false);
+		}
+	};
+
+	const handleSubmissionResponse = async (submissionMessage: any) => {
+		if (!session?.user?.id) return; // Skip if not authenticated
+
+		setIsThinking(true);
+		try {
+			const aiResponse = await getSubmissionResponse(
+				problem,
+				submissionMessage.submissionData,
+				code,
+				chatMessagesRef.current.filter(
+					(msg) =>
+						msg.id !== "problem-statement" &&
+						msg.id !== "examples-constraints"
+				)
+			);
+
+			setChatMessages((prev) => {
+				const updated = [...prev, aiResponse];
+				chatMessagesRef.current = updated;
+				return updated;
+			});
+
+			// Persist chat history to database
+			if (session?.user?.id && currentSessionId) {
+				try {
+					const savedProgress = progress.getAlgoProblemProgress?.(
+						problem.id,
+						"javascript"
+					);
+					const existingSessions = savedProgress?.chatHistory || [];
+
+					const currentSession = {
+						id: currentSessionId,
+						createdAt: new Date(),
+						messages: [
+							...chatMessagesRef.current,
+							submissionMessage,
+							aiResponse,
+						],
+					};
+
+					await updateAlgoProblemProgress(
+						session.user.id,
+						problem.id,
+						"javascript",
+						{
+							chatHistory: [...existingSessions, currentSession],
+						}
+					);
+				} catch (error) {
+					console.error("Error saving submission response:", error);
+				}
+			}
+		} catch (error) {
+			console.error("Error getting submission response:", error);
+			// Don't show error to user for auto-responses, just log it
 		} finally {
 			setIsThinking(false);
 		}

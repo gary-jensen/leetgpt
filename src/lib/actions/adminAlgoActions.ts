@@ -10,6 +10,7 @@ interface AlgoProblemData {
 	slug: string;
 	title: string;
 	statementMd: string;
+	examplesAndConstraintsMd?: string | null;
 	topics: string[];
 	difficulty: string;
 	languages: string[];
@@ -38,12 +39,17 @@ export async function createAlgoProblem(data: AlgoProblemData) {
 
 		// Process markdown to HTML
 		const statementHtml = await processMarkdown(data.statementMd);
+		const examplesAndConstraintsHtml = data.examplesAndConstraintsMd
+			? await processMarkdown(data.examplesAndConstraintsMd)
+			: null;
 
 		// Create problem with both markdown and HTML
 		const problem = await prisma.algoProblem.create({
 			data: {
 				...data,
 				statementHtml,
+				examplesAndConstraintsMd: data.examplesAndConstraintsMd || null,
+				examplesAndConstraintsHtml,
 			},
 		});
 
@@ -63,6 +69,9 @@ export async function updateAlgoProblem(id: string, data: AlgoProblemData) {
 
 		// Process markdown to HTML
 		const statementHtml = await processMarkdown(data.statementMd);
+		const examplesAndConstraintsHtml = data.examplesAndConstraintsMd
+			? await processMarkdown(data.examplesAndConstraintsMd)
+			: null;
 
 		// Update problem with both markdown and HTML
 		const problem = await prisma.algoProblem.update({
@@ -70,6 +79,8 @@ export async function updateAlgoProblem(id: string, data: AlgoProblemData) {
 			data: {
 				...data,
 				statementHtml,
+				examplesAndConstraintsMd: data.examplesAndConstraintsMd || null,
+				examplesAndConstraintsHtml,
 			},
 		});
 

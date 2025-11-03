@@ -81,7 +81,7 @@ export function AIChatPanel({
 								return (
 									<div
 										key={message.id || index}
-										className="space-y-1 flex justify-end"
+										className="space-y-1 flex justify-end px-3"
 									>
 										<div className="bg-white/15 rounded-lg px-3 py-2 max-w-[80%]">
 											<div className="text-base leading-[1.75]">
@@ -151,7 +151,7 @@ export function AIChatPanel({
 							return (
 								<div
 									key={message.id || index}
-									className="space-y-1"
+									className="space-y-1 px-3"
 								>
 									<ChatMarkdownDisplay
 										content={message.content}
