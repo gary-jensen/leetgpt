@@ -127,10 +127,12 @@ export function LessonModal({ lesson, children }: LessonModalProps) {
 
 						{isProcessing ? (
 							<div className="flex items-center justify-center py-8">
-								<div className="text-muted-foreground">Processing content...</div>
+								<div className="text-muted-foreground">
+									Processing content...
+								</div>
 							</div>
 						) : (
-							<div className="chat-markdown-display">
+							<div className="chat-markdown-display algo-problem">
 								<div
 									className="markdown-content prose prose-sm max-w-none"
 									dangerouslySetInnerHTML={{

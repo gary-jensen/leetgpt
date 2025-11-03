@@ -22,7 +22,7 @@ Style Guidelines:
   * Use **bold** for emphasis on key concepts
   * Use *italics* for gentle suggestions
   * Use \`code\` backticks for technical terms
-  * Use bullet points (•) for lists
+  * Use - for bullet points in lists
   * Use line breaks to separate ideas
 - Write in a friendly, conversational tone
 - Make complex ideas simple and digestible

@@ -33,6 +33,7 @@ interface WorkspaceLayoutProps {
 	chatMessages: any[];
 	onSendMessage: (message: string) => void;
 	isThinking: boolean;
+	streamingMessageId: string | null;
 	relatedLessons: AlgoLesson[];
 }
 
@@ -52,6 +53,7 @@ export function WorkspaceLayout({
 	chatMessages,
 	onSendMessage,
 	isThinking,
+	streamingMessageId,
 	relatedLessons,
 }: WorkspaceLayoutProps) {
 	const processedStatement = useProcessedStatement(problem);
@@ -90,6 +92,7 @@ export function WorkspaceLayout({
 							chatMessages={chatMessages}
 							onSendMessage={onSendMessage}
 							isThinking={isThinking}
+							streamingMessageId={streamingMessageId}
 							relatedLessons={relatedLessons}
 							defaultSize={is2xl ? 33.33 : 50}
 						/>

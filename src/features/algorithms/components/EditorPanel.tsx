@@ -14,6 +14,18 @@ import { RotateCcw, Lightbulb } from "lucide-react";
 import { useTestTab } from "../hooks/useTestTab";
 import { useSession } from "next-auth/react";
 import type { ImperativePanelHandle } from "react-resizable-panels";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useState } from "react";
 
 interface EditorPanelProps {
 	code: string;
@@ -53,11 +65,14 @@ export function EditorPanel({
 	// Only use hook if we need the test cases panel and props aren't provided
 	const hookResult = useTestTab(testResults, isExecuting);
 	const activeTestTab = propActiveTestTab ?? hookResult.activeTestTab;
-	const setActiveTestTab = propSetActiveTestTab ?? hookResult.setActiveTestTab;
-	const testCasesPanelRef = propTestCasesPanelRef ?? hookResult.testCasesPanelRef;
+	const setActiveTestTab =
+		propSetActiveTestTab ?? hookResult.setActiveTestTab;
+	const testCasesPanelRef =
+		propTestCasesPanelRef ?? hookResult.testCasesPanelRef;
 
 	const session = useSession();
 	const isAdmin = session?.data?.user?.role === "ADMIN";
+	const [resetDialogOpen, setResetDialogOpen] = useState(false);
 
 	const buttonVariant =
 		testResults.length > 0 && testResults.every((r) => r.passed)
@@ -67,6 +82,11 @@ export function EditorPanel({
 			: "run";
 
 	const buttonDisabled = isExecuting || isThinking;
+
+	const handleReset = () => {
+		onReset();
+		setResetDialogOpen(false);
+	};
 
 	// If hiding test cases panel, just show editor
 	if (hideTestCasesPanel) {
@@ -117,15 +137,45 @@ export function EditorPanel({
 										<Lightbulb className="w-4 h-4" />
 										Hint
 									</Button>
-									<Button
-										onClick={onReset}
-										variant="outline"
-										disabled={buttonDisabled}
-										className="flex items-center gap-2"
+									<AlertDialog
+										open={resetDialogOpen}
+										onOpenChange={setResetDialogOpen}
 									>
-										<RotateCcw className="w-4 h-4" />
-										Reset
-									</Button>
+										<AlertDialogTrigger asChild>
+											<Button
+												variant="outline"
+												disabled={buttonDisabled}
+												className="flex items-center gap-2"
+											>
+												<RotateCcw className="w-4 h-4" />
+												Reset
+											</Button>
+										</AlertDialogTrigger>
+										<AlertDialogContent>
+											<AlertDialogHeader>
+												<AlertDialogTitle>
+													Reset Code Editor
+												</AlertDialogTitle>
+												<AlertDialogDescription>
+													Are you sure you want to
+													reset the code editor? This
+													will clear all your current
+													code and cannot be undone.
+												</AlertDialogDescription>
+											</AlertDialogHeader>
+											<AlertDialogFooter>
+												<AlertDialogCancel variant="ghost">
+													Cancel
+												</AlertDialogCancel>
+												<AlertDialogAction
+													onClick={handleReset}
+													variant="destructive"
+												>
+													Reset
+												</AlertDialogAction>
+											</AlertDialogFooter>
+										</AlertDialogContent>
+									</AlertDialog>
 									{isAdmin && (
 										<Button
 											onClick={onShowSolution}
@@ -202,15 +252,45 @@ export function EditorPanel({
 										<Lightbulb className="w-4 h-4" />
 										Hint
 									</Button>
-									<Button
-										onClick={onReset}
-										variant="outline"
-										disabled={buttonDisabled}
-										className="flex items-center gap-2"
+									<AlertDialog
+										open={resetDialogOpen}
+										onOpenChange={setResetDialogOpen}
 									>
-										<RotateCcw className="w-4 h-4" />
-										Reset
-									</Button>
+										<AlertDialogTrigger asChild>
+											<Button
+												variant="outline"
+												disabled={buttonDisabled}
+												className="flex items-center gap-2"
+											>
+												<RotateCcw className="w-4 h-4" />
+												Reset
+											</Button>
+										</AlertDialogTrigger>
+										<AlertDialogContent>
+											<AlertDialogHeader>
+												<AlertDialogTitle>
+													Reset Code Editor
+												</AlertDialogTitle>
+												<AlertDialogDescription>
+													Are you sure you want to
+													reset the code editor? This
+													will clear all your current
+													code and cannot be undone.
+												</AlertDialogDescription>
+											</AlertDialogHeader>
+											<AlertDialogFooter>
+												<AlertDialogCancel variant="ghost">
+													Cancel
+												</AlertDialogCancel>
+												<AlertDialogAction
+													onClick={handleReset}
+													variant="destructive"
+												>
+													Reset
+												</AlertDialogAction>
+											</AlertDialogFooter>
+										</AlertDialogContent>
+									</AlertDialog>
 									{isAdmin && (
 										<Button
 											onClick={onShowSolution}

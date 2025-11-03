@@ -29,6 +29,7 @@ interface ProblemStatementChatProps {
 	chatMessages: any[];
 	onSendMessage: (message: string) => void;
 	isThinking?: boolean;
+	streamingMessageId?: string | null;
 	relatedLessons?: AlgoLesson[];
 	defaultSize?: number; // Default panel size (for 2 or 3 column layouts)
 }
@@ -39,6 +40,7 @@ export function ProblemStatementChat({
 	chatMessages,
 	onSendMessage,
 	isThinking = false,
+	streamingMessageId = null,
 	relatedLessons = [],
 	defaultSize = 50,
 }: ProblemStatementChatProps) {
@@ -280,7 +282,7 @@ export function ProblemStatementChat({
 							{/* Scrollable content area */}
 							<div className="flex-1 ">
 								<div className="space-y-1 px-3">
-									<div className="chat-markdown-display problem-statement">
+									<div className="chat-markdown-display algo-problem">
 										<div
 											className="markdown-content"
 											dangerouslySetInnerHTML={{
@@ -328,7 +330,7 @@ export function ProblemStatementChat({
 						{/* Examples & Constraints (scrollable) */}
 						{examplesConstraintsMessage && (
 							<div className="space-y-1 px-3">
-								<div className="chat-markdown-display">
+								<div className="chat-markdown-display algo-problem">
 									<div
 										className="markdown-content"
 										dangerouslySetInnerHTML={{
@@ -342,7 +344,7 @@ export function ProblemStatementChat({
 						{!examplesConstraintsMessage &&
 							processedExamplesAndConstraints && (
 								<div className="space-y-1 px-3">
-									<div className="chat-markdown-display">
+									<div className="chat-markdown-display algo-problem">
 										<div
 											className="markdown-content"
 											dangerouslySetInnerHTML={{
@@ -390,14 +392,17 @@ export function ProblemStatementChat({
 							}
 
 							// Assistant messages - markdown display (left-aligned)
+							const isStreaming =
+								message.id === streamingMessageId;
 							return (
 								<div
 									key={message.id || index}
 									className="space-y-1 px-3"
 								>
 									<ChatMarkdownDisplay
+										className="algo-problem"
 										content={message.content}
-										isStreaming={false}
+										isStreaming={isStreaming}
 										enableTypingAnimation={false}
 										isLastMessage={
 											index + 1 === displayMessages.length

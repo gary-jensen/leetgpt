@@ -5,11 +5,7 @@ import { useEffect, useState, useRef } from "react";
 import { WorkspaceLayout } from "./WorkspaceLayout";
 import { TestResult } from "./TestResultsDisplay";
 import { useAlgoProblemExecution } from "../hooks/useAlgoProblemExecution";
-import {
-	getHint,
-	getChatResponse,
-	getSubmissionResponse,
-} from "@/lib/actions/algoCoach";
+import { streamAlgoCoachMessage } from "../services/algoCoachStream";
 import { Button } from "@/components/ui/button";
 import { AlgoProblemDetail, AlgoLesson } from "@/types/algorithm-types";
 import { useProgress } from "@/contexts/ProgressContext";
@@ -33,13 +29,13 @@ export function AlgorithmWorkspace({
 }: AlgorithmWorkspaceProps) {
 	const [chatMessages, setChatMessages] = useState<any[]>([]);
 	const [isThinking, setIsThinking] = useState(false);
+	const [streamingMessageId, setStreamingMessageId] = useState<string | null>(
+		null
+	);
 	const [currentSessionId, setCurrentSessionId] = useState<string>("");
-	const [consecutiveFailures, setConsecutiveFailures] = useState(0);
-	const [hasShownStuckMessage, setHasShownStuckMessage] = useState(false);
-	const previousFailureCountRef = useRef(0);
 	const chatMessagesRef = useRef<any[]>([]);
-	const lastSubmissionRef = useRef<string>(""); // Track last submission to avoid duplicates
 	const previousIsExecutingRef = useRef(false);
+	const submissionCounterRef = useRef(0);
 	const { data: session } = useSession();
 	const progress = useProgress();
 
@@ -98,8 +94,6 @@ export function AlgorithmWorkspace({
 		}
 
 		setChatMessages(initialMessages);
-		setConsecutiveFailures(0); // Reset failure count on new session
-		setHasShownStuckMessage(false); // Reset stuck message flag
 	}, [problem.id]); // Re-initialize when problem changes
 
 	// Create submission message when code execution completes
@@ -109,167 +103,57 @@ export function AlgorithmWorkspace({
 			// Create submission message if we have test results OR if execution just finished
 			// This ensures errors are shown even if testResults is empty or errors occurred
 			if (testResults.length > 0) {
-				// Create a unique key for this submission based on test results signature
-				// Include error messages in signature to detect different errors
-				const testSignature = testResults
-					.map((r) => `${r.case}-${r.passed}-${r.error || ""}`)
-					.join(",");
-				const submissionKey = testSignature;
+				const testsPassed = testResults.filter((r) => r.passed).length;
+				const allPassed = testsPassed === testResults.length;
+				const totalRuntime = testResults.reduce(
+					(sum, r) => sum + (r.runtime || 0),
+					0
+				);
 
-				// Avoid duplicate submissions (only if different from last one)
-				if (lastSubmissionRef.current !== submissionKey) {
-					lastSubmissionRef.current = submissionKey;
-
-					const testsPassed = testResults.filter(
-						(r) => r.passed
-					).length;
-					const allPassed = testsPassed === testResults.length;
-					const totalRuntime = testResults.reduce(
-						(sum, r) => sum + (r.runtime || 0),
-						0
-					);
-
-					// Debug: log test results to verify errors are present
-					const hasErrors = testResults.some((r) => r.error);
-					if (hasErrors) {
-						console.log(
-							"Creating submission message with errors:",
-							testResults
-						);
-					}
-
-					const submissionMessage = {
-						id: `submission-${Date.now()}`,
-						role: "user" as const,
-						type: "submission",
-						content: "Submitted code solution",
-						timestamp: new Date(),
-						submissionData: {
-							allPassed,
-							testsPassed,
-							testsTotal: testResults.length,
-							runtime: totalRuntime, // Always include runtime, even if 0
-							testResults,
-						},
-					};
-
-					setChatMessages((prev) => {
-						const updated = [...prev, submissionMessage];
-						chatMessagesRef.current = updated;
-						return updated;
-					});
-
-					// Auto-trigger AI response after submission (async, don't await)
-					handleSubmissionResponse(submissionMessage).catch(
-						(error) => {
-							console.error(
-								"Error handling submission response:",
-								error
-							);
-						}
+				// Debug: log test results to verify errors are present
+				const hasErrors = testResults.some((r) => r.error);
+				if (hasErrors) {
+					console.log(
+						"Creating submission message with errors:",
+						testResults
 					);
 				}
+
+				// Generate unique ID with counter to avoid duplicates
+				submissionCounterRef.current += 1;
+				const submissionMessage = {
+					id: `submission-${Date.now()}-${
+						submissionCounterRef.current
+					}`,
+					role: "user" as const,
+					type: "submission",
+					content: "Submitted code solution",
+					timestamp: new Date(),
+					submissionData: {
+						allPassed,
+						testsPassed,
+						testsTotal: testResults.length,
+						runtime: totalRuntime, // Always include runtime, even if 0
+						testResults,
+					},
+				};
+
+				setChatMessages((prev) => {
+					const updated = [...prev, submissionMessage];
+					chatMessagesRef.current = updated;
+					return updated;
+				});
+
+				// Auto-trigger AI response after submission (async, don't await)
+				handleSubmissionResponse(submissionMessage).catch((error) => {
+					console.error("Error handling submission response:", error);
+				});
 			}
 		}
 
 		// Update previous execution state
 		previousIsExecutingRef.current = isExecuting;
 	}, [testResults, isExecuting]);
-
-	// Track consecutive failures and trigger AI help message
-	useEffect(() => {
-		if (testResults.length > 0) {
-			const allPassed = testResults.every((r) => r.passed);
-			if (allPassed) {
-				setConsecutiveFailures(0);
-				setHasShownStuckMessage(false); // Reset when they pass
-				previousFailureCountRef.current = 0;
-			} else {
-				const newFailureCount = previousFailureCountRef.current + 1;
-				setConsecutiveFailures(newFailureCount);
-				previousFailureCountRef.current = newFailureCount;
-
-				// Show AI help message after 2-3 failures (only once per session)
-				if (
-					newFailureCount >= 2 &&
-					newFailureCount <= 3 &&
-					!hasShownStuckMessage
-				) {
-					setHasShownStuckMessage(true);
-
-					// Build help message (short and sweet - lesson buttons will appear below automatically)
-					const helpMessage = `I notice you've had some trouble with the test cases. Would you like some **help**?`;
-
-					// Add AI assistant message to chat (update state immediately)
-					const stuckMessage = {
-						id: `stuck-${Date.now()}`,
-						role: "assistant" as const,
-						content: helpMessage,
-						timestamp: new Date(),
-					};
-
-					// Update state immediately (no blocking)
-					const updatedMessages = [...chatMessages, stuckMessage];
-					setChatMessages(updatedMessages);
-					chatMessagesRef.current = updatedMessages;
-
-					// Persist to database asynchronously after state update (don't block UI)
-					if (session?.user?.id && currentSessionId) {
-						// Schedule database save for next tick to not block state update
-						Promise.resolve().then(async () => {
-							try {
-								const savedProgress =
-									progress.getAlgoProblemProgress?.(
-										problem.id,
-										"javascript"
-									);
-								const existingSessions =
-									savedProgress?.chatHistory || [];
-
-								const currentSession = {
-									id: currentSessionId,
-									createdAt: new Date(),
-									// Use computed updatedMessages directly
-									messages: updatedMessages,
-								};
-
-								// Update database asynchronously (fire and forget)
-								updateAlgoProblemProgress(
-									session.user.id,
-									problem.id,
-									"javascript",
-									{
-										chatHistory: [
-											...existingSessions,
-											currentSession,
-										],
-									}
-								).catch((error) => {
-									console.error(
-										"Error saving stuck message:",
-										error
-									);
-								});
-							} catch (error) {
-								console.error(
-									"Error saving stuck message:",
-									error
-								);
-							}
-						});
-					}
-				}
-			}
-		}
-	}, [
-		testResults,
-		hasShownStuckMessage,
-		relatedLessons,
-		session,
-		currentSessionId,
-		problem.id,
-		progress,
-	]);
 
 	// Load saved code from context on mount
 	useEffect(() => {
@@ -320,36 +204,111 @@ export function AlgorithmWorkspace({
 	const handleHint = async () => {
 		setIsThinking(true);
 		trackAlgoHintRequested(problem.id, problem.title);
+
+		// Add user message indicating hint was requested
+		const userHintMessage = {
+			id: `hint-request-${Date.now()}`,
+			role: "user" as const,
+			content: "Can I have a hint?",
+			timestamp: new Date(),
+		};
+
+		setChatMessages((prev) => [...prev, userHintMessage]);
+
+		const hintMessageId = `hint-${Date.now()}`;
+		const hintMessage = {
+			id: hintMessageId,
+			role: "assistant" as const,
+			content: "",
+			timestamp: new Date(),
+		};
+
+		setChatMessages((prev) => [...prev, hintMessage]);
+		setStreamingMessageId(hintMessageId);
+
+		let fullContent = "";
+
 		try {
-			const hint = await getHint(
-				problem,
-				code,
-				chatMessages,
-				getFailureSummary(testResults)
+			await streamAlgoCoachMessage(
+				{
+					problemId: problem.id,
+					code,
+					chatHistory: [
+						...chatMessagesRef.current.filter(
+							(msg) =>
+								msg.id !== "problem-statement" &&
+								msg.id !== "examples-constraints"
+						),
+						userHintMessage,
+					],
+					failureSummary: getFailureSummary(testResults),
+					type: "hint",
+				},
+				(data) => {
+					if (data.content) {
+						// Stop thinking animation as soon as first chunk arrives
+						if (fullContent === "") {
+							setIsThinking(false);
+						}
+						fullContent += data.content;
+						setChatMessages((prev) =>
+							prev.map((msg) =>
+								msg.id === hintMessageId
+									? { ...msg, content: fullContent }
+									: msg
+							)
+						);
+					}
+
+					if (data.done) {
+						setStreamingMessageId(null);
+					}
+				},
+				(error) => {
+					console.error("Error streaming hint:", error);
+					setStreamingMessageId(null);
+					setIsThinking(false);
+					setChatMessages((prev) =>
+						prev.map((msg) =>
+							msg.id === hintMessageId
+								? {
+										...msg,
+										content:
+											"Sorry, I encountered an error. Please try again.",
+								  }
+								: msg
+						)
+					);
+					if (error instanceof Error) {
+						if (error.message.includes("Rate limit")) {
+							toast.error(error.message);
+						} else if (
+							error.message.includes("Authentication required")
+						) {
+							toast.error("Please sign in to use AI hints");
+						} else {
+							toast.error(
+								"Failed to get hint. Please try again."
+							);
+						}
+					}
+				}
 			);
-
-			const newMessage = {
-				id: Date.now().toString(),
-				role: "assistant" as const,
-				content: hint.message,
-				timestamp: new Date(),
-			};
-
-			setChatMessages((prev) => [...prev, newMessage]);
-
-			if (hint.followUpQuestion) {
-				setTimeout(() => {
-					const followUp = {
-						id: (Date.now() + 1).toString(),
-						role: "assistant" as const,
-						content: hint.followUpQuestion,
-						timestamp: new Date(),
-					};
-					setChatMessages((prev) => [...prev, followUp]);
-				}, 1000);
-			}
 		} catch (error) {
 			console.error("Error getting hint:", error);
+			setStreamingMessageId(null);
+			setIsThinking(false);
+			setChatMessages((prev) =>
+				prev.map((msg) =>
+					msg.id === hintMessageId
+						? {
+								...msg,
+								content:
+									"Failed to get hint. Please try again.",
+						  }
+						: msg
+				)
+			);
 			if (error instanceof Error) {
 				if (error.message.includes("Rate limit")) {
 					toast.error(error.message);
@@ -358,11 +317,7 @@ export function AlgorithmWorkspace({
 				} else {
 					toast.error("Failed to get hint. Please try again.");
 				}
-			} else {
-				toast.error("An unexpected error occurred");
 			}
-		} finally {
-			setIsThinking(false);
 		}
 	};
 
@@ -370,26 +325,70 @@ export function AlgorithmWorkspace({
 		if (!session?.user?.id) return; // Skip if not authenticated
 
 		setIsThinking(true);
+
+		const submissionMessageId = `submission-${Date.now()}`;
+		const submissionAiMessage = {
+			id: submissionMessageId,
+			role: "assistant" as const,
+			content: "",
+			timestamp: new Date(),
+		};
+
+		setChatMessages((prev) => [...prev, submissionAiMessage]);
+		setStreamingMessageId(submissionMessageId);
+
+		let fullContent = "";
+
 		try {
-			const aiResponse = await getSubmissionResponse(
-				problem,
-				submissionMessage.submissionData,
-				code,
-				chatMessagesRef.current.filter(
-					(msg) =>
-						msg.id !== "problem-statement" &&
-						msg.id !== "examples-constraints"
-				)
+			// Stream submission response
+			await streamAlgoCoachMessage(
+				{
+					problemId: problem.id,
+					code,
+					chatHistory: chatMessagesRef.current.filter(
+						(msg) =>
+							msg.id !== "problem-statement" &&
+							msg.id !== "examples-constraints"
+					),
+					submissionData: submissionMessage.submissionData,
+					type: "submission",
+				},
+				(data) => {
+					if (data.content) {
+						// Stop thinking animation as soon as first chunk arrives
+						if (fullContent === "") {
+							setIsThinking(false);
+						}
+						fullContent += data.content;
+						setChatMessages((prev) =>
+							prev.map((msg) =>
+								msg.id === submissionMessageId
+									? { ...msg, content: fullContent }
+									: msg
+							)
+						);
+					}
+
+					if (data.done) {
+						setStreamingMessageId(null);
+					}
+				},
+				(error) => {
+					console.error(
+						"Error streaming submission response:",
+						error
+					);
+					setStreamingMessageId(null);
+					setIsThinking(false);
+					// Remove empty message on error - silent failure for auto-responses
+					setChatMessages((prev) =>
+						prev.filter((msg) => msg.id !== submissionMessageId)
+					);
+				}
 			);
 
-			setChatMessages((prev) => {
-				const updated = [...prev, aiResponse];
-				chatMessagesRef.current = updated;
-				return updated;
-			});
-
 			// Persist chat history to database
-			if (session?.user?.id && currentSessionId) {
+			if (session?.user?.id && currentSessionId && fullContent) {
 				try {
 					const savedProgress = progress.getAlgoProblemProgress?.(
 						problem.id,
@@ -403,7 +402,7 @@ export function AlgorithmWorkspace({
 						messages: [
 							...chatMessagesRef.current,
 							submissionMessage,
-							aiResponse,
+							{ ...submissionAiMessage, content: fullContent },
 						],
 					};
 
@@ -421,9 +420,12 @@ export function AlgorithmWorkspace({
 			}
 		} catch (error) {
 			console.error("Error getting submission response:", error);
-			// Don't show error to user for auto-responses, just log it
-		} finally {
+			setStreamingMessageId(null);
 			setIsThinking(false);
+			// Remove empty message on error - silent failure for auto-responses
+			setChatMessages((prev) =>
+				prev.filter((msg) => msg.id !== submissionMessageId)
+			);
 		}
 	};
 
@@ -440,38 +442,96 @@ export function AlgorithmWorkspace({
 		setChatMessages((prev) => [...prev, userMessage]);
 		setIsThinking(true);
 
+		// Create AI message with empty content for streaming
+		const aiMessageId = `ai-${Date.now()}`;
+		const aiMessage = {
+			id: aiMessageId,
+			role: "assistant" as const,
+			content: "",
+			timestamp: new Date(),
+		};
+
+		setChatMessages((prev) => [...prev, aiMessage]);
+		setStreamingMessageId(aiMessageId);
+
+		let fullContent = "";
+
 		try {
-			// Call AI coach
-			const aiResponse = await getChatResponse(
-				problem.id,
-				message,
-				code,
-				chatMessages,
-				testResults
+			// Stream AI response
+			await streamAlgoCoachMessage(
+				{
+					problemId: problem.id,
+					userMessage: message,
+					code,
+					chatHistory: chatMessagesRef.current.filter(
+						(msg) =>
+							msg.id !== "problem-statement" &&
+							msg.id !== "examples-constraints"
+					),
+					type: "chat",
+				},
+				(data) => {
+					if (data.content) {
+						// Stop thinking animation as soon as first chunk arrives
+						if (fullContent === "") {
+							setIsThinking(false);
+						}
+						fullContent += data.content;
+						setChatMessages((prev) =>
+							prev.map((msg) =>
+								msg.id === aiMessageId
+									? { ...msg, content: fullContent }
+									: msg
+							)
+						);
+					}
+
+					if (data.done) {
+						setStreamingMessageId(null);
+					}
+				},
+				(error) => {
+					console.error("Error streaming AI response:", error);
+					setStreamingMessageId(null);
+					setIsThinking(false);
+					// Update message with error
+					setChatMessages((prev) =>
+						prev.map((msg) =>
+							msg.id === aiMessageId
+								? {
+										...msg,
+										content:
+											"Sorry, I encountered an error. Please try again.",
+								  }
+								: msg
+						)
+					);
+				}
 			);
 
-			setChatMessages((prev) => [...prev, aiResponse]);
-
 			// Persist chat history to database if authenticated
-			// This will be saved to the current session on page unload
-			// For now, we'll save immediately to ensure it persists
 			if (session?.user?.id && currentSessionId) {
 				try {
-					// Get existing sessions from progress
 					const savedProgress = progress.getAlgoProblemProgress?.(
 						problem.id,
 						"javascript"
 					);
 					const existingSessions = savedProgress?.chatHistory || [];
 
-					// Create current session with all messages
 					const currentSession = {
 						id: currentSessionId,
 						createdAt: new Date(),
-						messages: [...chatMessages, userMessage, aiResponse],
+						messages: [
+							...chatMessagesRef.current.filter(
+								(msg) =>
+									msg.id !== "problem-statement" &&
+									msg.id !== "examples-constraints"
+							),
+							userMessage,
+							{ ...aiMessage, content: fullContent },
+						],
 					};
 
-					// Append current session to existing sessions
 					await updateAlgoProblemProgress(
 						session.user.id,
 						problem.id,
@@ -486,6 +546,8 @@ export function AlgorithmWorkspace({
 			}
 		} catch (error) {
 			console.error("Error getting AI response:", error);
+			setStreamingMessageId(null);
+			setIsThinking(false);
 
 			let errorContent = "Failed to get AI response. Please try again.";
 			if (error instanceof Error) {
@@ -530,6 +592,7 @@ export function AlgorithmWorkspace({
 				chatMessages={chatMessages}
 				onSendMessage={handleSendMessage}
 				isThinking={isThinking}
+				streamingMessageId={streamingMessageId}
 				relatedLessons={relatedLessons}
 			/>
 		</>

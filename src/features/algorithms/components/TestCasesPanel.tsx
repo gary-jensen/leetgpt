@@ -183,7 +183,7 @@ function ExamplesTab({ problem }: ExamplesTabProps) {
 				scrollbarColor: "#9f9f9f #2C2C2C",
 			}}
 		>
-			<div className="chat-markdown-display">
+			<div className="chat-markdown-display algo-problem">
 				<div
 					className="markdown-content"
 					dangerouslySetInnerHTML={{

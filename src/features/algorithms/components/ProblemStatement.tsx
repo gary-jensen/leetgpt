@@ -67,7 +67,7 @@ export function ProblemStatement({
 					scrollbarColor: "#9f9f9f #2C2C2C",
 				}}
 			>
-				<div className="chat-markdown-display problem-statement">
+				<div className="chat-markdown-display algo-problem">
 					<div
 						className="markdown-content"
 						dangerouslySetInnerHTML={{
