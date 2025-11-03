@@ -7,11 +7,15 @@ import { useState, useRef, useEffect } from "react";
 import { processMarkdown } from "@/components/MarkdownEditor/markdown-processor";
 import ThinkingAnimation from "@/components/workspace/Chat/components/ThinkingAnimation";
 import { SubmissionMessage } from "./SubmissionMessage";
-import { RelatedLessonsModal } from "./RelatedLessonsModal";
 import { TopicsDropdown } from "./TopicsDropdown";
 import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogTitle,
+} from "@/components/ui/dialog";
+import {
 	TagIcon,
-	BookOpen,
 	ChevronUp,
 	ChevronDown,
 	Plus,
@@ -45,7 +49,7 @@ export function ProblemStatementChat({
 	defaultSize = 50,
 }: ProblemStatementChatProps) {
 	const [inputValue, setInputValue] = useState("");
-	const [isLessonsModalOpen, setIsLessonsModalOpen] = useState(false);
+	const [isTopicsDialogOpen, setIsTopicsDialogOpen] = useState(false);
 	const [
 		processedExamplesAndConstraints,
 		setProcessedExamplesAndConstraints,
@@ -53,8 +57,10 @@ export function ProblemStatementChat({
 	const [isScrolled, setIsScrolled] = useState(false);
 	const [isStickyExpanded, setIsStickyExpanded] = useState(false);
 	const [shouldAnimate, setShouldAnimate] = useState(false);
+	const [needsExpandCollapse, setNeedsExpandCollapse] = useState(false);
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 	const chatContainerRef = useRef<HTMLDivElement>(null);
+	const problemStatementContentRef = useRef<HTMLDivElement>(null);
 	const hasUserMessagesRef = useRef(false);
 	const isInitialStickyRenderRef = useRef(false);
 
@@ -165,6 +171,31 @@ export function ProblemStatementChat({
 	// If yes, make problem statement sticky
 	const hasUserMessages = displayMessages.length > 0;
 
+	// Measure problem statement content height to determine if expand/collapse is needed
+	useEffect(() => {
+		const contentDiv = problemStatementContentRef.current;
+		if (!contentDiv) return;
+
+		const measureHeight = () => {
+			const contentHeight = contentDiv.scrollHeight;
+			const viewportHeight30vh = window.innerHeight * 0.3;
+			setNeedsExpandCollapse(contentHeight > viewportHeight30vh);
+		};
+
+		// Measure initially and on resize
+		measureHeight();
+		window.addEventListener("resize", measureHeight);
+
+		// Use ResizeObserver for more accurate measurement when content changes
+		const resizeObserver = new ResizeObserver(measureHeight);
+		resizeObserver.observe(contentDiv);
+
+		return () => {
+			window.removeEventListener("resize", measureHeight);
+			resizeObserver.disconnect();
+		};
+	}, [problemStatementMessage, processedStatement]);
+
 	// Trigger animation when hasUserMessages becomes true for the first time
 	useEffect(() => {
 		if (hasUserMessages && !hasUserMessagesRef.current) {
@@ -215,28 +246,46 @@ export function ProblemStatementChat({
 						>
 							{problem.difficulty}
 						</span>
-						<span className="text-sm bg-white/15 px-1.5 py-0.5 rounded-sm font-normal font-dm-sans flex items-center gap-1">
-							<TagIcon size={14} />
-							Topics
-						</span>
 					</h2>
-					{relatedLessons.length > 0 && (
-						<Button
-							variant="outline"
-							size="sm"
-							onClick={() => setIsLessonsModalOpen(true)}
-							className="flex items-center gap-2"
-						>
-							<BookOpen className="w-4 h-4" />
-							Related Lessons
-						</Button>
-					)}
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={() => setIsTopicsDialogOpen(true)}
+						className="flex items-center gap-2 font-normal text-[13px]"
+					>
+						<TagIcon className="scale-80" />
+						Topics
+					</Button>
 				</div>
-				<RelatedLessonsModal
-					lessons={relatedLessons}
-					open={isLessonsModalOpen}
-					onOpenChange={setIsLessonsModalOpen}
-				/>
+				{/* Topics Dialog */}
+				<Dialog
+					open={isTopicsDialogOpen}
+					onOpenChange={setIsTopicsDialogOpen}
+				>
+					<DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+						<DialogTitle>Topics & Related Lessons</DialogTitle>
+						<div className="mt-3 mb-2">
+							<div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
+								<p className="text-sm text-foreground mb-2">
+									<strong>💡 Tip:</strong> Try solving the
+									problem first without checking the topics!
+									Pattern recognition is a crucial skill.
+								</p>
+								<p className="text-sm text-foreground">
+									Use the AI coach to guide your thinking
+									rather than jumping straight to the solution
+									pattern.
+								</p>
+							</div>
+						</div>
+						<div className="mft-4">
+							<TopicsDropdown
+								topics={problem.topics}
+								relatedLessons={relatedLessons}
+							/>
+						</div>
+					</DialogContent>
+				</Dialog>
 				{/* Messages Container */}
 				<div
 					ref={chatContainerRef}
@@ -284,6 +333,7 @@ export function ProblemStatementChat({
 								<div className="space-y-1 px-3">
 									<div className="chat-markdown-display algo-problem">
 										<div
+											ref={problemStatementContentRef}
 											className="markdown-content"
 											dangerouslySetInnerHTML={{
 												__html:
@@ -294,9 +344,10 @@ export function ProblemStatementChat({
 									</div>
 								</div>
 							</div>
-							{/* Expand/Collapse Button - only show when sticky, fixed at bottom */}
-							{hasUserMessages && (
-								<div className="sticky bottom-1 right-2 flex justify-end px-3 pt-2 pb-1 flex-shrink-0">
+
+							<div className="sticky bottom-1 right-2 flex justify-end px-3 pt-2 pb-1 flex-shrink-0">
+								{/* Expand/Collapse Button - only show when sticky and content exceeds 30vh */}
+								{hasUserMessages && needsExpandCollapse && (
 									<button
 										onClick={() =>
 											setIsStickyExpanded(
@@ -322,8 +373,8 @@ export function ProblemStatementChat({
 											</>
 										)}
 									</button>
-								</div>
-							)}
+								)}
+							</div>
 						</div>
 					)}
 					<div className="flex-1 flex flex-col overflow-y-auto space-y-4">

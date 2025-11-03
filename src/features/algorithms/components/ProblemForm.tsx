@@ -13,6 +13,7 @@ interface ProblemFormProps {
 		slug: string;
 		title: string;
 		statementMd: string;
+		examplesAndConstraintsMd?: string | null;
 		topics: string[];
 		difficulty: string;
 		languages: string[];
@@ -30,6 +31,9 @@ export function ProblemForm({ onSubmit, initialData }: ProblemFormProps) {
 	const [title, setTitle] = useState(initialData?.title || "");
 	const [statementMd, setStatementMd] = useState(
 		initialData?.statementMd || ""
+	);
+	const [examplesAndConstraintsMd, setExamplesAndConstraintsMd] = useState(
+		initialData?.examplesAndConstraintsMd || ""
 	);
 	const [topics, setTopics] = useState(initialData?.topics?.join(", ") || "");
 	const [difficulty, setDifficulty] = useState(
@@ -68,6 +72,7 @@ export function ProblemForm({ onSubmit, initialData }: ProblemFormProps) {
 				slug,
 				title,
 				statementMd,
+				examplesAndConstraintsMd: examplesAndConstraintsMd || null,
 				topics: topics.split(",").map((t) => t.trim()),
 				difficulty,
 				languages: languages.split(",").map((l) => l.trim()),
@@ -140,6 +145,19 @@ export function ProblemForm({ onSubmit, initialData }: ProblemFormProps) {
 					onChange={(e) => setStatementMd(e.target.value)}
 					rows={10}
 					required
+				/>
+			</div>
+
+			<div>
+				<Label htmlFor="examplesAndConstraintsMd">
+					Examples and Constraints (Markdown)
+				</Label>
+				<Textarea
+					id="examplesAndConstraintsMd"
+					value={examplesAndConstraintsMd}
+					onChange={(e) => setExamplesAndConstraintsMd(e.target.value)}
+					rows={10}
+					placeholder="Enter examples and constraints in markdown format..."
 				/>
 			</div>
 

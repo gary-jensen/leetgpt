@@ -19,6 +19,11 @@
 		margin-bottom: 1rem;
 		font-family: "DM Sans" !important;
 	}
+
+	.markdown-quote {
+		font-family: monospace;
+		white-space: pre !important;
+	}
 }
 
 .chat-markdown-display.algo-problem .markdown-content {

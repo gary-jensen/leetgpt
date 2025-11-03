@@ -100,6 +100,10 @@ interface ProgressContextType {
 	) => AlgoProblemProgress | null;
 	getAlgoLessonProgress: (lessonId: string) => AlgoLessonProgress | null;
 	getAlgoSubmissions: (problemId: string) => AlgoProblemSubmission[];
+	updateAlgoLessonProgressLocal: (
+		lessonId: string,
+		status: "not_started" | "in_progress" | "completed"
+	) => void;
 }
 
 const ProgressContext = createContext<ProgressContextType | undefined>(
@@ -307,9 +311,9 @@ interface ProgressProviderProps {
 	children: ReactNode;
 	lessonMetadata?: { id: string; skillNodeId: string }[];
 	session: Session | null;
-    initialAlgoProblemProgress?: AlgoProblemProgress[];
-    initialAlgoLessonProgress?: AlgoLessonProgress[];
-    initialAlgoSubmissions?: AlgoProblemSubmission[];
+	initialAlgoProblemProgress?: AlgoProblemProgress[];
+	initialAlgoLessonProgress?: AlgoLessonProgress[];
+	initialAlgoSubmissions?: AlgoProblemSubmission[];
 }
 
 function getInitialProgress(
@@ -355,9 +359,9 @@ export function ProgressProvider({
 	children,
 	lessonMetadata,
 	session: serverSession,
-    initialAlgoProblemProgress,
-    initialAlgoLessonProgress,
-    initialAlgoSubmissions,
+	initialAlgoProblemProgress,
+	initialAlgoLessonProgress,
+	initialAlgoSubmissions,
 }: ProgressProviderProps) {
 	const { data: session, status } = useSession();
 	// Use server session for initial render, then client session after hydration
@@ -374,15 +378,15 @@ export function ProgressProvider({
 	const hasInitializedLevelTracking = useRef(false);
 
 	// Algorithm progress state
-    const [algoProblemProgress, setAlgoProblemProgress] = useState<
+	const [algoProblemProgress, setAlgoProblemProgress] = useState<
 		AlgoProblemProgress[]
-    >(initialAlgoProblemProgress || []);
-    const [algoLessonProgress, setAlgoLessonProgress] = useState<
+	>(initialAlgoProblemProgress || []);
+	const [algoLessonProgress, setAlgoLessonProgress] = useState<
 		AlgoLessonProgress[]
-    >(initialAlgoLessonProgress || []);
-    const [algoSubmissions, setAlgoSubmissions] = useState<
+	>(initialAlgoLessonProgress || []);
+	const [algoSubmissions, setAlgoSubmissions] = useState<
 		AlgoProblemSubmission[]
-    >(initialAlgoSubmissions || []);
+	>(initialAlgoSubmissions || []);
 
 	// Compute loading state based on whether we need to check migration/localStorage
 	const needsAsyncLoad = activeSession?.user?.id
@@ -427,7 +431,7 @@ export function ProgressProvider({
 			localStorage.removeItem("bitschool-progress-checksum");
 			clearGuestId();
 
-            // Algorithm progress is preloaded in layout when available
+			// Algorithm progress is preloaded in layout when available
 			return;
 		}
 
@@ -538,7 +542,7 @@ export function ProgressProvider({
 
 			setIsProgressLoading(false);
 
-            // Algorithm progress is preloaded in layout when available
+			// Algorithm progress is preloaded in layout when available
 		};
 
 		loadProgress();
@@ -755,6 +759,52 @@ export function ProgressProvider({
 		[algoSubmissions]
 	);
 
+	// Update lesson progress locally (optimistic update)
+	const updateAlgoLessonProgressLocal = useCallback(
+		(
+			lessonId: string,
+			status: "not_started" | "in_progress" | "completed"
+		) => {
+			setAlgoLessonProgress((prev) => {
+				const existingIndex = prev.findIndex(
+					(l) => l.lessonId === lessonId
+				);
+				if (existingIndex >= 0) {
+					// Update existing progress
+					const updated = [...prev];
+					updated[existingIndex] = {
+						...updated[existingIndex],
+						status,
+						completedAt:
+							status === "completed"
+								? new Date()
+								: updated[existingIndex].completedAt,
+						updatedAt: new Date(),
+					};
+					return updated;
+				} else {
+					// Add new progress entry (will be properly saved by server action)
+					// For optimistic update, create a temporary entry with minimal required fields
+					const tempId = `temp-${Date.now()}`;
+					return [
+						...prev,
+						{
+							id: tempId,
+							userId: activeSession?.user?.id || "",
+							lessonId,
+							status,
+							completedAt:
+								status === "completed" ? new Date() : undefined,
+							createdAt: new Date(),
+							updatedAt: new Date(),
+						},
+					];
+				}
+			});
+		},
+		[activeSession?.user?.id]
+	);
+
 	const value: ProgressContextType = {
 		progress: state,
 		isProgressLoading,
@@ -790,6 +840,7 @@ export function ProgressProvider({
 		getAlgoProblemProgress: getAlgoProblemProgressHelper,
 		getAlgoLessonProgress: getAlgoLessonProgressHelper,
 		getAlgoSubmissions: getAlgoSubmissionsHelper,
+		updateAlgoLessonProgressLocal,
 	};
 
 	return (

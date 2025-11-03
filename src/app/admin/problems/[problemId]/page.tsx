@@ -42,6 +42,7 @@ export default async function EditProblemPage({
 					slug: problem.slug,
 					title: problem.title,
 					statementMd: problem.statementMd,
+					examplesAndConstraintsMd: problem.examplesAndConstraintsMd,
 					topics: problem.topics,
 					difficulty: problem.difficulty,
 					languages: problem.languages,

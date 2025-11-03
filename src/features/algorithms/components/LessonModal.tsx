@@ -76,6 +76,9 @@ export function LessonModal({ lesson, children }: LessonModalProps) {
 		}
 
 		setIsMarkingComplete(true);
+		// Optimistically update local state immediately
+		progress.updateAlgoLessonProgressLocal?.(lesson.id, "completed");
+
 		try {
 			await updateAlgoLessonProgress(
 				session.user.id,
@@ -86,6 +89,8 @@ export function LessonModal({ lesson, children }: LessonModalProps) {
 			toast.success("Lesson marked as complete!");
 		} catch (error) {
 			console.error("Error marking lesson complete:", error);
+			// Revert optimistic update on error
+			progress.updateAlgoLessonProgressLocal?.(lesson.id, "in_progress");
 			toast.error("Failed to mark lesson as complete");
 		} finally {
 			setIsMarkingComplete(false);
@@ -96,15 +101,14 @@ export function LessonModal({ lesson, children }: LessonModalProps) {
 		<>
 			<div onClick={() => setOpen(true)}>{children}</div>
 			<Dialog open={open} onOpenChange={setOpen}>
-				<DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+				<DialogContent className="!max-w-5xl max-h-[90vh] overflow-y-auto">
 					<DialogTitle>{lesson.title}</DialogTitle>
-					<DialogDescription>{lesson.summary}</DialogDescription>
-
-					<div className="mt-4">
+					<div className="flex justify-between items-center mb-4">
+						<DialogDescription>{lesson.summary}</DialogDescription>
 						{isCompleted ? (
-							<div className="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-lg mb-4">
-								<CheckCircle2 className="w-5 h-5 text-green-600" />
-								<span className="text-green-700 font-medium">
+							<div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg h-[32px] max-h-[32px] px-3 py-[14.4px] text-sm box-border">
+								<CheckCircle2 className="w-4 h-4 text-green-600" />
+								<span className="text-green-700">
 									Completed
 								</span>
 							</div>
@@ -112,7 +116,8 @@ export function LessonModal({ lesson, children }: LessonModalProps) {
 							<Button
 								onClick={handleMarkComplete}
 								disabled={isMarkingComplete}
-								className="mb-4"
+								className="!py-4"
+								size="xs"
 							>
 								{isMarkingComplete ? (
 									"Marking..."
@@ -124,24 +129,23 @@ export function LessonModal({ lesson, children }: LessonModalProps) {
 								)}
 							</Button>
 						) : null}
-
-						{isProcessing ? (
-							<div className="flex items-center justify-center py-8">
-								<div className="text-muted-foreground">
-									Processing content...
-								</div>
-							</div>
-						) : (
-							<div className="chat-markdown-display algo-problem">
-								<div
-									className="markdown-content prose prose-sm max-w-none"
-									dangerouslySetInnerHTML={{
-										__html: processedHtml,
-									}}
-								/>
-							</div>
-						)}
 					</div>
+					{isProcessing ? (
+						<div className="flex items-center justify-center py-8">
+							<div className="text-muted-foreground">
+								Processing content...
+							</div>
+						</div>
+					) : (
+						<div className="chat-markdown-display algo-problem overflow-hidden">
+							<div
+								className="markdown-content prose prose-sm max-w-none"
+								dangerouslySetInnerHTML={{
+									__html: processedHtml,
+								}}
+							/>
+						</div>
+					)}
 
 					<div className="flex justify-end gap-2 mt-4">
 						<Button
