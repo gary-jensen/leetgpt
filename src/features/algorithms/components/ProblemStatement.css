@@ -20,3 +20,9 @@
 		font-family: "DM Sans" !important;
 	}
 }
+
+.chat-markdown-display.algo-problem .markdown-content {
+	.markdown-paragraph:last-child {
+		margin-bottom: 0rem;
+	}
+}
