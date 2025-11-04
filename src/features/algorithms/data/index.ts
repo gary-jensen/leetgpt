@@ -141,6 +141,10 @@ export async function getAlgoProblem(
 			[key: string]: string;
 		},
 		passingCode: dbProblem.passingCode as { [key: string]: string },
+		secondaryPassingCode: (dbProblem as any).secondaryPassingCode
+			? ((dbProblem as any).secondaryPassingCode as { [key: string]: string })
+			: undefined,
+		outputOrderMatters: (dbProblem as any).outputOrderMatters ?? true,
 	};
 }
 
@@ -226,6 +230,10 @@ export async function getAlgoProblemBySlug(
 			[key: string]: string;
 		},
 		passingCode: dbProblem.passingCode as { [key: string]: string },
+		secondaryPassingCode: (dbProblem as any).secondaryPassingCode
+			? ((dbProblem as any).secondaryPassingCode as { [key: string]: string })
+			: undefined,
+		outputOrderMatters: (dbProblem as any).outputOrderMatters ?? true,
 	};
 }
 

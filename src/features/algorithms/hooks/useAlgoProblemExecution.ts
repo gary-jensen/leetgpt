@@ -151,11 +151,26 @@ export function useAlgoProblemExecution(problem: AlgoProblemDetail | null) {
 
 						// Mark as completed on first successful run
 						if (passed && session?.user?.id) {
-							await markProblemCompleted(
-								session.user.id,
-								problem.id,
-								"javascript"
-							);
+							// Optimistically update local state immediately
+							progress.updateAlgoProblemProgressLocal?.(problem.id, "javascript", {
+								status: "completed",
+								completedAt: new Date(),
+							});
+
+							try {
+								await markProblemCompleted(
+									session.user.id,
+									problem.id,
+									"javascript"
+								);
+							} catch (error) {
+								console.error("Error marking problem completed:", error);
+								// Revert optimistic update on error
+								progress.updateAlgoProblemProgressLocal?.(problem.id, "javascript", {
+									status: "in_progress",
+									completedAt: undefined,
+								});
+							}
 						}
 
 						await createSubmission(

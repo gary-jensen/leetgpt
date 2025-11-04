@@ -13,6 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import {
 	testAllProblems,
+	testSingleProblem,
 	TestProblemResult,
 } from "@/lib/actions/adminTestActions";
 import { formatFailedTestCases } from "@/lib/execution/adminTestUtils";
@@ -33,6 +34,7 @@ export function TestRunner() {
 	const [fixDialogProblem, setFixDialogProblem] = useState<{
 		problem: TestProblemResult;
 		language: string;
+		isSecondary: boolean;
 	} | null>(null);
 	const [batchFixDialogOpen, setBatchFixDialogOpen] = useState(false);
 
@@ -57,7 +59,10 @@ export function TestRunner() {
 		}
 	};
 
-	const copyFailedTestCases = async (problemResult: TestProblemResult) => {
+	const copyFailedTestCases = async (
+		problemResult: TestProblemResult,
+		includeSecondary: boolean = true
+	) => {
 		// Create a minimal AlgoProblemDetail object for formatting
 		const problem: AlgoProblemDetail = {
 			id: problemResult.problemId,
@@ -75,10 +80,11 @@ export function TestRunner() {
 			passingCode: {},
 		};
 
-		// Collect all failed test cases across all languages
+		// Collect all failed test cases across all languages (primary and secondary)
 		const allFailedTestCases: AlgoTestResult[] = [];
 
 		for (const langResult of problemResult.languages) {
+			// Primary code failures
 			if (langResult.failedTestCases) {
 				langResult.failedTestCases.forEach((failedTc) => {
 					allFailedTestCases.push({
@@ -90,6 +96,25 @@ export function TestRunner() {
 						error: failedTc.error,
 					});
 				});
+			}
+
+			// Secondary code failures (if enabled)
+			if (
+				includeSecondary &&
+				langResult.secondaryValidation?.failedTestCases
+			) {
+				langResult.secondaryValidation.failedTestCases.forEach(
+					(failedTc) => {
+						allFailedTestCases.push({
+							case: failedTc.case,
+							passed: false,
+							input: failedTc.input,
+							expected: failedTc.expected,
+							actual: failedTc.actual,
+							error: failedTc.error,
+						});
+					}
+				);
 			}
 		}
 
@@ -110,17 +135,57 @@ export function TestRunner() {
 
 	const handleFixWithAI = (
 		problemResult: TestProblemResult,
-		language: string
+		language: string,
+		isSecondary: boolean = false
 	) => {
-		setFixDialogProblem({ problem: problemResult, language });
+		setFixDialogProblem({ problem: problemResult, language, isSecondary });
 		setFixDialogOpen(true);
 	};
 
-	const handleFixed = () => {
-		// Refresh test results after fix is applied
-		if (results) {
-			handleRunTests();
+	const handleFixed = (problemIds?: string | string[]) => {
+		// If problem IDs are provided, test just those problems in the background
+		if (problemIds && results) {
+			const ids = Array.isArray(problemIds) ? problemIds : [problemIds];
+
+			// Test all specified problems in parallel (don't await - run in background)
+			Promise.all(ids.map((id) => testSingleProblem(id))).then(
+				(updatedResults) => {
+					// Update results state and summary together when testing completes
+					setResults((prevResults) => {
+						if (!prevResults) return null;
+
+						const resultMap = new Map(
+							updatedResults
+								.filter(
+									(r): r is TestProblemResult => r !== null
+								)
+								.map((r) => [r.problemId, r])
+						);
+
+						const newResults = prevResults.map(
+							(r) => resultMap.get(r.problemId) || r
+						);
+
+						// Update summary
+						if (summary) {
+							const passedProblems = newResults.filter((r) =>
+								r.languages.every((l) => l.passed)
+							).length;
+
+							setSummary({
+								...summary,
+								passedProblems,
+								failedProblems:
+									newResults.length - passedProblems,
+							});
+						}
+
+						return newResults;
+					});
+				}
+			);
 		}
+		// If no problemIds provided, don't refresh (removed auto-refresh of all tests)
 	};
 
 	const getFailedProblems = (): Array<{
@@ -134,7 +199,19 @@ export function TestRunner() {
 
 		for (const problemResult of results) {
 			for (const langResult of problemResult.languages) {
+				// Primary code failures
 				if (!langResult.passed && langResult.failedTestCasesCount > 0) {
+					failed.push({
+						problem: problemResult,
+						language: langResult.language,
+					});
+				}
+				// Secondary code failures
+				if (
+					langResult.secondaryValidation &&
+					!langResult.secondaryValidation.passed &&
+					langResult.secondaryValidation.failedTestCasesCount > 0
+				) {
 					failed.push({
 						problem: problemResult,
 						language: langResult.language,
@@ -156,8 +233,9 @@ export function TestRunner() {
 				<div>
 					<h2 className="text-3xl font-bold">Test All Problems</h2>
 					<p className="text-muted-foreground mt-1">
-						Validate that all problems&apos; passingCode passes all
-						test cases
+						Validate that passingCode and secondaryPassingCode both
+						pass all test cases (ensures test cases accept valid
+						solutions)
 					</p>
 				</div>
 				<Button onClick={handleRunTests} disabled={isRunning}>
@@ -216,6 +294,7 @@ export function TestRunner() {
 								<TableHead>Languages</TableHead>
 								<TableHead>Status</TableHead>
 								<TableHead>Failed Cases</TableHead>
+								<TableHead>Secondary Validation</TableHead>
 								<TableHead>Actions</TableHead>
 							</TableRow>
 						</TableHeader>
@@ -229,6 +308,34 @@ export function TestRunner() {
 										(sum, l) =>
 											sum + l.failedTestCasesCount,
 										0
+									);
+								const totalSecondaryFailedCases =
+									problemResult.languages.reduce(
+										(sum, l) =>
+											sum +
+											(l.secondaryValidation
+												?.failedTestCasesCount ?? 0),
+										0
+									);
+								const hasAnyFailures =
+									totalFailedCases > 0 ||
+									totalSecondaryFailedCases > 0;
+								const secondaryValidationStatus =
+									problemResult.languages.map((lang) => ({
+										language: lang.language,
+										hasSecondary:
+											!!lang.secondaryValidation,
+										passed:
+											lang.secondaryValidation?.passed ??
+											true,
+										failedTestCasesCount:
+											lang.secondaryValidation
+												?.failedTestCasesCount ?? 0,
+										error: lang.secondaryValidation?.error,
+									}));
+								const hasSecondaryCode =
+									secondaryValidationStatus.some(
+										(s) => s.hasSecondary
 									);
 
 								return (
@@ -283,43 +390,139 @@ export function TestRunner() {
 											)}
 										</TableCell>
 										<TableCell>
+											{hasSecondaryCode ? (
+												<div className="flex flex-col gap-1">
+													{secondaryValidationStatus.map(
+														(sec) =>
+															sec.hasSecondary ? (
+																<div
+																	key={
+																		sec.language
+																	}
+																	className="flex flex-col gap-0.5"
+																>
+																	<Badge
+																		variant={
+																			sec.passed
+																				? "default"
+																				: "destructive"
+																		}
+																		className="w-fit"
+																	>
+																		{
+																			sec.language
+																		}
+																		:{" "}
+																		{sec.passed
+																			? "✓ Passes"
+																			: "✗ Fails"}
+																	</Badge>
+																	{!sec.passed &&
+																		sec.failedTestCasesCount >
+																			0 && (
+																			<span className="text-xs text-red-600">
+																				Secondary
+																				code
+																				failed{" "}
+																				{
+																					sec.failedTestCasesCount
+																				}{" "}
+																				test
+																				case
+																				{sec.failedTestCasesCount !==
+																				1
+																					? "s"
+																					: ""}
+																			</span>
+																		)}
+																	{sec.error && (
+																		<span className="text-xs text-red-600">
+																			{
+																				sec.error
+																			}
+																		</span>
+																	)}
+																</div>
+															) : null
+													)}
+												</div>
+											) : (
+												<span className="text-xs text-muted-foreground">
+													No secondary code
+												</span>
+											)}
+										</TableCell>
+										<TableCell>
 											<div className="flex flex-col gap-2">
-												{totalFailedCases > 0 && (
+												{hasAnyFailures && (
 													<>
+														{/* Combined fix button - fixes both primary and secondary if needed */}
 														{problemResult.languages
 															.filter(
 																(l) =>
-																	!l.passed &&
-																	l.failedTestCasesCount >
-																		0
+																	(!l.passed &&
+																		l.failedTestCasesCount >
+																			0) ||
+																	(l.secondaryValidation &&
+																		!l
+																			.secondaryValidation
+																			.passed &&
+																		l
+																			.secondaryValidation
+																			.failedTestCasesCount >
+																			0)
 															)
-															.map((lang) => (
-																<Button
-																	key={
-																		lang.language
-																	}
-																	variant="outline"
-																	size="sm"
-																	onClick={() =>
-																		handleFixWithAI(
-																			problemResult,
+															.map((lang) => {
+																const hasPrimaryFailures =
+																	!lang.passed &&
+																	lang.failedTestCasesCount >
+																		0;
+																const hasSecondaryFailures =
+																	lang.secondaryValidation &&
+																	!lang
+																		.secondaryValidation
+																		.passed &&
+																	lang
+																		.secondaryValidation
+																		.failedTestCasesCount >
+																		0;
+
+																return (
+																	<Button
+																		key={
 																			lang.language
-																		)
-																	}
-																>
-																	Fix{" "}
-																	{
-																		lang.language
-																	}{" "}
-																	with AI
-																</Button>
-															))}
+																		}
+																		variant="outline"
+																		size="sm"
+																		onClick={() =>
+																			handleFixWithAI(
+																				problemResult,
+																				lang.language,
+																				false // Always use primary mode, but will fix both
+																			)
+																		}
+																	>
+																		Fix{" "}
+																		{
+																			lang.language
+																		}{" "}
+																		{hasPrimaryFailures &&
+																		hasSecondaryFailures
+																			? "(Primary + Secondary)"
+																			: hasPrimaryFailures
+																			? "(Primary)"
+																			: "(Secondary)"}{" "}
+																		with AI
+																	</Button>
+																);
+															})}
 														<Button
 															variant="outline"
 															size="sm"
 															onClick={() =>
 																copyFailedTestCases(
-																	problemResult
+																	problemResult,
+																	true
 																)
 															}
 														>
@@ -344,6 +547,7 @@ export function TestRunner() {
 					onOpenChange={setFixDialogOpen}
 					problemResult={fixDialogProblem.problem}
 					language={fixDialogProblem.language}
+					isSecondary={fixDialogProblem.isSecondary}
 					onFixed={handleFixed}
 				/>
 			)}

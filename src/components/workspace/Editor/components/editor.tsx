@@ -7,6 +7,7 @@ import Console from "../../Console/components/console";
 import { Button } from "@/components/ui/button";
 import { useProgress } from "@/contexts/ProgressContext";
 import { cn } from "@/lib/utils";
+import { CodeXmlIcon, FileCode } from "lucide-react";
 
 const Editor = ({
 	code,
@@ -21,6 +22,7 @@ const Editor = ({
 	showConsole = true,
 	disableBorder = false,
 	hideActionButtons = false,
+	workspaceType = "learn",
 }: {
 	code: string;
 	setCode: (code: string) => void;
@@ -34,6 +36,7 @@ const Editor = ({
 	showConsole?: boolean;
 	disableBorder?: boolean;
 	hideActionButtons?: boolean;
+	workspaceType?: "learn" | "algo";
 }) => {
 	const [isDebouncing, setIsDebouncing] = useState(false);
 
@@ -72,7 +75,7 @@ const Editor = ({
 	return (
 		<div className="flex-50 lg:flex-65 h-full flex">
 			{/* <Sidebar /> */}
-			<div className="flex-3 h-full bg-backgroufnd-2 flex flex-col">
+			<div className="flex-3 h-full bg-background flex flex-col">
 				<div className="w-full h-full  flex flex-col inset-shadow-black/30f inseft-shadow-sm shadow-finset p-0 gap-6">
 					<div
 						className={cn(
@@ -81,17 +84,28 @@ const Editor = ({
 							disableBorder && "border-none"
 						)}
 					>
-						<div className="w-full bg-background-2">
-							<div className="w-fit px-3 py-3.5 fh-[40px] bg-background hover:bg-card flex items-center gap-3 cursor-pointer">
-								<Image
-									src="/js.svg"
-									alt="js"
-									width={20}
-									height={20}
-								/>
-								index.js
+						{workspaceType === "algo" ? (
+							<div className="flex items-center justify-between p-3 py-1.5 border-b border-border">
+								<div className="flex gap-4">
+									<button className="px-2 py-1 rounded-md hover:bg-white/10 hover:cursor-pointer flex items-center gap-1.5">
+										<CodeXmlIcon className="h-4 w-4 text-green-600" />
+										Code
+									</button>
+								</div>
 							</div>
-						</div>
+						) : (
+							<div className="w-full bg-background-2">
+								<div className="w-fit px-3 py-3.5 fh-[40px] bg-background hover:bg-card flex items-center gap-3 cursor-pointer">
+									<Image
+										src="/js.svg"
+										alt="js"
+										width={20}
+										height={20}
+									/>
+									index.js
+								</div>
+							</div>
+						)}
 						<EditorWrapper
 							code={code}
 							setCode={setCode}

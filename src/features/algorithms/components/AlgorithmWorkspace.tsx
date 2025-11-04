@@ -406,14 +406,43 @@ export function AlgorithmWorkspace({
 						],
 					};
 
-					await updateAlgoProblemProgress(
-						session.user.id,
+					const updatedChatHistory = [
+						...existingSessions,
+						currentSession,
+					];
+
+					// Optimistically update local state immediately
+					progress.updateAlgoProblemProgressLocal?.(
 						problem.id,
 						"javascript",
 						{
-							chatHistory: [...existingSessions, currentSession],
+							chatHistory: updatedChatHistory,
 						}
 					);
+
+					try {
+						await updateAlgoProblemProgress(
+							session.user.id,
+							problem.id,
+							"javascript",
+							{
+								chatHistory: updatedChatHistory,
+							}
+						);
+					} catch (error) {
+						console.error(
+							"Error saving submission response:",
+							error
+						);
+						// Revert optimistic update on error
+						progress.updateAlgoProblemProgressLocal?.(
+							problem.id,
+							"javascript",
+							{
+								chatHistory: existingSessions,
+							}
+						);
+					}
 				} catch (error) {
 					console.error("Error saving submission response:", error);
 				}
@@ -532,14 +561,40 @@ export function AlgorithmWorkspace({
 						],
 					};
 
-					await updateAlgoProblemProgress(
-						session.user.id,
+					const updatedChatHistory = [
+						...existingSessions,
+						currentSession,
+					];
+
+					// Optimistically update local state immediately
+					progress.updateAlgoProblemProgressLocal?.(
 						problem.id,
 						"javascript",
 						{
-							chatHistory: [...existingSessions, currentSession],
+							chatHistory: updatedChatHistory,
 						}
 					);
+
+					try {
+						await updateAlgoProblemProgress(
+							session.user.id,
+							problem.id,
+							"javascript",
+							{
+								chatHistory: updatedChatHistory,
+							}
+						);
+					} catch (error) {
+						console.error("Error saving chat history:", error);
+						// Revert optimistic update on error
+						progress.updateAlgoProblemProgressLocal?.(
+							problem.id,
+							"javascript",
+							{
+								chatHistory: existingSessions,
+							}
+						);
+					}
 				} catch (error) {
 					console.error("Error saving chat history:", error);
 				}

@@ -58,11 +58,15 @@ export function ProblemStatementChat({
 	const [isStickyExpanded, setIsStickyExpanded] = useState(false);
 	const [shouldAnimate, setShouldAnimate] = useState(false);
 	const [needsExpandCollapse, setNeedsExpandCollapse] = useState(false);
+	const [isExpandedBeforeMessages, setIsExpandedBeforeMessages] =
+		useState(true);
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 	const chatContainerRef = useRef<HTMLDivElement>(null);
 	const problemStatementContentRef = useRef<HTMLDivElement>(null);
 	const hasUserMessagesRef = useRef(false);
 	const isInitialStickyRenderRef = useRef(false);
+	const hasInitializedExpandedStateRef = useRef(false);
+	const userHasInteractedWithExpandRef = useRef(false);
 
 	// Process examples and constraints
 	useEffect(() => {
@@ -171,6 +175,26 @@ export function ProblemStatementChat({
 	// If yes, make problem statement sticky
 	const hasUserMessages = displayMessages.length > 0;
 
+	// Initialize expanded state once on mount (only if content exceeds 30vh and no user messages)
+	useEffect(() => {
+		const contentDiv = problemStatementContentRef.current;
+		if (!contentDiv || hasInitializedExpandedStateRef.current) return;
+
+		// Use requestAnimationFrame to ensure DOM is fully rendered
+		requestAnimationFrame(() => {
+			if (!contentDiv || userHasInteractedWithExpandRef.current) return;
+
+			const contentHeight = contentDiv.scrollHeight;
+			const viewportHeight30vh = window.innerHeight * 0.3;
+			const needsExpCollapse = contentHeight > viewportHeight30vh;
+
+			if (needsExpCollapse && !hasUserMessages) {
+				setIsExpandedBeforeMessages(true);
+				hasInitializedExpandedStateRef.current = true;
+			}
+		});
+	}, [problemStatementMessage, processedStatement, hasUserMessages]);
+
 	// Measure problem statement content height to determine if expand/collapse is needed
 	useEffect(() => {
 		const contentDiv = problemStatementContentRef.current;
@@ -179,7 +203,9 @@ export function ProblemStatementChat({
 		const measureHeight = () => {
 			const contentHeight = contentDiv.scrollHeight;
 			const viewportHeight30vh = window.innerHeight * 0.3;
-			setNeedsExpandCollapse(contentHeight > viewportHeight30vh);
+			const needsExpCollapse = contentHeight > viewportHeight30vh;
+			setNeedsExpandCollapse(needsExpCollapse);
+			// Do NOT touch isExpandedBeforeMessages here - it's only set in the initialization effect above
 		};
 
 		// Measure initially and on resize
@@ -201,17 +227,22 @@ export function ProblemStatementChat({
 		if (hasUserMessages && !hasUserMessagesRef.current) {
 			hasUserMessagesRef.current = true;
 			isInitialStickyRenderRef.current = true;
-			// Start expanded immediately (no animation on initial render)
-			setIsStickyExpanded(true);
+			// Sync expanded state from before-messages state if it was expanded
+			const shouldStartExpanded =
+				isExpandedBeforeMessages && needsExpandCollapse;
+			setIsStickyExpanded(shouldStartExpanded);
 			setShouldAnimate(false); // Disable animation for initial expanded state
-			// Immediately enable animation and collapse (no delay)
+			// Immediately enable animation and collapse if needed (no delay)
 			requestAnimationFrame(() => {
 				isInitialStickyRenderRef.current = false;
 				setShouldAnimate(true);
 				// Small delay to ensure transition is enabled before changing state
-				setTimeout(() => {
-					setIsStickyExpanded(false);
-				}, 50);
+				// Only collapse if it wasn't expanded before
+				if (!shouldStartExpanded) {
+					setTimeout(() => {
+						setIsStickyExpanded(false);
+					}, 50);
+				}
 			});
 		} else if (!hasUserMessages) {
 			// Reset when user messages are cleared
@@ -219,8 +250,11 @@ export function ProblemStatementChat({
 			isInitialStickyRenderRef.current = false;
 			setIsStickyExpanded(false);
 			setShouldAnimate(false);
+			// Reset the initialization flags so it can be set again if needed
+			hasInitializedExpandedStateRef.current = false;
+			userHasInteractedWithExpandRef.current = false;
 		}
-	}, [hasUserMessages]);
+	}, [hasUserMessages, isExpandedBeforeMessages, needsExpandCollapse]);
 
 	return (
 		<ResizablePanel
@@ -233,7 +267,7 @@ export function ProblemStatementChat({
 				{/* Header */}
 				<div className="flex items-center justify-between p-4 pb-2 border-b border-border flex-shrink-0">
 					<h2 className="text-2xl font-bold flex items-center gap-4">
-						{problem.title}
+						{problem.order}. {problem.title}
 						<span
 							className={cn(
 								"text-sm bg-white/15 px-1.5 py-0.5 rounded-sm font-normal font-dm-sans",
@@ -303,25 +337,33 @@ export function ProblemStatementChat({
 					{/* Problem Statement - Sticky only after user messages */}
 					{problemStatementMessage && (
 						<div
-							className={
+							className={cn(
 								hasUserMessages
 									? "static top-0 bottom-[-10px] z-10 bg-background mb-2 border-b-4 border-border flex flex-col overflow-y-auto"
+									: needsExpandCollapse
+									? "mb-2 border-b-4 border-border flex flex-col overflow-y-auto"
 									: "mb-2"
-							}
+							)}
 							style={{
-								boxShadow: hasUserMessages
-									? "0 4px 12px 0px rgba(0, 0, 0, 0.15)"
-									: "none",
+								boxShadow:
+									hasUserMessages || needsExpandCollapse
+										? "0 4px 12px 0px rgba(0, 0, 0, 0.15)"
+										: "none",
 								maxHeight: hasUserMessages
 									? isStickyExpanded
 										? "100vh"
 										: "30vh"
+									: needsExpandCollapse &&
+									  !isExpandedBeforeMessages
+									? "30vh"
 									: "none",
 								transition: isInitialStickyRenderRef.current
 									? "none"
 									: shouldAnimate
 									? "max-height 0.8s ease"
 									: hasUserMessages
+									? "max-height 0.8s ease"
+									: needsExpandCollapse
 									? "max-height 0.8s ease"
 									: "none",
 								paddingTop: "12px",
@@ -346,22 +388,38 @@ export function ProblemStatementChat({
 							</div>
 
 							<div className="sticky bottom-1 right-2 flex justify-end px-3 pt-2 pb-1 flex-shrink-0">
-								{/* Expand/Collapse Button - only show when sticky and content exceeds 30vh */}
-								{hasUserMessages && needsExpandCollapse && (
+								{/* Expand/Collapse Button - show when content exceeds 30vh (before or after user messages) */}
+								{needsExpandCollapse && (
 									<button
-										onClick={() =>
-											setIsStickyExpanded(
-												!isStickyExpanded
-											)
-										}
+										onClick={() => {
+											if (hasUserMessages) {
+												setIsStickyExpanded(
+													!isStickyExpanded
+												);
+											} else {
+												userHasInteractedWithExpandRef.current =
+													true;
+												setIsExpandedBeforeMessages(
+													!isExpandedBeforeMessages
+												);
+											}
+										}}
 										className="flex items-center gap-1 text-xs opacity-80 hover:opacity-100 bg-[#3f3f3f]  px-2 py-1 rounded-sm cursor-pointer"
 										aria-label={
-											isStickyExpanded
+											(
+												hasUserMessages
+													? isStickyExpanded
+													: isExpandedBeforeMessages
+											)
 												? "Collapse problem statement"
 												: "Expand problem statement"
 										}
 									>
-										{isStickyExpanded ? (
+										{(
+											hasUserMessages
+												? isStickyExpanded
+												: isExpandedBeforeMessages
+										) ? (
 											<>
 												<ChevronUp className="w-3 h-3" />
 												Collapse

@@ -22,7 +22,7 @@
 
 	.markdown-quote {
 		font-family: monospace;
-		white-space: pre !important;
+		white-space: pre-wrap !important;
 	}
 }
 

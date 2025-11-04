@@ -319,7 +319,8 @@ export async function markProblemCompleted(
 	problemId: string,
 	language: "javascript"
 ): Promise<void> {
-	await prisma.algoProblemProgress.update({
+	// Get existing progress if it exists
+	const existing = await prisma.algoProblemProgress.findUnique({
 		where: {
 			userId_problemId_language: {
 				userId,
@@ -327,10 +328,43 @@ export async function markProblemCompleted(
 				language,
 			},
 		},
-		data: {
+	});
+
+	// Preserve existing data or use defaults
+	const chatHistoryToSave = existing?.chatHistory
+		? parseChatHistory(existing.chatHistory).map((session) => ({
+				id: session.id,
+				createdAt: session.createdAt,
+				messages: session.messages.map((msg) => ({
+					id: msg.id,
+					role: msg.role,
+					content: msg.content,
+					timestamp: msg.timestamp,
+				})),
+		  }))
+		: [];
+
+	await prisma.algoProblemProgress.upsert({
+		where: {
+			userId_problemId_language: {
+				userId,
+				problemId,
+				language,
+			},
+		},
+		update: {
 			status: "completed",
 			completedAt: new Date(),
 			updatedAt: new Date(),
+		},
+		create: {
+			userId,
+			problemId,
+			language,
+			status: "completed",
+			currentCode: existing?.currentCode || "",
+			chatHistory: chatHistoryToSave,
+			completedAt: new Date(),
 		},
 	});
 }

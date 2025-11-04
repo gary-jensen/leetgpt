@@ -5,7 +5,7 @@ import { TestResult } from "../components/TestResultsDisplay";
 export function useTestTab(testResults: TestResult[], isExecuting: boolean) {
 	const [activeTestTab, setActiveTestTab] = useState<
 		"examples" | "testcase" | "results"
-	>("examples");
+	>("testcase");
 	const testCasesPanelRef = useRef<ImperativePanelHandle | null>(null);
 
 	// Auto-switch to results tab when tests are run

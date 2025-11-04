@@ -37,7 +37,7 @@ interface BatchFixDialogProps {
 		problem: TestProblemResult;
 		language: string;
 	}>;
-	onFixed: () => void;
+	onFixed: (problemIds?: string[]) => void;
 }
 
 const MAX_CONCURRENT = 5;
@@ -317,11 +317,16 @@ export function BatchFixDialog({
 			}
 		}
 
-		setIsApplying(false);
-
-		// Close and refresh
+		// Close dialog immediately - don't wait for re-testing
 		onOpenChange(false);
-		onFixed();
+
+		// Start re-testing in the background (don't await)
+		const fixedProblemIds = results
+			.filter((r) => r.success)
+			.map((r) => items[r.index].problemResult.problemId);
+		onFixed(fixedProblemIds);
+
+		setIsApplying(false);
 	};
 
 	const toggleSelection = (index: number) => {

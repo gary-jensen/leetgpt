@@ -14,10 +14,10 @@ export async function validatePassingCode(problem: AlgoProblemDetail): Promise<{
 	}[];
 }> {
 	const results = [];
-	
+
 	for (const language of problem.languages) {
 		const passingCode = problem.passingCode[language];
-		
+
 		if (!passingCode) {
 			results.push({
 				language,
@@ -26,10 +26,14 @@ export async function validatePassingCode(problem: AlgoProblemDetail): Promise<{
 			});
 			continue;
 		}
-		
+
 		try {
-			const testResult = await executeAlgoTests(problem, passingCode, language);
-			
+			const testResult = await executeAlgoTests(
+				problem,
+				passingCode,
+				language
+			);
+
 			if (testResult.status === "error") {
 				results.push({
 					language,
@@ -37,7 +41,9 @@ export async function validatePassingCode(problem: AlgoProblemDetail): Promise<{
 					error: testResult.message || "Unknown error",
 				});
 			} else {
-				const allPassed = testResult.results.every(result => result.passed);
+				const allPassed = testResult.results.every(
+					(result) => result.passed
+				);
 				results.push({
 					language,
 					passed: allPassed,
@@ -52,9 +58,9 @@ export async function validatePassingCode(problem: AlgoProblemDetail): Promise<{
 			});
 		}
 	}
-	
-	const isValid = results.every(result => result.passed);
-	
+
+	const isValid = results.every((result) => result.passed);
+
 	return {
 		isValid,
 		results,
@@ -64,7 +70,9 @@ export async function validatePassingCode(problem: AlgoProblemDetail): Promise<{
 /**
  * Admin utility to validate all problems' passingCode
  */
-export async function validateAllPassingCodes(problems: AlgoProblemDetail[]): Promise<{
+export async function validateAllPassingCodes(
+	problems: AlgoProblemDetail[]
+): Promise<{
 	validProblems: string[];
 	invalidProblems: {
 		problemId: string;
@@ -84,10 +92,10 @@ export async function validateAllPassingCodes(problems: AlgoProblemDetail[]): Pr
 			error?: string;
 		}[];
 	}[] = [];
-	
+
 	for (const problem of problems) {
 		const validation = await validatePassingCode(problem);
-		
+
 		if (validation.isValid) {
 			validProblems.push(problem.id);
 		} else {
@@ -97,7 +105,7 @@ export async function validateAllPassingCodes(problems: AlgoProblemDetail[]): Pr
 			});
 		}
 	}
-	
+
 	return {
 		validProblems,
 		invalidProblems,
@@ -120,10 +128,10 @@ export async function validatePassingCodeDetailed(
 	}[];
 }> {
 	const results = [];
-	
+
 	for (const language of problem.languages) {
 		const passingCode = problem.passingCode[language];
-		
+
 		if (!passingCode) {
 			results.push({
 				language,
@@ -134,10 +142,14 @@ export async function validatePassingCodeDetailed(
 			});
 			continue;
 		}
-		
+
 		try {
-			const testResult = await executeAlgoTests(problem, passingCode, language);
-			
+			const testResult = await executeAlgoTests(
+				problem,
+				passingCode,
+				language
+			);
+
 			if (testResult.status === "error") {
 				results.push({
 					language,
@@ -151,11 +163,13 @@ export async function validatePassingCodeDetailed(
 					(result) => !result.passed
 				);
 				const allPassed = failedTestCases.length === 0;
-				
+
 				results.push({
 					language,
 					passed: allPassed,
-					error: allPassed ? undefined : `${failedTestCases.length} test case(s) failed`,
+					error: allPassed
+						? undefined
+						: `${failedTestCases.length} test case(s) failed`,
 					failedTestCases,
 					allTestResults: testResult.results,
 				});
@@ -170,9 +184,106 @@ export async function validatePassingCodeDetailed(
 			});
 		}
 	}
-	
+
 	const isValid = results.every((result) => result.passed);
-	
+
+	return {
+		isValid,
+		results,
+	};
+}
+
+/**
+ * Validate that secondaryPassingCode (non-optimal but correct solution) passes all test cases
+ * This ensures test cases correctly accept valid solutions, even if they're not optimal
+ */
+export async function validateSecondaryPassingCode(
+	problem: AlgoProblemDetail
+): Promise<{
+	isValid: boolean;
+	results: {
+		language: string;
+		passed: boolean; // true if secondaryPassingCode passes all tests (which is what we want)
+		error?: string;
+		failedTestCases?: AlgoTestResult[]; // Test cases that the secondary code failed (bad - means test cases reject valid solutions)
+		passedTestCases?: AlgoTestResult[]; // Test cases that the secondary code passed (good)
+		allTestResults?: AlgoTestResult[];
+	}[];
+}> {
+	const results = [];
+
+	for (const language of problem.languages) {
+		const secondaryPassingCode = problem.secondaryPassingCode?.[language];
+
+		// If no secondaryPassingCode is provided, skip validation
+		if (!secondaryPassingCode) {
+			results.push({
+				language,
+				passed: true, // Not required, so we consider it valid
+				error: undefined,
+				failedTestCases: [],
+				passedTestCases: [],
+				allTestResults: [],
+			});
+			continue;
+		}
+
+		try {
+			const testResult = await executeAlgoTests(
+				problem,
+				secondaryPassingCode,
+				language
+			);
+
+			if (testResult.status === "error") {
+				// If secondary code errors out, that's bad - it should pass
+				results.push({
+					language,
+					passed: false,
+					error: `Secondary code has errors: ${
+						testResult.message || "Unknown error"
+					}`,
+					failedTestCases: [],
+					passedTestCases: [],
+					allTestResults: [],
+				});
+			} else {
+				const passedTestCases = testResult.results.filter(
+					(result) => result.passed
+				);
+				const failedTestCases = testResult.results.filter(
+					(result) => !result.passed
+				);
+
+				// We want secondaryPassingCode to PASS all tests
+				// If it fails any tests, that means our test cases reject valid solutions
+				const isValid = failedTestCases.length === 0;
+
+				results.push({
+					language,
+					passed: isValid,
+					error: isValid
+						? undefined
+						: `Secondary passing code failed ${failedTestCases.length} out of ${testResult.results.length} test cases. Test cases may be too strict - they should accept valid solutions.`,
+					failedTestCases,
+					passedTestCases,
+					allTestResults: testResult.results,
+				});
+			}
+		} catch (error) {
+			results.push({
+				language,
+				passed: false,
+				error: error instanceof Error ? error.message : "Unknown error",
+				failedTestCases: [],
+				passedTestCases: [],
+				allTestResults: [],
+			});
+		}
+	}
+
+	const isValid = results.every((result) => result.passed);
+
 	return {
 		isValid,
 		results,
@@ -189,9 +300,9 @@ export function formatFailedTestCases(
 	if (failedTestCases.length === 0) {
 		return "";
 	}
-	
+
 	const lines: string[] = [];
-	
+
 	for (const testCase of failedTestCases) {
 		lines.push(`Problem: ${problem.id} - ${problem.title}`);
 		lines.push(`Test Case ${testCase.case}:`);
@@ -204,6 +315,6 @@ export function formatFailedTestCases(
 		}
 		lines.push(""); // Empty line between test cases
 	}
-	
+
 	return lines.join("\n");
 }

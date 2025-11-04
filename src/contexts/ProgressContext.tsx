@@ -46,6 +46,7 @@ import {
 	AlgoProblemProgress,
 	AlgoLessonProgress,
 	AlgoProblemSubmission,
+	ChatSession,
 } from "@/types/algorithm-types";
 import { getAlgoProgress } from "@/lib/actions/algoProgress";
 
@@ -103,6 +104,16 @@ interface ProgressContextType {
 	updateAlgoLessonProgressLocal: (
 		lessonId: string,
 		status: "not_started" | "in_progress" | "completed"
+	) => void;
+	updateAlgoProblemProgressLocal: (
+		problemId: string,
+		language: "javascript",
+		updates: {
+			status?: "not_started" | "in_progress" | "completed";
+			currentCode?: string;
+			chatHistory?: ChatSession[];
+			completedAt?: Date;
+		}
 	) => void;
 }
 
@@ -805,6 +816,56 @@ export function ProgressProvider({
 		[activeSession?.user?.id]
 	);
 
+	// Update problem progress locally (optimistic update)
+	const updateAlgoProblemProgressLocal = useCallback(
+		(
+			problemId: string,
+			language: "javascript",
+			updates: {
+				status?: "not_started" | "in_progress" | "completed";
+				currentCode?: string;
+				chatHistory?: ChatSession[];
+				completedAt?: Date;
+			}
+		) => {
+			setAlgoProblemProgress((prev) => {
+				const existingIndex = prev.findIndex(
+					(p) => p.problemId === problemId && p.language === language
+				);
+				if (existingIndex >= 0) {
+					// Update existing progress
+					const updated = [...prev];
+					updated[existingIndex] = {
+						...updated[existingIndex],
+						...updates,
+						updatedAt: new Date(),
+					};
+					return updated;
+				} else {
+					// Add new progress entry (will be properly saved by server action)
+					// For optimistic update, create a temporary entry with minimal required fields
+					const tempId = `temp-${Date.now()}`;
+					return [
+						...prev,
+						{
+							id: tempId,
+							userId: activeSession?.user?.id || "",
+							problemId,
+							language,
+							status: updates.status || "in_progress",
+							currentCode: updates.currentCode || "",
+							chatHistory: updates.chatHistory || [],
+							completedAt: updates.completedAt || undefined,
+							createdAt: new Date(),
+							updatedAt: new Date(),
+						},
+					];
+				}
+			});
+		},
+		[activeSession?.user?.id]
+	);
+
 	const value: ProgressContextType = {
 		progress: state,
 		isProgressLoading,
@@ -841,6 +902,7 @@ export function ProgressProvider({
 		getAlgoLessonProgress: getAlgoLessonProgressHelper,
 		getAlgoSubmissions: getAlgoSubmissionsHelper,
 		updateAlgoLessonProgressLocal,
+		updateAlgoProblemProgressLocal,
 	};
 
 	return (

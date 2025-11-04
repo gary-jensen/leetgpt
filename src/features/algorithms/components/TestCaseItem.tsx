@@ -4,6 +4,7 @@ import { useState } from "react";
 import { TestResult } from "./TestResultsDisplay";
 import { CheckCircle, XCircle, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { roundTo5Decimals } from "@/utils/numberUtils";
 
 interface TestCaseItemProps {
 	result: TestResult;
@@ -17,13 +18,16 @@ export function TestCaseItem({
 	const [expanded, setExpanded] = useState(isExpanded);
 
 	const formatValue = (value: any): string => {
-		if (value === null) return "null";
-		if (value === undefined) return "undefined";
-		if (typeof value === "string") return `"${value}"`;
-		if (Array.isArray(value))
-			return `[${value.map(formatValue).join(", ")}]`;
-		if (typeof value === "object") return JSON.stringify(value);
-		return String(value);
+		// Round numbers to 5 decimal places before formatting
+		const rounded = roundTo5Decimals(value);
+		
+		if (rounded === null) return "null";
+		if (rounded === undefined) return "undefined";
+		if (typeof rounded === "string") return `"${rounded}"`;
+		if (Array.isArray(rounded))
+			return `[${rounded.map(formatValue).join(", ")}]`;
+		if (typeof rounded === "object") return JSON.stringify(rounded);
+		return String(rounded);
 	};
 
 	return (

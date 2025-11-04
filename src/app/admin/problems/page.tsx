@@ -22,6 +22,11 @@ export default async function AdminProblemsPage() {
 					<Link href="/admin/problems/test">
 						<Button variant="outline">Test All Problems</Button>
 					</Link>
+					<Link href="/admin/problems/secondary-code">
+						<Button variant="outline">
+							Generate Secondary Code
+						</Button>
+					</Link>
 					<Link href="/admin/problems/new">
 						<Button>Create New Problem</Button>
 					</Link>

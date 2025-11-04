@@ -99,7 +99,7 @@ export function EditorPanel({
 				<div className="border-1 rounded-2xl overflow-hidden gap-2 h-full">
 					<div className="h-full flex rounfded-2xl overflow-hidden bforder-1">
 						<div className="flex-3 h-full bg-background-2 flex flex-col">
-							<div className="w-full h-full flex flex-col inset-shadow-black/30 inset-shadow-sm shadow-inner p-0">
+							<div className="w-full h-full flex flex-col p-0">
 								<div className="min-h-[60vh] md:min-h-0 flex flex-1 flex-col overflow-hidden">
 									<Editor
 										code={code}
@@ -117,6 +117,7 @@ export function EditorPanel({
 										showConsole={false}
 										disableBorder={true}
 										hideActionButtons={true}
+										workspaceType="algo"
 									/>
 								</div>
 								{/* Action Buttons Toolbar */}
@@ -213,8 +214,8 @@ export function EditorPanel({
 					className="border-1 rounded-2xl overflow-hidden gap-2"
 				>
 					<div className="h-full flex rounfded-2xl overflow-hidden bforder-1">
-						<div className="flex-3 h-full bg-background-2 flex flex-col">
-							<div className="w-full h-full flex flex-col inset-shadow-black/30 inset-shadow-sm shadow-inner p-0">
+						<div className="flex-3 h-full bg-background flex flex-col">
+							<div className="w-full h-full flex flex-col p-0">
 								<div className="min-h-[60vh] md:min-h-0 flex flex-1 flex-col overflow-hidden">
 									<Editor
 										code={code}
@@ -232,6 +233,7 @@ export function EditorPanel({
 										showConsole={false}
 										disableBorder={true}
 										hideActionButtons={true}
+										workspaceType="algo"
 									/>
 								</div>
 								{/* Action Buttons Toolbar */}

@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { processMarkdown } from "@/components/MarkdownEditor/markdown-processor";
 import "@/components/MarkdownEditor/MarkdownDisplay.css";
 import { ChatMarkdownDisplay } from "@/components/workspace/Chat/components/ChatMarkdownDisplay";
+import { roundTo5Decimals } from "@/utils/numberUtils";
 import {
 	CheckCircle,
 	XCircle,
@@ -51,7 +52,9 @@ export function TestCasesPanel({
 			const processInputs = async () => {
 				const inputs = problem.tests[selectedTestIndex].input.map(
 					async (value) => {
-						const jsonStr = JSON.stringify(value);
+						// Round numbers to 5 decimal places before stringifying
+						const rounded = roundTo5Decimals(value);
+						const jsonStr = JSON.stringify(rounded);
 						const markdown = `\`\`\`json\n${jsonStr}\n\`\`\``;
 						return await processMarkdown(markdown);
 					}
@@ -73,7 +76,7 @@ export function TestCasesPanel({
 							"text-muted-foreground"
 						}`}
 					>
-						Examples
+						Constraints
 					</button>
 					<button
 						onClick={() => setActiveTestTab("testcase")}
@@ -487,7 +490,9 @@ function TestResultsTab({
                                         overflow-x-auto"
 														>
 															{JSON.stringify(
-																value
+																roundTo5Decimals(
+																	value
+																)
 															)}
 														</pre>
 													)}
@@ -507,18 +512,56 @@ function TestResultsTab({
 									<pre
 										className="text-sm overflow-x-auto"
 										dangerouslySetInnerHTML={{
-											__html:
-												testResults[selectedTestIndex]
-													?.actual !== undefined
-													? createDiff(
-															testResults[
-																selectedTestIndex
-															].actual,
-															problem.tests[
-																selectedTestIndex
-															].output
-													  ).output
-													: '<span class="text-gray-400">undefined</span>',
+											__html: (() => {
+												const actual =
+													testResults[
+														selectedTestIndex
+													]?.actual;
+												const expected =
+													problem.tests[
+														selectedTestIndex
+													].output;
+												const input =
+													problem.tests[
+														selectedTestIndex
+													].input;
+
+												// If actual is undefined/null, show it
+												if (
+													actual === undefined ||
+													actual === null
+												) {
+													return '<span class="text-gray-400">undefined</span>';
+												}
+
+												// Check if actual equals the input (false positive in-place detection)
+												// This happens when function returns undefined but test executor
+												// incorrectly assumes in-place modification
+												const inputToCompare =
+													input.length === 1
+														? input[0]
+														: input;
+												if (
+													JSON.stringify(
+														roundTo5Decimals(actual)
+													) ===
+													JSON.stringify(
+														roundTo5Decimals(
+															inputToCompare
+														)
+													)
+												) {
+													// Actual equals input - function likely returned nothing
+													return '<span class="text-gray-400">undefined</span>';
+												}
+
+												return createDiff(
+													actual,
+													expected,
+													problem.outputOrderMatters ??
+														true
+												).output;
+											})(),
 										}}
 									/>
 								</div>
@@ -542,12 +585,16 @@ function TestResultsTab({
 															].actual,
 															problem.tests[
 																selectedTestIndex
-															].output
+															].output,
+															problem.outputOrderMatters ??
+																true
 													  ).expected
 													: `<span class="text-green-400">${JSON.stringify(
-															problem.tests[
-																selectedTestIndex
-															].output
+															roundTo5Decimals(
+																problem.tests[
+																	selectedTestIndex
+																].output
+															)
 													  )}</span>`,
 										}}
 									/>

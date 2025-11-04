@@ -211,6 +211,10 @@ export function WorkspaceNavbar() {
 												<div className="border shadow-xs hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 size-9 hidden group-hover:flex h-fit w-fit rounded-[4px] bg-white/10 hover:bg-white/15 hover:border-white/1">
 													<Link
 														href="/algorithms/problems"
+														target="_blank"
+														onClick={(e) => {
+															e.stopPropagation();
+														}}
 														className="p-0.5"
 													>
 														<SquareArrowOutUpRightIcon
@@ -226,7 +230,7 @@ export function WorkspaceNavbar() {
 										</Tooltip>
 									</Button>
 								</DrawerTrigger>
-								<DrawerContent>
+								<DrawerContent className="!max-w-2xl">
 									<DrawerHeader className="py-0 border-b border-border mb-2 h-16 justify-center">
 										<DrawerTitle>
 											<Link
@@ -499,9 +503,9 @@ export function WorkspaceNavbar() {
 															`/algorithms/problems/${p.slug}`
 														);
 													}}
-													className={`w-full text-left px-3 py-2 rounded-md border border-transparent hover:bg-white/5 ${
+													className={`w-full text-left px-3 py-2 rounded-md border border-transparent hover:bg-white/10 ${
 														isActive
-															? "bg-white/10 border-border"
+															? "bg-white/5 border-border"
 															: ""
 													}`}
 												>

@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
 			context += `\nTest Results: ${submissionData.testsPassed}/${submissionData.testsTotal} tests passed\n`;
 			if (submissionData.allPassed) {
 				// Will need to check optimality - for now just pass basic info
-				context += `\nThe user's solution passed all tests. Provide an encouraging response. If you can determine the complexity, mention if there's a more optimal approach without giving specific hints. Keep it short (2-4 sentences max).`;
+				context += `\nThe user's solution passed all tests. Provide an encouraging response. If you can determine the complexity, mention if there's a more optimal approach without giving specific hints (only if there is a more optimal approach. Sometimes there isn't, so don't talk about optimizing it further. Make it seem like they can move on!). Keep it short (2-4 sentences max).`;
 			} else {
 				context += `\nThe user's solution failed some tests. Provide an encouraging message. Do NOT give hints unless explicitly asked. Just acknowledge their progress and encourage them to keep trying. Keep it short, 1 sentence max. End the response with "Ask me a question if you would like some help!" on a new line`;
 			}

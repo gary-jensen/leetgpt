@@ -25,7 +25,8 @@ interface FixDialogProps {
 	onOpenChange: (open: boolean) => void;
 	problemResult: TestProblemResult;
 	language: string;
-	onFixed: () => void;
+	isSecondary?: boolean;
+	onFixed: (problemId?: string) => void;
 }
 
 export function FixDialog({
@@ -33,6 +34,7 @@ export function FixDialog({
 	onOpenChange,
 	problemResult,
 	language,
+	isSecondary = false,
 	onFixed,
 }: FixDialogProps) {
 	const [step, setStep] = useState<
@@ -46,7 +48,12 @@ export function FixDialog({
 	const langResult = problemResult.languages.find(
 		(l) => l.language === language
 	);
-	const failedTestCases = langResult?.failedTestCases || [];
+	const primaryFailedTestCases = langResult?.failedTestCases || [];
+	const secondaryFailedTestCases =
+		langResult?.secondaryValidation?.failedTestCases || [];
+	const failedTestCases = isSecondary
+		? secondaryFailedTestCases
+		: primaryFailedTestCases;
 
 	// Reset state when dialog opens/closes or problem changes
 	useEffect(() => {
@@ -58,8 +65,11 @@ export function FixDialog({
 			setError(null);
 			setIsApplying(false);
 
-			// Generate fix if we have failed test cases
-			if (failedTestCases.length > 0) {
+			// Generate fix if we have any failed test cases (primary or secondary)
+			if (
+				primaryFailedTestCases.length > 0 ||
+				secondaryFailedTestCases.length > 0
+			) {
 				generateFix();
 			}
 		} else {
@@ -79,16 +89,27 @@ export function FixDialog({
 		setTestResult(null);
 
 		try {
+			// Always pass both primary and secondary failures if they exist
+			// The AI will determine what needs to be fixed
 			const result = await generateProblemFix(
 				problemResult.problemId,
 				language,
-				failedTestCases.map((tc) => ({
+				primaryFailedTestCases.map((tc) => ({
 					case: tc.case,
 					input: tc.input,
 					expected: tc.expected,
 					actual: tc.actual,
 					error: tc.error,
-				}))
+				})),
+				secondaryFailedTestCases.length > 0
+					? secondaryFailedTestCases.map((tc) => ({
+							case: tc.case,
+							input: tc.input,
+							expected: tc.expected,
+							actual: tc.actual,
+							error: tc.error,
+					  }))
+					: undefined
 			);
 
 			if (!result.success || !result.fix) {
@@ -101,12 +122,22 @@ export function FixDialog({
 			setStep("testing");
 			setError(null);
 
-			// Auto-test the fix
+			// Auto-test the fix with timeout
 			try {
-				const testResult = await testProposedFix(
-					problemResult.problemId,
-					result.fix
+				// Add timeout to prevent hanging indefinitely
+				const timeoutPromise: Promise<TestFixResult> = new Promise(
+					(_, reject) => {
+						setTimeout(() => {
+							reject(new Error("Testing timeout after 60 seconds"));
+						}, 60000); // 60 second timeout
+					}
 				);
+
+				const testResult = await Promise.race([
+					testProposedFix(problemResult.problemId, result.fix),
+					timeoutPromise,
+				]);
+
 				setTestResult(testResult);
 				setStep("ready");
 			} catch (testErr) {
@@ -147,9 +178,8 @@ export function FixDialog({
 				return;
 			}
 
-			// Close dialog and refresh
+			// Close dialog immediately - don't wait for re-testing
 			onOpenChange(false);
-			onFixed();
 
 			// Reset state immediately
 			setFix(null);
@@ -157,6 +187,9 @@ export function FixDialog({
 			setError(null);
 			setStep("generating");
 			setIsApplying(false);
+
+			// Start re-testing in the background (don't await)
+			onFixed(problemResult.problemId);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Unknown error");
 			setIsApplying(false);
@@ -179,9 +212,16 @@ export function FixDialog({
 				<DialogHeader>
 					<DialogTitle>
 						Fix with AI: {problemResult.problemTitle}
+						{isSecondary && (
+							<Badge variant="secondary" className="ml-2">
+								Secondary Code
+							</Badge>
+						)}
 					</DialogTitle>
 					<DialogDescription>
 						AI will analyze the failed test cases and propose fixes
+						{isSecondary &&
+							" (fixing test cases that reject valid secondary solutions)"}
 					</DialogDescription>
 				</DialogHeader>
 

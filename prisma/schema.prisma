@@ -161,6 +161,8 @@ model AlgoProblem {
     tests                      Json
     startingCode               Json
     passingCode                Json
+    secondaryPassingCode       Json? // Non-optimal passing code for test case validation
+    outputOrderMatters         Boolean  @default(true) // If false, arrays of arrays are compared as sets (order-independent)
     createdAt                  DateTime @default(now())
     updatedAt                  DateTime @updatedAt
 

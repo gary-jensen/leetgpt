@@ -1,4 +1,5 @@
 import { AlgoProblemDetail } from "@/types/algorithm-types";
+import { roundTo5Decimals } from "@/utils/numberUtils";
 
 export interface AlgoTestResult {
 	case: number;
@@ -44,7 +45,12 @@ export async function executeAlgoTests(
 
 		for (let i = 0; i < problem.tests.length; i++) {
 			const testCase = problem.tests[i];
-			const result = await runSingleTest(userFunction, testCase, i + 1);
+			const result = await runSingleTest(
+				userFunction,
+				testCase,
+				i + 1,
+				problem
+			);
 			results.push(result);
 		}
 
@@ -124,39 +130,112 @@ function getMainFunctionName(problem: AlgoProblemDetail): string {
 }
 
 /**
+ * Deep clone a value (handles arrays, objects, primitives)
+ */
+function deepClone(value: any): any {
+	if (value === null || value === undefined) {
+		return value;
+	}
+	if (typeof value === "function") {
+		return value; // Functions can't be cloned, return as-is
+	}
+	if (typeof value !== "object") {
+		return value; // Primitives don't need cloning
+	}
+	if (Array.isArray(value)) {
+		return value.map(deepClone);
+	}
+	// Regular object
+	const cloned: any = {};
+	for (const key in value) {
+		if (Object.prototype.hasOwnProperty.call(value, key)) {
+			cloned[key] = deepClone(value[key]);
+		}
+	}
+	return cloned;
+}
+
+/**
  * Run a single test case
  */
 async function runSingleTest(
 	userFunction: (...args: any[]) => any,
 	testCase: { input: any[]; output: any },
-	caseNumber: number
+	caseNumber: number,
+	problem?: AlgoProblemDetail
 ): Promise<AlgoTestResult> {
 	const startTime = Date.now();
 
 	try {
-		// Call the user's function with the test input
-		const actual = userFunction(...testCase.input);
+		// Round test case input to 5 decimal places
+		const roundedInput = roundTo5Decimals(testCase.input);
 
-		// Compare actual vs expected
-		const passed = deepEqual(actual, testCase.output);
+		// Deep clone the input to prevent in-place modifications from affecting the original
+		const clonedInput = deepClone(roundedInput);
+
+		// Call the user's function with the cloned input
+		const returnValue = userFunction(...clonedInput);
+
+		// Round expected output to 5 decimal places
+		const roundedExpected = roundTo5Decimals(testCase.output);
+
+		// Determine what to compare:
+		// - If function returns undefined/null AND the first argument is an array/object,
+		//   it likely modifies in-place. Compare the modified first argument with expected.
+		// - Otherwise, compare the return value with expected
+		let actual: any;
+		let passed: boolean;
+
+		const firstArg = clonedInput.length > 0 ? clonedInput[0] : null;
+		const isFirstArgArrayOrObject =
+			firstArg !== null &&
+			firstArg !== undefined &&
+			(Array.isArray(firstArg) || typeof firstArg === "object");
+
+		if (
+			(returnValue === undefined || returnValue === null) &&
+			isFirstArgArrayOrObject
+		) {
+			// Likely in-place modification: compare the modified first argument with expected
+			// Round the modified input after function execution
+			const roundedModifiedInput = roundTo5Decimals(clonedInput);
+			// If there's only one argument, compare that argument directly
+			// Otherwise, compare the entire input array
+			actual =
+				roundedInput.length === 1
+					? roundedModifiedInput[0]
+					: roundedModifiedInput;
+		} else {
+			// Normal return value: compare return value with expected
+			actual = roundTo5Decimals(returnValue);
+		}
+
+		// Compare actual vs expected (both already rounded)
+		// Use outputOrderMatters from problem if available, default to true
+		const outputOrderMatters = problem?.outputOrderMatters ?? true;
+		passed = deepEqual(actual, roundedExpected, outputOrderMatters);
 		const runtime = Date.now() - startTime;
 
 		return {
 			case: caseNumber,
 			passed,
-			input: testCase.input,
-			expected: testCase.output,
+			input: roundedInput,
+			expected: roundedExpected,
 			actual: actual,
 			runtime,
 		};
 	} catch (error) {
 		const runtime = Date.now() - startTime;
 
+		// Round input and expected even in error case
+		const roundedInput = roundTo5Decimals(testCase.input);
+		const roundedExpected = roundTo5Decimals(testCase.output);
+
 		return {
 			case: caseNumber,
 			passed: false,
-			input: testCase.input,
-			expected: testCase.output,
+			input: roundedInput,
+			expected: roundedExpected,
 			error: error instanceof Error ? error.message : String(error),
 			runtime,
 		};
@@ -164,25 +243,135 @@ async function runSingleTest(
 }
 
 /**
- * Deep equality comparison for test results
+ * Normalize arrays for order-independent comparison
+ * - Arrays of arrays: sorts each sub-array, then sorts the outer array lexicographically
+ * - Arrays of primitives/strings: sorts the array
+ * - Handles nested structures recursively
  */
-function deepEqual(a: any, b: any): boolean {
-	if (a === b) return true;
-
-	if (a == null || b == null) return a === b;
-
-	if (Array.isArray(a) && Array.isArray(b)) {
-		if (a.length !== b.length) return false;
-		return a.every((val, index) => deepEqual(val, b[index]));
+export function normalizeArrayOfArrays(value: any): any {
+	if (!Array.isArray(value)) {
+		return value;
 	}
 
-	if (typeof a === "object" && typeof b === "object") {
-		const keysA = Object.keys(a);
-		const keysB = Object.keys(b);
+	// Check if this is an array of arrays (all elements are arrays)
+	// Empty array is treated as a regular array (not an array of arrays)
+	const isArrayOfArrays =
+		value.length > 0 && value.every((item) => Array.isArray(item));
+
+	if (isArrayOfArrays) {
+		// Sort each sub-array (normalize recursively in case of nested arrays)
+		const sortedSubArrays = value.map((subArray) => {
+			// Deep clone and normalize recursively
+			const normalized = normalizeArrayOfArrays([...subArray]);
+			// Sort the normalized sub-array
+			const sorted = normalized.sort((a: any, b: any) => {
+				// Handle different types for comparison
+				if (typeof a === "number" && typeof b === "number") {
+					return a - b;
+				}
+				if (typeof a === "string" && typeof b === "string") {
+					return a.localeCompare(b);
+				}
+				// For mixed types, objects, or arrays, use JSON string comparison
+				// This ensures consistent ordering
+				return JSON.stringify(a).localeCompare(JSON.stringify(b));
+			});
+			return sorted;
+		});
+
+		// Sort the outer array lexicographically
+		sortedSubArrays.sort((a, b) => {
+			// Compare element by element
+			const minLength = Math.min(a.length, b.length);
+			for (let i = 0; i < minLength; i++) {
+				const aVal = a[i];
+				const bVal = b[i];
+
+				// Compare values
+				if (aVal < bVal) return -1;
+				if (aVal > bVal) return 1;
+
+				// If values are equal but might be objects/arrays, compare as JSON
+				if (typeof aVal === "object" || typeof bVal === "object") {
+					const aStr = JSON.stringify(aVal);
+					const bStr = JSON.stringify(bVal);
+					if (aStr !== bStr) {
+						return aStr.localeCompare(bStr);
+					}
+				}
+			}
+			return a.length - b.length;
+		});
+
+		return sortedSubArrays;
+	}
+
+	// Regular array (array of primitives/strings/objects) - sort it
+	// First normalize each element recursively in case it's a nested structure
+	const normalized = value.map((item) => normalizeArrayOfArrays(item));
+	
+	// Sort the array (create a copy to avoid mutating)
+	const sorted = [...normalized].sort((a: any, b: any) => {
+		// Handle different types for comparison
+		if (typeof a === "number" && typeof b === "number") {
+			return a - b;
+		}
+		if (typeof a === "string" && typeof b === "string") {
+			return a.localeCompare(b);
+		}
+		// For mixed types, objects, or arrays, use JSON string comparison
+		return JSON.stringify(a).localeCompare(JSON.stringify(b));
+	});
+	
+	return sorted;
+}
+
+/**
+ * Deep equality comparison for test results
+ * Numbers are rounded to 5 decimal places before comparison to avoid floating point issues
+ * If outputOrderMatters is false, arrays of arrays are normalized for order-independent comparison
+ */
+function deepEqual(
+	a: any,
+	b: any,
+	outputOrderMatters: boolean = true
+): boolean {
+	// Round both values to 5 decimal places before comparison
+	const roundedA = roundTo5Decimals(a);
+	const roundedB = roundTo5Decimals(b);
+
+	if (roundedA === roundedB) return true;
+
+	if (roundedA == null || roundedB == null) return roundedA === roundedB;
+
+	if (Array.isArray(roundedA) && Array.isArray(roundedB)) {
+		if (roundedA.length !== roundedB.length) return false;
+
+		// If order doesn't matter, normalize both arrays before comparison
+		if (!outputOrderMatters) {
+			const normalizedA = normalizeArrayOfArrays(roundedA);
+			const normalizedB = normalizeArrayOfArrays(roundedB);
+
+			// Compare normalized versions using JSON stringify for deep comparison
+			// This handles nested arrays of arrays correctly
+			return JSON.stringify(normalizedA) === JSON.stringify(normalizedB);
+		}
+
+		// Default: order matters, compare element by element
+		return roundedA.every((val, index) =>
+			deepEqual(val, roundedB[index], outputOrderMatters)
+		);
+	}
+
+	if (typeof roundedA === "object" && typeof roundedB === "object") {
+		const keysA = Object.keys(roundedA);
+		const keysB = Object.keys(roundedB);
 
 		if (keysA.length !== keysB.length) return false;
 
-		return keysA.every((key) => deepEqual(a[key], b[key]));
+		return keysA.every((key) =>
+			deepEqual(roundedA[key], roundedB[key], outputOrderMatters)
+		);
 	}
 
 	return false;
