@@ -1,9 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import {
-	TableRow,
-	TableCell,
-} from "@/components/ui/table";
+import { TableRow, TableCell } from "@/components/ui/table";
 import { DeleteProblemButton } from "./DeleteProblemButton";
 
 interface ProblemsTableRowProps {
@@ -13,13 +10,23 @@ interface ProblemsTableRowProps {
 		difficulty: string;
 		topics: string[];
 		languages: string[];
+		order?: number;
 	};
 }
 
 export function ProblemsTableRow({ problem }: ProblemsTableRowProps) {
 	return (
 		<TableRow>
-			<TableCell className="font-medium">{problem.title}</TableCell>
+			<TableCell className="font-medium">
+				<div className="flex items-center gap-3">
+					{problem.order && (
+						<span className="text-sm text-muted-foreground min-w-[2rem]">
+							{problem.order}
+						</span>
+					)}
+					<span>{problem.title}</span>
+				</div>
+			</TableCell>
 			<TableCell>
 				<span
 					className={`px-2 py-1 text-xs rounded-full ${
@@ -48,4 +55,3 @@ export function ProblemsTableRow({ problem }: ProblemsTableRowProps) {
 		</TableRow>
 	);
 }
-

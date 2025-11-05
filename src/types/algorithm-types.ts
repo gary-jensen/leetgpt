@@ -33,6 +33,7 @@ export interface AlgoProblemDetail extends AlgoProblemMeta {
 	startingCode: { [language: string]: string };
 	passingCode: { [language: string]: string }; // Admin debugging and testing purposes
 	secondaryPassingCode?: { [language: string]: string }; // Non-optimal passing code for test case validation
+	systemCode?: { [language: string]: string }; // Optional: Problem-specific execution wrapper that handles type conversions (e.g., array ↔ ListNode)
 	outputOrderMatters?: boolean; // If false, arrays of arrays are compared as sets (order-independent). Default: true
 	// Hints are AI-generated, not stored in hardcoded data
 }

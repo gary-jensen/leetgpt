@@ -1,5 +1,6 @@
 import { AlgoProblemDetail } from "@/types/algorithm-types";
 import { roundTo5Decimals } from "@/utils/numberUtils";
+import { getSystemCodeUtilities } from "@/lib/utils/systemCodeUtils";
 
 export interface AlgoTestResult {
 	case: number;
@@ -44,14 +45,26 @@ export async function executeAlgoTests(
 		const results: AlgoTestResult[] = [];
 
 		for (let i = 0; i < problem.tests.length; i++) {
+			// Yield to event loop every 2 tests to prevent blocking
+			// Use actual setTimeout delay to ensure event loop can process other requests
+			if (i > 0 && i % 2 === 0) {
+				await new Promise((resolve) => setTimeout(resolve, 10));
+			}
+
 			const testCase = problem.tests[i];
 			const result = await runSingleTest(
 				userFunction,
 				testCase,
 				i + 1,
-				problem
+				problem,
+				code
 			);
 			results.push(result);
+
+			// Yield after each test to prevent blocking
+			if (i < problem.tests.length - 1) {
+				await new Promise((resolve) => setTimeout(resolve, 5));
+			}
 		}
 
 		const runMs = Date.now() - startTime;
@@ -75,6 +88,7 @@ export async function executeAlgoTests(
 
 /**
  * Create a function from user code by extracting the main function
+ * Injects ListNode/TreeNode if problem uses them (for systemCode or Linked List/Tree topics)
  */
 function createFunctionFromCode(
 	code: string,
@@ -84,8 +98,22 @@ function createFunctionFromCode(
 		// Try to extract the main function from the code
 		const functionName = getMainFunctionName(problem);
 
-		// Create a wrapper that includes the user's code and returns the function
+		// Check if we need to inject ListNode/TreeNode (for systemCode or Linked List/Tree problems)
+		const needsDataStructures =
+			problem.systemCode?.javascript ||
+			problem.topics.some(
+				(t) =>
+					t.includes("Linked List") ||
+					t.includes("Tree") ||
+					t.includes("Binary")
+			);
+
+		// Get utility functions if needed
+		const utilities = needsDataStructures ? getSystemCodeUtilities() : "";
+
+		// Create a wrapper that includes utilities, user's code, and returns the function
 		const wrappedCode =
+			utilities +
 			code +
 			`
 			
@@ -157,12 +185,14 @@ function deepClone(value: any): any {
 
 /**
  * Run a single test case
+ * Uses systemCode if available, otherwise falls back to direct execution
  */
 async function runSingleTest(
 	userFunction: (...args: any[]) => any,
 	testCase: { input: any[]; output: any },
 	caseNumber: number,
-	problem?: AlgoProblemDetail
+	problem?: AlgoProblemDetail,
+	userCode?: string
 ): Promise<AlgoTestResult> {
 	const startTime = Date.now();
 
@@ -173,47 +203,38 @@ async function runSingleTest(
 		// Deep clone the input to prevent in-place modifications from affecting the original
 		const clonedInput = deepClone(roundedInput);
 
-		// Call the user's function with the cloned input
-		const returnValue = userFunction(...clonedInput);
+		// Yield before function execution (in case it's CPU-intensive)
+		await new Promise((resolve) => setTimeout(resolve, 1));
+
+		let actual: any;
+
+		// Check if problem has systemCode
+		if (problem?.systemCode?.javascript) {
+			// Use systemCode execution wrapper
+			actual = await executeWithSystemCode(
+				testCase,
+				problem.systemCode.javascript,
+				problem,
+				userCode || ""
+			);
+		} else {
+			// Fallback to direct execution (backward compatibility)
+			actual = await executeDirectly(userFunction, clonedInput);
+		}
+
+		// Yield after function execution
+		await new Promise((resolve) => setTimeout(resolve, 1));
 
 		// Round expected output to 5 decimal places
 		const roundedExpected = roundTo5Decimals(testCase.output);
 
-		// Determine what to compare:
-		// - If function returns undefined/null AND the first argument is an array/object,
-		//   it likely modifies in-place. Compare the modified first argument with expected.
-		// - Otherwise, compare the return value with expected
-		let actual: any;
-		let passed: boolean;
-
-		const firstArg = clonedInput.length > 0 ? clonedInput[0] : null;
-		const isFirstArgArrayOrObject =
-			firstArg !== null &&
-			firstArg !== undefined &&
-			(Array.isArray(firstArg) || typeof firstArg === "object");
-
-		if (
-			(returnValue === undefined || returnValue === null) &&
-			isFirstArgArrayOrObject
-		) {
-			// Likely in-place modification: compare the modified first argument with expected
-			// Round the modified input after function execution
-			const roundedModifiedInput = roundTo5Decimals(clonedInput);
-			// If there's only one argument, compare that argument directly
-			// Otherwise, compare the entire input array
-			actual =
-				roundedInput.length === 1
-					? roundedModifiedInput[0]
-					: roundedModifiedInput;
-		} else {
-			// Normal return value: compare return value with expected
-			actual = roundTo5Decimals(returnValue);
-		}
+		// Round actual output
+		actual = roundTo5Decimals(actual);
 
 		// Compare actual vs expected (both already rounded)
 		// Use outputOrderMatters from problem if available, default to true
 		const outputOrderMatters = problem?.outputOrderMatters ?? true;
-		passed = deepEqual(actual, roundedExpected, outputOrderMatters);
+		const passed = deepEqual(actual, roundedExpected, outputOrderMatters);
 		const runtime = Date.now() - startTime;
 
 		return {
@@ -239,6 +260,147 @@ async function runSingleTest(
 			error: error instanceof Error ? error.message : String(error),
 			runtime,
 		};
+	}
+}
+
+/**
+ * Execute test case using systemCode wrapper
+ * Injects user code into systemCode execution context so everything shares the same scope
+ */
+function executeWithSystemCode(
+	testCase: { input: any[]; output: any },
+	systemCode: string,
+	problem: AlgoProblemDetail,
+	userCode: string
+): any {
+	try {
+		// Extract function name from user code (not starting code, which might have ListNode)
+		// Try to find function declaration in user code - exclude ListNode, TreeNode, arrayToListNode, etc.
+		const excludedNames = [
+			"ListNode",
+			"TreeNode",
+			"arrayToListNode",
+			"listNodeToArray",
+			"arrayToTreeNode",
+			"treeNodeToArray",
+			"systemExecute",
+		];
+
+		// Find all function declarations in user code
+		const functionMatches = [
+			...userCode.matchAll(/function\s+(\w+)\s*\(/g),
+		];
+		const arrowMatches = [
+			...userCode.matchAll(
+				/(?:const|let|var)\s+(\w+)\s*=\s*(?:function|\([^)]*\)\s*=>)/g
+			),
+		];
+
+		// Find the first function that's not in the excluded list
+		let functionName: string | undefined;
+
+		// Check function declarations first
+		for (const match of functionMatches) {
+			if (match[1] && !excludedNames.includes(match[1])) {
+				functionName = match[1];
+				break;
+			}
+		}
+
+		// If not found, check arrow functions
+		if (!functionName) {
+			for (const match of arrowMatches) {
+				if (match[1] && !excludedNames.includes(match[1])) {
+					functionName = match[1];
+					break;
+				}
+			}
+		}
+
+		// Fallback to problem's starting code if not found in user code
+		if (!functionName) {
+			functionName = getMainFunctionName(problem);
+		}
+
+		// SystemCode should be completely self-contained
+		// It defines its own data structures (ListNode, TreeNode, etc.) and conversion functions
+		// We inject user code into the same execution context so the function can access systemCode's ListNode
+		const wrappedCode = `
+			${systemCode}
+			
+			// Inject user's code into the same execution context
+			${userCode}
+			
+			// Extract the function from the user's code (now in same scope as systemCode's ListNode)
+			const userFunction = typeof ${functionName} === 'function' ? ${functionName} : null;
+			
+			if (!userFunction) {
+				throw new Error('Could not find function ${functionName} in user code.');
+			}
+			
+			// Modify systemExecute to use userFunction from outer scope
+			// If systemCode's systemExecute expects userFunction as parameter, we wrap it
+			const originalSystemExecute = systemExecute;
+			const wrappedSystemExecute = function(testCase) {
+				try {
+					// Check if original systemExecute expects userFunction parameter
+					if (originalSystemExecute.length === 2) {
+						// Old signature: systemExecute(userFunction, testCase)
+						const result = originalSystemExecute(userFunction, testCase);
+						return result;
+					} else {
+						// New signature: systemExecute(testCase) - userFunction in scope
+						return originalSystemExecute(testCase);
+					}
+				} catch (error) {
+					throw error;
+				}
+			};
+			
+			// Call the wrapped systemExecute
+			return wrappedSystemExecute(testCase);
+		`;
+
+		// Create the execution function (no parameters needed - everything is in the code)
+		const executeFunc = new Function("testCase", wrappedCode);
+
+		// Execute with systemCode and user code in same context
+		const result = executeFunc(testCase);
+		return result;
+	} catch (error) {
+		throw error;
+	}
+}
+
+/**
+ * Execute test case directly (fallback for problems without systemCode)
+ */
+function executeDirectly(
+	userFunction: (...args: any[]) => any,
+	clonedInput: any[]
+): any {
+	// Call the user's function with the cloned input
+	const returnValue = userFunction(...clonedInput);
+
+	// Determine what to return:
+	// - If function returns undefined/null AND the first argument is an array/object,
+	//   it likely modifies in-place. Return the modified first argument.
+	// - Otherwise, return the return value
+	const firstArg = clonedInput.length > 0 ? clonedInput[0] : null;
+	const isFirstArgArrayOrObject =
+		firstArg !== null &&
+		firstArg !== undefined &&
+		(Array.isArray(firstArg) || typeof firstArg === "object");
+
+	if (
+		(returnValue === undefined || returnValue === null) &&
+		isFirstArgArrayOrObject
+	) {
+		// Likely in-place modification: return the modified first argument
+		return clonedInput.length === 1 ? clonedInput[0] : clonedInput;
+	} else {
+		// Normal return value
+		return returnValue;
 	}
 }
 
@@ -309,7 +471,7 @@ export function normalizeArrayOfArrays(value: any): any {
 	// Regular array (array of primitives/strings/objects) - sort it
 	// First normalize each element recursively in case it's a nested structure
 	const normalized = value.map((item) => normalizeArrayOfArrays(item));
-	
+
 	// Sort the array (create a copy to avoid mutating)
 	const sorted = [...normalized].sort((a: any, b: any) => {
 		// Handle different types for comparison
@@ -322,7 +484,7 @@ export function normalizeArrayOfArrays(value: any): any {
 		// For mixed types, objects, or arrays, use JSON string comparison
 		return JSON.stringify(a).localeCompare(JSON.stringify(b));
 	});
-	
+
 	return sorted;
 }
 

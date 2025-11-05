@@ -114,8 +114,12 @@ export function WorkspaceLayout({
 							problem={problem}
 							hideTestCasesPanel={is2xl}
 							activeTestTab={is2xl ? undefined : activeTestTab}
-							setActiveTestTab={is2xl ? undefined : setActiveTestTab}
-							testCasesPanelRef={is2xl ? undefined : testCasesPanelRef}
+							setActiveTestTab={
+								is2xl ? undefined : setActiveTestTab
+							}
+							testCasesPanelRef={
+								is2xl ? undefined : testCasesPanelRef
+							}
 						/>
 
 						{/* Right Panel - Test Cases (only visible at 2xl+) */}

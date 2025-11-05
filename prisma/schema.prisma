@@ -162,6 +162,7 @@ model AlgoProblem {
     startingCode               Json
     passingCode                Json
     secondaryPassingCode       Json? // Non-optimal passing code for test case validation
+    systemCode                 Json? // Optional: Problem-specific execution wrapper that handles type conversions (e.g., array ↔ ListNode)
     outputOrderMatters         Boolean  @default(true) // If false, arrays of arrays are compared as sets (order-independent)
     createdAt                  DateTime @default(now())
     updatedAt                  DateTime @updatedAt
