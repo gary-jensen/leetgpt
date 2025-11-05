@@ -80,7 +80,7 @@ export function WorkspaceLayout({
 
 			{/* Main Content */}
 			<div className="flex-1 flex items-center justify-center overflow-hidden pb-6">
-				<div className="w-[95%] h-full max-h-full rounded-xl overflow-hidden pt-4">
+				<div className="w-[95%] h-full max-h-full rounded-xl overflow-hidden pft-4">
 					<ResizablePanelGroup
 						direction="horizontal"
 						className="h-full gapf-2"

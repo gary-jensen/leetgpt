@@ -170,8 +170,8 @@ export function WorkspaceNavbar() {
 	};
 
 	return (
-		<nav className="w-full bg-background/80 backdrop-blur-sm border-b border-border">
-			<div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
+		<nav className="w-full bg-none bgf-background/80 backdrop-blur-sm border-0 bforder-b border-border">
+			<div className="max-w-[95%] mx-auto px-4 sm:px-6 lg:fpx-8 lg:px-0">
 				<div className="flex items-center justify-between h-16">
 					{/* Left: Logo and Back Button */}
 					<div className="flex items-center gap-4">
@@ -200,7 +200,7 @@ export function WorkspaceNavbar() {
 									<Button
 										variant="outline"
 										size="sm"
-										className="group gap-2 hover:bg-white/10 w-35 justify-start"
+										className="group gap-2 bg-transparent border-transparent hover:border-border hover:bg-white/10 w-35 justify-start"
 									>
 										<List className="w-4 h-4" />
 										<span className="hidden sm:inline truncate">
@@ -541,6 +541,7 @@ export function WorkspaceNavbar() {
 
 							<Button
 								variant="ghost"
+								className="hover:bg-white/10"
 								size="icon"
 								aria-label="Previous problem"
 								onClick={goPrev}
@@ -550,6 +551,7 @@ export function WorkspaceNavbar() {
 							</Button>
 							<Button
 								variant="ghost"
+								className="hover:bg-white/10"
 								size="icon"
 								aria-label="Next problem"
 								onClick={goNext}
