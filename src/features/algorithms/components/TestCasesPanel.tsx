@@ -48,7 +48,7 @@ export function TestCasesPanel({
 	}, [activeTestTab, testResults]);
 
 	useEffect(() => {
-		if (problem.tests[selectedTestIndex]) {
+		if (problem.tests[selectedTestIndex]?.input) {
 			const processInputs = async () => {
 				const inputs = problem.tests[selectedTestIndex].input.map(
 					async (value) => {
@@ -62,6 +62,8 @@ export function TestCasesPanel({
 				setProcessedInputs(await Promise.all(inputs));
 			};
 			processInputs();
+		} else {
+			setProcessedInputs([]);
 		}
 	}, [selectedTestIndex, problem.tests]);
 
@@ -248,7 +250,7 @@ function TestCaseTab({
 							(value, index) => (
 								<div key={index}>
 									<span className="text-sm font-medium text-foreground">
-										{problem.parameterNames[index] ||
+									{problem.parameters?.[index]?.name ||
 											`param${index + 1}`}{" "}
 										=
 									</span>
@@ -465,9 +467,7 @@ function TestResultsTab({
 										(value, index) => (
 											<div key={index}>
 												<span className="text-sm font-medium text-foreground">
-													{problem.parameterNames[
-														index
-													] ||
+													{problem.parameters?.[index]?.name ||
 														`param${
 															index + 1
 														}`}{" "}
@@ -534,27 +534,8 @@ function TestResultsTab({
 													return '<span class="text-gray-400">undefined</span>';
 												}
 
-												// Check if actual equals the input (false positive in-place detection)
-												// This happens when function returns undefined but test executor
-												// incorrectly assumes in-place modification
-												const inputToCompare =
-													input.length === 1
-														? input[0]
-														: input;
-												if (
-													JSON.stringify(
-														roundTo5Decimals(actual)
-													) ===
-													JSON.stringify(
-														roundTo5Decimals(
-															inputToCompare
-														)
-													)
-												) {
-													// Actual equals input - function likely returned nothing
-													return '<span class="text-gray-400">undefined</span>';
-												}
-
+												// Trust the test executor's actual value - if the test passed,
+												// the actual value is correct (even if it equals the input for in-place modifications)
 												return createDiff(
 													actual,
 													expected,

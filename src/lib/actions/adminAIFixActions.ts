@@ -205,7 +205,7 @@ function buildFixPrompt(
 	prompt += `Problem Statement:\n${problem.statementMd}\n\n`;
 	prompt += `Topics: ${problem.topics.join(", ")}\n`;
 	prompt += `Difficulty: ${problem.difficulty}\n\n`;
-	prompt += `Parameter Names: ${problem.parameterNames.join(", ")}\n\n`;
+	prompt += `Parameters: ${problem.parameters?.map(p => `${p.name}: ${p.type}`).join(", ") || "N/A"}\n\n`;
 
 	prompt += `Current Passing Code (${language}) - PRIMARY:\n\`\`\`javascript\n${
 		problem.passingCode[language] || "N/A"

@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import { processMarkdown } from "@/components/MarkdownEditor/markdown-processor";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { AlgoLesson, AlgoProblemDetail } from "@/types/algorithm-types";
 
 interface AlgoProblemData {
@@ -15,7 +15,10 @@ interface AlgoProblemData {
 	difficulty: string;
 	languages: string[];
 	rubric: { optimal_time: string; acceptable_time: string[] };
-	parameterNames: string[];
+	parameters?: { name: string; type: string }[];
+	returnType?: string;
+	functionName?: string;
+	judge?: any;
 	tests: { input: any[]; output: any }[];
 	startingCode: { [key: string]: string };
 	passingCode: { [key: string]: string };
@@ -47,6 +50,10 @@ export async function createAlgoProblem(data: AlgoProblemData) {
 		const problem = await prisma.algoProblem.create({
 			data: {
 				...data,
+				parameters: data.parameters || undefined,
+				returnType: data.returnType || undefined,
+				functionName: data.functionName || undefined,
+				judge: data.judge || undefined,
 				statementHtml,
 				examplesAndConstraintsMd: data.examplesAndConstraintsMd || null,
 				examplesAndConstraintsHtml,
@@ -78,6 +85,10 @@ export async function updateAlgoProblem(id: string, data: AlgoProblemData) {
 			where: { id },
 			data: {
 				...data,
+				parameters: data.parameters || undefined,
+				returnType: data.returnType || undefined,
+				functionName: data.functionName || undefined,
+				judge: data.judge || undefined,
 				statementHtml,
 				examplesAndConstraintsMd: data.examplesAndConstraintsMd || null,
 				examplesAndConstraintsHtml,
@@ -87,6 +98,7 @@ export async function updateAlgoProblem(id: string, data: AlgoProblemData) {
 		// Revalidate algorithm pages
 		revalidatePath("/algorithms");
 		revalidatePath("/algorithms/problems");
+		revalidateTag("algo:problems");
 
 		return { success: true, data: problem };
 	} catch (error: any) {

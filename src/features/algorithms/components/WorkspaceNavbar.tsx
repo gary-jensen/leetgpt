@@ -30,7 +30,6 @@ import {
 	DrawerTitle,
 	DrawerTrigger,
 } from "@/components/ui/drawer";
-import { algoProblems } from "@/features/algorithms/data/problems/algoProblems";
 import type { AlgoProblemMeta } from "@/types/algorithm-types";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -51,7 +50,11 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-export function WorkspaceNavbar() {
+interface WorkspaceNavbarProps {
+	problemsMeta: AlgoProblemMeta[];
+}
+
+export function WorkspaceNavbar({ problemsMeta }: WorkspaceNavbarProps) {
 	const { data: session } = useSession();
 	const router = useRouter();
 	const pathname = usePathname();
@@ -87,20 +90,6 @@ export function WorkspaceNavbar() {
 		if (idx >= 0 && parts[idx + 1]) return parts[idx + 1];
 		return null;
 	}, [pathname]);
-
-	const problemsMeta: AlgoProblemMeta[] = useMemo(
-		() =>
-			algoProblems.map((p) => ({
-				id: p.id,
-				slug: p.slug,
-				title: p.title,
-				topics: p.topics,
-				difficulty: p.difficulty,
-				languages: p.languages,
-				order: p.order,
-			})),
-		[]
-	);
 
 	const allTopics = useMemo(() => {
 		const set = new Set<string>();

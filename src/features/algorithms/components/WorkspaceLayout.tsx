@@ -6,7 +6,11 @@ import {
 	ResizablePanel,
 } from "@/components/ui/resizable";
 import "@/components/workspace/Chat/components/ChatMarkdownDisplay.css";
-import { AlgoProblemDetail, AlgoLesson } from "@/types/algorithm-types";
+import {
+	AlgoProblemDetail,
+	AlgoLesson,
+	AlgoProblemMeta,
+} from "@/types/algorithm-types";
 import { TestResult } from "./TestResultsDisplay";
 import { useProcessedStatement } from "../hooks/useProcessedStatement";
 import { WorkspaceNavbar } from "./WorkspaceNavbar";
@@ -35,6 +39,7 @@ interface WorkspaceLayoutProps {
 	isThinking: boolean;
 	streamingMessageId: string | null;
 	relatedLessons: AlgoLesson[];
+	problemsMeta: AlgoProblemMeta[];
 }
 
 export function WorkspaceLayout({
@@ -55,6 +60,7 @@ export function WorkspaceLayout({
 	isThinking,
 	streamingMessageId,
 	relatedLessons,
+	problemsMeta,
 }: WorkspaceLayoutProps) {
 	const processedStatement = useProcessedStatement(problem);
 	const { activeTestTab, setActiveTestTab, testCasesPanelRef } = useTestTab(
@@ -76,7 +82,7 @@ export function WorkspaceLayout({
 
 	return (
 		<div className="w-screen h-screen max-h-screen flex flex-col bg-background-4 overflow-hidden">
-			<WorkspaceNavbar />
+			<WorkspaceNavbar problemsMeta={problemsMeta} />
 
 			{/* Main Content */}
 			<div className="flex-1 flex items-center justify-center overflow-hidden pb-6">

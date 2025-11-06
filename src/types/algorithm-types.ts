@@ -22,6 +22,12 @@ export interface AlgoProblemMeta {
 	order: number;
 }
 
+// Parameter type definition
+export interface Parameter {
+	name: string;
+	type: string; // "ListNode" | "TreeNode" | "number[]" | "number" | "string" | "boolean" | "number[][]" | etc.
+}
+
 export interface AlgoProblemDetail extends AlgoProblemMeta {
 	statementMd: string;
 	statementHtml?: string | null; // Pre-processed HTML (from database)
@@ -29,12 +35,14 @@ export interface AlgoProblemDetail extends AlgoProblemMeta {
 	examplesAndConstraintsHtml?: string | null; // Pre-processed HTML for examples/constraints
 	rubric: { optimal_time: string; acceptable_time: string[] };
 	tests: { input: any[]; output: any }[];
-	parameterNames: string[]; // Names of the input parameters in order
+	parameters?: Parameter[]; // Explicit parameter definitions with types
+	returnType?: string; // Return type (e.g., "ListNode", "number[]", "boolean")
+	functionName?: string; // Expected function name (e.g., "deleteDuplicates", "twoSum")
 	startingCode: { [language: string]: string };
 	passingCode: { [language: string]: string }; // Admin debugging and testing purposes
 	secondaryPassingCode?: { [language: string]: string }; // Non-optimal passing code for test case validation
-	systemCode?: { [language: string]: string }; // Optional: Problem-specific execution wrapper that handles type conversions (e.g., array ↔ ListNode)
 	outputOrderMatters?: boolean; // If false, arrays of arrays are compared as sets (order-independent). Default: true
+	judge?: JudgeConfig; // Optional judge configuration (stored in database, allows custom validation without code changes)
 	// Hints are AI-generated, not stored in hardcoded data
 }
 
@@ -124,3 +132,29 @@ export interface TestCase {
 	input: any[]; // Array where each element is a parameter
 	output: any; // Expected return value
 }
+
+// Judge configuration types
+export type JudgeKind = "return-value" | "mutating-array-with-k" | "custom-script";
+
+export interface JudgeConfig_ReturnValue {
+	kind: "return-value";
+	// Optional: ignoreOrder, numericTolerance, etc. can be added here
+}
+
+export interface JudgeConfig_MutatingArrayWithK {
+	kind: "mutating-array-with-k";
+	arrayParamIndex: number; // Which parameter is the array (0-indexed)
+	kIsReturnValue: boolean; // Whether k is the return value (true) or a separate parameter
+	ignoreOrder?: boolean; // Whether to sort before comparing (default: false)
+}
+
+export interface JudgeConfig_CustomScript {
+	kind: "custom-script";
+	script: string; // JavaScript code that implements the judge
+	// Script should implement: function judge(args, returnValue, expected) { return { pass, actual, expected }; }
+}
+
+export type JudgeConfig =
+	| JudgeConfig_ReturnValue
+	| JudgeConfig_MutatingArrayWithK
+	| JudgeConfig_CustomScript;

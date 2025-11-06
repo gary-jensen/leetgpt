@@ -6,6 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+	Collapsible,
+	CollapsibleContent,
+	CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ChevronDown, ChevronRight } from "lucide-react";
 
 interface ProblemFormProps {
 	onSubmit: (data: any) => Promise<any>;
@@ -18,7 +24,10 @@ interface ProblemFormProps {
 		difficulty: string;
 		languages: string[];
 		rubric: any;
-		parameterNames: string[];
+		parameters?: { name: string; type: string }[];
+		returnType?: string;
+		functionName?: string;
+		judge?: any;
 		tests: any[];
 		startingCode: any;
 		passingCode: any;
@@ -45,8 +54,17 @@ export function ProblemForm({ onSubmit, initialData }: ProblemFormProps) {
 	const [rubric, setRubric] = useState(
 		JSON.stringify(initialData?.rubric || {}, null, 2)
 	);
-	const [parameterNames, setParameterNames] = useState(
-		initialData?.parameterNames?.join(", ") || ""
+	const [parameters, setParameters] = useState(
+		JSON.stringify(initialData?.parameters || [], null, 2)
+	);
+	const [returnType, setReturnType] = useState(
+		initialData?.returnType || ""
+	);
+	const [functionName, setFunctionName] = useState(
+		initialData?.functionName || ""
+	);
+	const [judge, setJudge] = useState(
+		JSON.stringify(initialData?.judge || null, null, 2)
 	);
 	const [tests, setTests] = useState(
 		JSON.stringify(initialData?.tests || [], null, 2)
@@ -60,6 +78,7 @@ export function ProblemForm({ onSubmit, initialData }: ProblemFormProps) {
 	const [order, setOrder] = useState(initialData?.order?.toString() || "1");
 	const [error, setError] = useState("");
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [testsOpen, setTestsOpen] = useState(false);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -77,7 +96,10 @@ export function ProblemForm({ onSubmit, initialData }: ProblemFormProps) {
 				difficulty,
 				languages: languages.split(",").map((l) => l.trim()),
 				rubric: JSON.parse(rubric),
-				parameterNames: parameterNames.split(",").map((p) => p.trim()),
+				parameters: parameters ? JSON.parse(parameters) : undefined,
+				returnType: returnType || undefined,
+				functionName: functionName || undefined,
+				judge: judge && judge.trim() !== "null" ? JSON.parse(judge) : undefined,
 				tests: JSON.parse(tests),
 				startingCode: JSON.parse(startingCode),
 				passingCode: JSON.parse(passingCode),
@@ -199,15 +221,55 @@ export function ProblemForm({ onSubmit, initialData }: ProblemFormProps) {
 			</div>
 
 			<div>
-				<Label htmlFor="parameterNames">
-					Parameter Names (comma-separated)
+				<Label htmlFor="parameters">
+					Parameters (JSON) - Array of {`{name, type}`} objects
 				</Label>
-				<Input
-					id="parameterNames"
-					value={parameterNames}
-					onChange={(e) => setParameterNames(e.target.value)}
-					required
+				<Textarea
+					id="parameters"
+					value={parameters}
+					onChange={(e) => setParameters(e.target.value)}
+					rows={6}
+					placeholder='[{"name": "head", "type": "ListNode"}, {"name": "k", "type": "number"}]'
 				/>
+			</div>
+
+			<div className="grid grid-cols-2 gap-4">
+				<div>
+					<Label htmlFor="returnType">Return Type</Label>
+					<Input
+						id="returnType"
+						value={returnType}
+						onChange={(e) => setReturnType(e.target.value)}
+						placeholder="ListNode, number[], boolean, etc."
+					/>
+				</div>
+
+				<div>
+					<Label htmlFor="functionName">Function Name</Label>
+					<Input
+						id="functionName"
+						value={functionName}
+						onChange={(e) => setFunctionName(e.target.value)}
+						placeholder="deleteDuplicates, twoSum, etc."
+					/>
+				</div>
+			</div>
+
+			<div>
+				<Label htmlFor="judge">
+					Judge Configuration (JSON) - Optional, for custom validation logic
+				</Label>
+				<Textarea
+					id="judge"
+					value={judge}
+					onChange={(e) => setJudge(e.target.value)}
+					rows={8}
+					placeholder='{"kind": "mutating-array-with-k", "arrayParamIndex": 0, "kIsReturnValue": true, "ignoreOrder": false}'
+				/>
+				<p className="text-sm text-muted-foreground mt-1">
+					Judge types: &quot;return-value&quot; (default), &quot;mutating-array-with-k&quot;, or
+					&quot;custom-script&quot;. Leave empty/null for default behavior.
+				</p>
 			</div>
 
 			<div>
@@ -221,16 +283,36 @@ export function ProblemForm({ onSubmit, initialData }: ProblemFormProps) {
 				/>
 			</div>
 
-			<div>
-				<Label htmlFor="tests">Tests (JSON)</Label>
-				<Textarea
-					id="tests"
-					value={tests}
-					onChange={(e) => setTests(e.target.value)}
-					rows={10}
-					required
-				/>
-			</div>
+			<Collapsible open={testsOpen} onOpenChange={setTestsOpen}>
+				<div className="flex items-center justify-between">
+					<Label htmlFor="tests">Tests (JSON)</Label>
+					<CollapsibleTrigger asChild>
+						<Button
+							type="button"
+							variant="ghost"
+							size="sm"
+							className="h-8 w-8 p-0"
+						>
+							{testsOpen ? (
+								<ChevronDown className="h-4 w-4" />
+							) : (
+								<ChevronRight className="h-4 w-4" />
+							)}
+						</Button>
+					</CollapsibleTrigger>
+				</div>
+				<CollapsibleContent>
+					<div className="mt-2">
+						<Textarea
+							id="tests"
+							value={tests}
+							onChange={(e) => setTests(e.target.value)}
+							rows={10}
+							required
+						/>
+					</div>
+				</CollapsibleContent>
+			</Collapsible>
 
 			<div>
 				<Label htmlFor="startingCode">Starting Code (JSON)</Label>

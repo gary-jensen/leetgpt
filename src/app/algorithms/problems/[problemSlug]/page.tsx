@@ -1,7 +1,7 @@
 import { AlgorithmWorkspace } from "@/features/algorithms/components/AlgorithmWorkspace";
 import {
 	getAlgoProblemBySlug,
-	getAlgoProblems,
+	getAlgoProblemsMeta,
 	getLessonsByTopics,
 } from "@/features/algorithms/data";
 import { redirect } from "next/navigation";
@@ -63,7 +63,11 @@ export default async function AlgorithmWorkspacePage({
 	params,
 }: AlgorithmWorkspacePageProps) {
 	const { problemSlug } = await params;
-	const problem = await getAlgoProblemBySlug(problemSlug);
+	// Fetch problem and all problems metadata for navigation (lightweight, only what we need) (also cached)
+	const [problem, problemsMeta] = await Promise.all([
+		getAlgoProblemBySlug(problemSlug),
+		getAlgoProblemsMeta(),
+	]);
 
 	if (!problem) {
 		console.error("Problem not found");
@@ -74,13 +78,17 @@ export default async function AlgorithmWorkspacePage({
 	const relatedLessons = await getLessonsByTopics(problem.topics);
 
 	return (
-		<AlgorithmWorkspace problem={problem} relatedLessons={relatedLessons} />
+		<AlgorithmWorkspace
+			problem={problem}
+			relatedLessons={relatedLessons}
+			problemsMeta={problemsMeta}
+		/>
 	);
 }
 
 // Generate static params for all problems
 export async function generateStaticParams() {
-	const problems = await getAlgoProblems();
+	const problems = await getAlgoProblemsMeta();
 
 	return problems.map((problem) => ({
 		problemSlug: problem.slug,

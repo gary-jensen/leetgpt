@@ -18,6 +18,8 @@ import {
 import { AlgoProblemDetail } from "@/types/algorithm-types";
 import { TestCase } from "@/types/algorithm-types";
 import { generateUUID } from "@/lib/cryptoUtils";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { processMarkdown } from "@/components/MarkdownEditor/markdown-processor";
 
 // In-memory storage for builder state
 const builderStates = new Map<string, BuilderState>();
@@ -31,12 +33,19 @@ const builderData = new Map<string, BuilderData>();
 
 /**
  * Dedicated server action for revalidating paths
- * This ensures revalidation happens in a proper server action context, not during render
+ * This is a public server action that can be called from client components
+ * to revalidate algorithm-related pages after problem creation/updates
+ *
+ * This is called from the client after detecting builder completion,
+ * ensuring revalidation happens in a separate server action context,
+ * not during the builder's execution or during render.
  */
-async function revalidateAlgorithmPaths() {
-	const { revalidatePath } = await import("next/cache");
+export async function revalidateAlgorithmPaths() {
+	requireAdmin();
+
 	revalidatePath("/algorithms");
 	revalidatePath("/algorithms/problems");
+	revalidateTag("algo:problems");
 }
 
 /**
@@ -205,7 +214,24 @@ async function startProblemBuilder(
 			}
 
 			try {
+				// Check for cancellation before making OpenAI API call
+				if (isBuilderCancelled(builderId)) {
+					return {
+						success: false,
+						error: "Builder was cancelled",
+					};
+				}
+
 				const result = await generateProblemData(problemName);
+
+				// Check for cancellation after OpenAI API call completes
+				if (isBuilderCancelled(builderId)) {
+					return {
+						success: false,
+						error: "Builder was cancelled",
+					};
+				}
+
 				if (!result.success || !result.data) {
 					throw new Error(
 						result.error || "Failed to generate problem data"
@@ -237,10 +263,26 @@ async function startProblemBuilder(
 					// Yield before regeneration
 					await yieldToEventLoop(20);
 
+					// Check for cancellation before regeneration
+					if (isBuilderCancelled(builderId)) {
+						return {
+							success: false,
+							error: "Builder was cancelled",
+						};
+					}
+
 					// Try to regenerate with stronger prompt
 					const regenerateResult = await generateProblemData(
 						problemName
 					);
+
+					// Check for cancellation after regeneration
+					if (isBuilderCancelled(builderId)) {
+						return {
+							success: false,
+							error: "Builder was cancelled",
+						};
+					}
 
 					// Yield after regeneration
 					await yieldToEventLoop(20);
@@ -322,17 +364,28 @@ async function startProblemBuilder(
 			errorTimestamp: undefined,
 		});
 
-		// Phase 2: Generate Test Cases (Batch Loop)
+		// Phase 2: Generate All Test Cases (Single Function Call)
 		updateBuilderState(builderId, {
 			phase: "generating_tests",
 			phaseDescription: getPhaseDescription("generating_tests"),
 		});
 
-		const passingTestCases: TestCase[] = [];
-		const MIN_PASSING_TESTS = 40;
-		let batchNumber = 0;
+		// Check for cancellation
+		if (isBuilderCancelled(builderId)) {
+			return {
+				success: false,
+				error: "Builder was cancelled",
+			};
+		}
 
-		while (passingTestCases.length < MIN_PASSING_TESTS) {
+		// Yield to event loop to prevent blocking
+		await yieldToEventLoop(20);
+
+		// Generate all test cases at once
+		let allTestCases: TestCase[] = [];
+		retryCount = 0;
+
+		while (retryCount <= maxRetries) {
 			// Check for cancellation
 			if (isBuilderCancelled(builderId)) {
 				return {
@@ -341,23 +394,13 @@ async function startProblemBuilder(
 				};
 			}
 
-			// Yield to event loop to prevent blocking
-			await yieldToEventLoop(20);
+			// Yield before each retry attempt
+			if (retryCount > 0) {
+				await yieldToEventLoop(10);
+			}
 
-			batchNumber++;
-			updateBuilderState(builderId, {
-				batchNumber,
-				phaseDescription: getPhaseDescription("generating_tests", {
-					batchNumber,
-				}),
-			});
-
-			// Generate batch of test cases
-			let batchTestCases: TestCase[] = [];
-			retryCount = 0;
-
-			while (retryCount <= maxRetries) {
-				// Check for cancellation
+			try {
+				// Check for cancellation before making OpenAI API call
 				if (isBuilderCancelled(builderId)) {
 					return {
 						success: false,
@@ -365,197 +408,61 @@ async function startProblemBuilder(
 					};
 				}
 
-				// Yield before each retry attempt
-				if (retryCount > 0) {
-					await yieldToEventLoop(10);
+				const testResult = await generateTestCases(
+					problemData,
+					[] // No existing tests on first generation
+				);
+
+				// Check for cancellation after OpenAI API call completes
+				if (isBuilderCancelled(builderId)) {
+					return {
+						success: false,
+						error: "Builder was cancelled",
+					};
 				}
 
-				try {
-					const testResult = await generateTestCases(
-						problemData,
-						passingTestCases,
-						10
-					);
-
-					if (!testResult.success || !testResult.testCases) {
-						throw new Error(
-							testResult.error || "Failed to generate test cases"
-						);
-					}
-
-					// Yield after AI call
-					await yieldToEventLoop(20);
-
-					batchTestCases = testResult.testCases;
-					break;
-				} catch (error) {
-					if (retryCount >= maxRetries) {
-						throw error;
-					}
-					retryCount++;
-					updateBuilderState(builderId, {
-						retryCount,
-						error:
-							error instanceof Error
-								? error.message
-								: "Unknown error",
-						errorTimestamp: Date.now(),
-						phaseDescription: `Retrying test generation (attempt ${
-							retryCount + 1
-						}/${maxRetries + 1})...`,
-					});
-					// Yield before backoff delay
-					await yieldToEventLoop(10);
-					await new Promise((resolve) =>
-						setTimeout(resolve, getBackoffDelay(retryCount - 1))
+				if (!testResult.success || !testResult.testCases) {
+					throw new Error(
+						testResult.error || "Failed to generate test cases"
 					);
 				}
-			}
 
-			// Validate test cases against both passing codes
-			updateBuilderState(builderId, {
-				phaseDescription: getPhaseDescription("validating_tests", {
-					batchNumber,
-				}),
-			});
+				// Yield after AI call
+				await yieldToEventLoop(20);
 
-			// Create temporary problem for testing
-			const tempProblem: AlgoProblemDetail = {
-				id: "temp",
-				slug: problemData.slug,
-				title: problemData.title,
-				topics: problemData.topics,
-				difficulty: problemData.difficulty,
-				languages: problemData.languages,
-				order: 0,
-				statementMd: problemData.statementMd,
-				examplesAndConstraintsMd: problemData.examplesAndConstraintsMd,
-				rubric: problemData.rubric,
-				tests: batchTestCases,
-				parameterNames: problemData.parameterNames,
-				startingCode: problemData.startingCode,
-				passingCode: problemData.passingCode,
-				secondaryPassingCode: problemData.secondaryPassingCode,
-				systemCode: problemData.systemCode,
-				outputOrderMatters: problemData.outputOrderMatters,
-			};
-
-			// Check for cancellation before test execution
-			if (isBuilderCancelled(builderId)) {
-				return {
-					success: false,
-					error: "Builder was cancelled",
-				};
-			}
-
-			// Yield to event loop before heavy CPU operations
-			await yieldToEventLoop(50);
-
-			// Test against passing code
-			const passingCodeResult = await executeAlgoTests(
-				tempProblem,
-				problemData.passingCode.javascript,
-				"javascript"
-			);
-
-			// Check for cancellation after first test execution
-			if (isBuilderCancelled(builderId)) {
-				return {
-					success: false,
-					error: "Builder was cancelled",
-				};
-			}
-
-			// Yield again before next CPU-intensive operation (longer delay for heavy operations)
-			await yieldToEventLoop(50);
-
-			// Test against secondary passing code
-			const secondaryCodeResult = await executeAlgoTests(
-				tempProblem,
-				problemData.secondaryPassingCode.javascript,
-				"javascript"
-			);
-
-			// Check for cancellation after second test execution
-			if (isBuilderCancelled(builderId)) {
-				return {
-					success: false,
-					error: "Builder was cancelled",
-				};
-			}
-
-			// Yield after test executions (longer delay)
-			await yieldToEventLoop(50);
-
-			// Filter to only test cases that pass both codes
-			const validTestCases = batchTestCases.filter((testCase, index) => {
-				const passingResult = passingCodeResult.results[index];
-				const secondaryResult = secondaryCodeResult.results[index];
-				return (
-					passingResult?.passed === true &&
-					secondaryResult?.passed === true
-				);
-			});
-
-			// Update counts
-			const generated = batchTestCases.length;
-			const passed = validTestCases.length;
-			const failed = generated - passed;
-
-			updateBuilderState(builderId, {
-				testCaseCounts: {
-					generated: passingTestCases.length + generated,
-					passed: passingTestCases.length + passed,
-					failed:
-						(builderStates.get(builderId)?.testCaseCounts.failed ||
-							0) + failed,
-				},
-				phaseDescription: getPhaseDescription("validating_tests", {
-					passedTests: passingTestCases.length + passed,
-					targetTests: MIN_PASSING_TESTS,
-				}),
-			});
-
-			// Add valid test cases
-			passingTestCases.push(...validTestCases);
-
-			// Update stored test cases for manual finish
-			const currentData = builderData.get(builderId) || {};
-			builderData.set(builderId, {
-				...currentData,
-				testCases: [...passingTestCases],
-			});
-
-			// Log successful batch
-			if (passed === generated && passed > 0) {
-				console.log(
-					`✅ Builder ${builderId} - Batch ${batchNumber}: All ${passed}/${generated} test cases passed for ${problemData.title}`
+				allTestCases = testResult.testCases;
+				break;
+			} catch (error) {
+				if (retryCount >= maxRetries) {
+					throw error;
+				}
+				retryCount++;
+				updateBuilderState(builderId, {
+					retryCount,
+					error:
+						error instanceof Error
+							? error.message
+							: "Unknown error",
+					errorTimestamp: Date.now(),
+					phaseDescription: `Retrying test generation (attempt ${
+						retryCount + 1
+					}/${maxRetries + 1})...`,
+				});
+				// Yield before backoff delay
+				await yieldToEventLoop(10);
+				await new Promise((resolve) =>
+					setTimeout(resolve, getBackoffDelay(retryCount - 1))
 				);
 			}
-
-			// Yield after batch completion to prevent blocking
-			await yieldToEventLoop(20);
 		}
 
-		// Check for cancellation before final validation
-		if (isBuilderCancelled(builderId)) {
-			return {
-				success: false,
-				error: "Builder was cancelled",
-			};
-		}
-
-		// Phase 3: Final Validation
+		// Validate test cases against both passing codes
 		updateBuilderState(builderId, {
-			phase: "validating_tests",
-			phaseDescription: "Running final validation...",
+			phaseDescription: getPhaseDescription("validating_tests"),
 		});
 
-		// Yield to event loop before heavy validation
-		await yieldToEventLoop(50);
-
-		// Create final problem for validation
-		const finalProblem: AlgoProblemDetail = {
+		// Create temporary problem for testing
+		const tempProblem: AlgoProblemDetail = {
 			id: "temp",
 			slug: problemData.slug,
 			title: problemData.title,
@@ -566,62 +473,154 @@ async function startProblemBuilder(
 			statementMd: problemData.statementMd,
 			examplesAndConstraintsMd: problemData.examplesAndConstraintsMd,
 			rubric: problemData.rubric,
-			tests: passingTestCases,
-			parameterNames: problemData.parameterNames,
+			tests: allTestCases,
+			parameters: problemData.parameters || undefined,
+			returnType: problemData.returnType || undefined,
+			functionName: problemData.functionName || undefined,
+			judge: problemData.judge || undefined,
 			startingCode: problemData.startingCode,
 			passingCode: problemData.passingCode,
 			secondaryPassingCode: problemData.secondaryPassingCode,
-			systemCode: problemData.systemCode || undefined,
 			outputOrderMatters: problemData.outputOrderMatters,
 		};
 
-		// Final validation
-		const finalPassingResult = await executeAlgoTests(
-			finalProblem,
-			problemData.passingCode.javascript,
-			"javascript"
-		);
+		// Check for cancellation before test execution
+		if (isBuilderCancelled(builderId)) {
+			return {
+				success: false,
+				error: "Builder was cancelled",
+			};
+		}
 
-		// Yield between test executions (longer delay for 40+ tests)
+		// Yield to event loop before heavy CPU operations
 		await yieldToEventLoop(50);
 
-		const finalSecondaryResult = await executeAlgoTests(
-			finalProblem,
-			problemData.secondaryPassingCode.javascript,
-			"javascript"
+		// Check for cancellation before test execution
+		if (isBuilderCancelled(builderId)) {
+			return {
+				success: false,
+				error: "Builder was cancelled",
+			};
+		}
+
+		// Run both test executions in parallel
+		const [passingCodeResult, secondaryCodeResult] = await Promise.all([
+			executeAlgoTests(
+				tempProblem,
+				problemData.passingCode.javascript,
+				"javascript",
+				() => isBuilderCancelled(builderId)
+			),
+			executeAlgoTests(
+				tempProblem,
+				problemData.secondaryPassingCode.javascript,
+				"javascript",
+				() => isBuilderCancelled(builderId)
+			),
+		]);
+
+		// Check for cancellation after test executions
+		if (
+			isBuilderCancelled(builderId) ||
+			passingCodeResult.message === "Execution was cancelled" ||
+			secondaryCodeResult.message === "Execution was cancelled"
+		) {
+			return {
+				success: false,
+				error: "Builder was cancelled",
+			};
+		}
+
+		// Yield after test executions
+		await yieldToEventLoop(50);
+
+		// Filter out failing test cases - only keep those that pass both codes
+		console.log(
+			`\n[Builder] Validating ${allTestCases.length} test cases for: ${problemData.title}`
+		);
+		console.log(
+			`[Builder] Passing code results: ${
+				passingCodeResult.results.filter((r) => r.passed).length
+			}/${passingCodeResult.results.length} passed`
+		);
+		console.log(
+			`[Builder] Secondary code results: ${
+				secondaryCodeResult.results.filter((r) => r.passed).length
+			}/${secondaryCodeResult.results.length} passed`
 		);
 
-		if (finalPassingResult.status === "error") {
-			throw new Error(
-				`Passing code validation failed: ${finalPassingResult.message}`
+		const passingTestCases = allTestCases.filter((testCase, index) => {
+			const passingTest = passingCodeResult.results[index];
+			const secondaryTest = secondaryCodeResult.results[index];
+
+			const passes =
+				passingTest?.passed === true && secondaryTest?.passed === true;
+
+			// Log first few failures for debugging
+			if (!passes && index < 5) {
+				console.log(`\n[Builder] Failed test case ${index + 1}:`);
+				console.log(`  Input: ${JSON.stringify(testCase.input)}`);
+				console.log(`  Expected: ${JSON.stringify(testCase.output)}`);
+				if (passingTest?.passed !== true) {
+					console.log(
+						`  Passing code actual: ${JSON.stringify(
+							passingTest?.actual
+						)}`
+					);
+					console.log(
+						`  Passing code passed: ${passingTest?.passed}`
+					);
+					if (passingTest?.error) {
+						console.log(
+							`  Passing code error: ${passingTest.error}`
+						);
+					}
+				}
+				if (secondaryTest?.passed !== true) {
+					console.log(
+						`  Secondary code actual: ${JSON.stringify(
+							secondaryTest?.actual
+						)}`
+					);
+					console.log(
+						`  Secondary code passed: ${secondaryTest?.passed}`
+					);
+					if (secondaryTest?.error) {
+						console.log(
+							`  Secondary code error: ${secondaryTest.error}`
+						);
+					}
+				}
+			}
+
+			return passes;
+		});
+
+		updateBuilderState(builderId, {
+			testCaseCounts: {
+				generated: allTestCases.length,
+				passed: passingTestCases.length,
+				failed: allTestCases.length - passingTestCases.length,
+			},
+		});
+
+		// Log detailed failure information
+		if (passingTestCases.length < allTestCases.length) {
+			console.log(
+				`\n⚠️ [Builder] ${
+					allTestCases.length - passingTestCases.length
+				} test cases failed for: ${problemData.title}`
+			);
+			console.log(
+				`[Builder] Only showing first 5 failures above. Total failures: ${
+					allTestCases.length - passingTestCases.length
+				}`
 			);
 		}
 
-		if (finalSecondaryResult.status === "error") {
-			throw new Error(
-				`Secondary code validation failed: ${finalSecondaryResult.message}`
-			);
-		}
-
-		// Yield after validation checks
-		await yieldToEventLoop(20);
-
-		const allPassingPassed = finalPassingResult.results.every(
-			(r) => r.passed
+		console.log(
+			`\n✅ Generated ${allTestCases.length} test cases, ${passingTestCases.length} passed validation for: ${problemData.title}`
 		);
-		const allSecondaryPassed = finalSecondaryResult.results.every(
-			(r) => r.passed
-		);
-
-		if (!allPassingPassed || !allSecondaryPassed) {
-			throw new Error(
-				`Final validation failed: passing code passed ${
-					finalPassingResult.results.filter((r) => r.passed).length
-				}/${finalPassingResult.results.length}, secondary code passed ${
-					finalSecondaryResult.results.filter((r) => r.passed).length
-				}/${finalSecondaryResult.results.length}`
-			);
-		}
 
 		// Check for cancellation before finalizing
 		if (isBuilderCancelled(builderId)) {
@@ -655,9 +654,6 @@ async function startProblemBuilder(
 		await yieldToEventLoop(20);
 
 		// Process markdown to HTML (to avoid revalidatePath during render)
-		const { processMarkdown } = await import(
-			"@/components/MarkdownEditor/markdown-processor"
-		);
 
 		// Yield before CPU-intensive markdown processing
 		await yieldToEventLoop(30);
@@ -688,13 +684,15 @@ async function startProblemBuilder(
 				difficulty: problemData.difficulty,
 				languages: problemData.languages,
 				rubric: problemData.rubric,
-				parameterNames: problemData.parameterNames,
+				parameters: problemData.parameters || undefined,
+				returnType: problemData.returnType || undefined,
+				functionName: problemData.functionName || undefined,
 				tests: passingTestCases as any, // Cast to Prisma Json type
 				startingCode: problemData.startingCode,
 				passingCode: problemData.passingCode,
 				secondaryPassingCode: problemData.secondaryPassingCode,
-				systemCode: problemData.systemCode || undefined,
 				outputOrderMatters: problemData.outputOrderMatters,
+				judge: problemData.judge || undefined, // Custom judge config (only for edge cases)
 				order: finalOrder,
 			},
 		});
@@ -702,17 +700,9 @@ async function startProblemBuilder(
 		// Yield after database save
 		await yieldToEventLoop(20);
 
-		// Revalidate paths after successful save
-		// Schedule revalidation using queueMicrotask to ensure it's outside render context
-		// This prevents Next.js from detecting it as happening during render
-		queueMicrotask(() => {
-			revalidateAlgorithmPaths().catch((error) => {
-				console.error("Failed to revalidate paths:", error);
-			});
-		});
-
-		// Yield after scheduling revalidation
-		await yieldToEventLoop(20);
+		// Note: Revalidation is now handled by the client component
+		// calling revalidateAlgorithmPaths() after detecting completion
+		// This prevents Next.js from detecting revalidation during render
 
 		// Phase 5: Complete
 		updateBuilderState(builderId, {
@@ -849,9 +839,6 @@ export async function finishBuilderManually(builderId: string): Promise<{
 		await yieldToEventLoop(20);
 
 		// Process markdown to HTML
-		const { processMarkdown } = await import(
-			"@/components/MarkdownEditor/markdown-processor"
-		);
 
 		await yieldToEventLoop(30);
 
@@ -879,27 +866,24 @@ export async function finishBuilderManually(builderId: string): Promise<{
 				difficulty: problemData.difficulty,
 				languages: problemData.languages,
 				rubric: problemData.rubric,
-				parameterNames: problemData.parameterNames,
+				parameters: problemData.parameters || undefined,
+				returnType: problemData.returnType || undefined,
+				functionName: problemData.functionName || undefined,
 				tests: testCases as any, // Cast to Prisma Json type
 				startingCode: problemData.startingCode,
 				passingCode: problemData.passingCode,
 				secondaryPassingCode: problemData.secondaryPassingCode,
-				systemCode: problemData.systemCode || undefined,
 				outputOrderMatters: problemData.outputOrderMatters,
+				judge: problemData.judge || undefined, // Custom judge config (only for edge cases)
 				order: finalOrder,
 			},
 		});
 
 		await yieldToEventLoop(20);
 
-		// Revalidate paths
-		queueMicrotask(() => {
-			revalidateAlgorithmPaths().catch((error) => {
-				console.error("Failed to revalidate paths:", error);
-			});
-		});
-
-		await yieldToEventLoop(20);
+		// Note: Revalidation is now handled by the client component
+		// calling revalidateAlgorithmPaths() after detecting completion
+		// This prevents Next.js from detecting revalidation during render
 
 		// Mark as completed
 		updateBuilderState(builderId, {

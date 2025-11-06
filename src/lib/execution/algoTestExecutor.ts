@@ -1,6 +1,11 @@
 import { AlgoProblemDetail } from "@/types/algorithm-types";
 import { roundTo5Decimals } from "@/utils/numberUtils";
-import { getSystemCodeUtilities } from "@/lib/utils/systemCodeUtils";
+import {
+	convertInput,
+	convertOutput,
+	getTypeDefinitionsCode,
+} from "@/lib/utils/typeConverters";
+import { executeJudge } from "./judges";
 
 export interface AlgoTestResult {
 	case: number;
@@ -21,15 +26,26 @@ export interface AlgoExecutionResult {
 
 /**
  * Execute algorithm problem tests against user code
+ * @param cancellationCheck - Optional function that returns true if execution should be cancelled
  */
 export async function executeAlgoTests(
 	problem: AlgoProblemDetail,
 	code: string,
-	language: string = "javascript"
+	language: string = "javascript",
+	cancellationCheck?: () => boolean
 ): Promise<AlgoExecutionResult> {
 	const startTime = Date.now();
 
 	try {
+		// Check for cancellation before starting
+		if (cancellationCheck && cancellationCheck()) {
+			return {
+				status: "error",
+				results: [],
+				message: "Execution was cancelled",
+			};
+		}
+
 		// Create a function from the user's code
 		const userFunction = createFunctionFromCode(code, problem);
 
@@ -45,10 +61,13 @@ export async function executeAlgoTests(
 		const results: AlgoTestResult[] = [];
 
 		for (let i = 0; i < problem.tests.length; i++) {
-			// Yield to event loop every 2 tests to prevent blocking
-			// Use actual setTimeout delay to ensure event loop can process other requests
-			if (i > 0 && i % 2 === 0) {
-				await new Promise((resolve) => setTimeout(resolve, 10));
+			// Check for cancellation before each test case
+			if (cancellationCheck && cancellationCheck()) {
+				return {
+					status: "error",
+					results,
+					message: "Execution was cancelled",
+				};
 			}
 
 			const testCase = problem.tests[i];
@@ -61,9 +80,17 @@ export async function executeAlgoTests(
 			);
 			results.push(result);
 
-			// Yield after each test to prevent blocking
-			if (i < problem.tests.length - 1) {
-				await new Promise((resolve) => setTimeout(resolve, 5));
+			// Yield to event loop every 10 tests to prevent blocking (only for long test suites)
+			if (i > 0 && i % 10 === 0) {
+				await new Promise((resolve) => setTimeout(resolve, 0));
+				// Check again after yielding
+				if (cancellationCheck && cancellationCheck()) {
+					return {
+						status: "error",
+						results,
+						message: "Execution was cancelled",
+					};
+				}
 			}
 		}
 
@@ -88,19 +115,31 @@ export async function executeAlgoTests(
 
 /**
  * Create a function from user code by extracting the main function
- * Injects ListNode/TreeNode if problem uses them (for systemCode or Linked List/Tree topics)
+ * Injects ListNode/TreeNode definitions if problem uses them
  */
 function createFunctionFromCode(
 	code: string,
 	problem: AlgoProblemDetail
 ): ((...args: any[]) => any) | null {
 	try {
-		// Try to extract the main function from the code
-		const functionName = getMainFunctionName(problem);
+		// Priority 1: Use explicit functionName from problem metadata (most reliable)
+		// Priority 2: Extract from user's code
+		// Priority 3: Fall back to starting code or default
+		const functionName =
+			problem.functionName ||
+			extractFunctionNameFromCode(code) ||
+			getMainFunctionName(problem);
 
-		// Check if we need to inject ListNode/TreeNode (for systemCode or Linked List/Tree problems)
+		// Check if we need to inject ListNode/TreeNode
+		// Priority 1: If problem has parameters with ListNode/TreeNode types
+		// Priority 2: Check if problem needs data structures
+		// Priority 3: If topics suggest Linked List/Tree
 		const needsDataStructures =
-			problem.systemCode?.javascript ||
+			problem.parameters?.some(
+				(p) => p.type === "ListNode" || p.type === "TreeNode"
+			) ||
+			problem.returnType === "ListNode" ||
+			problem.returnType === "TreeNode" ||
 			problem.topics.some(
 				(t) =>
 					t.includes("Linked List") ||
@@ -108,8 +147,8 @@ function createFunctionFromCode(
 					t.includes("Binary")
 			);
 
-		// Get utility functions if needed
-		const utilities = needsDataStructures ? getSystemCodeUtilities() : "";
+		// Get utility functions if needed (use new type definitions)
+		const utilities = needsDataStructures ? getTypeDefinitionsCode() : "";
 
 		// Create a wrapper that includes utilities, user's code, and returns the function
 		const wrappedCode =
@@ -133,6 +172,40 @@ function createFunctionFromCode(
 		console.error("Error creating function from code:", error);
 		return null;
 	}
+}
+
+/**
+ * Extract function name directly from user code
+ * Excludes system-defined names like ListNode, TreeNode, etc.
+ */
+function extractFunctionNameFromCode(code: string): string | null {
+	// System-defined names to exclude
+	const excludedNames = new Set([
+		"ListNode",
+		"TreeNode",
+		"arrayToListNode",
+		"listNodeToArray",
+		"arrayToTreeNode",
+		"treeNodeToArray",
+		"convertInput",
+		"convertOutput",
+	]);
+
+	// Try function declaration: function name(...)
+	const functionMatch = code.match(/function\s+(\w+)\s*\(/);
+	if (functionMatch && !excludedNames.has(functionMatch[1])) {
+		return functionMatch[1];
+	}
+
+	// Try arrow function: const name = (...) => or const name = function(...)
+	const arrowMatch = code.match(
+		/(?:const|let|var)\s+(\w+)\s*=\s*(?:\([^)]*\)\s*=>|function)/
+	);
+	if (arrowMatch && !excludedNames.has(arrowMatch[1])) {
+		return arrowMatch[1];
+	}
+
+	return null;
 }
 
 /**
@@ -185,7 +258,7 @@ function deepClone(value: any): any {
 
 /**
  * Run a single test case
- * Uses systemCode if available, otherwise falls back to direct execution
+ * Uses type converters if parameters/returnType are available, otherwise falls back to direct execution
  */
 async function runSingleTest(
 	userFunction: (...args: any[]) => any,
@@ -196,67 +269,206 @@ async function runSingleTest(
 ): Promise<AlgoTestResult> {
 	const startTime = Date.now();
 
+	// Round test case input to 5 decimal places
+	const roundedInput = roundTo5Decimals(testCase.input);
+
+	// Deep clone the input to prevent in-place modifications from affecting the original
+	const clonedInput = deepClone(roundedInput);
+
 	try {
-		// Round test case input to 5 decimal places
-		const roundedInput = roundTo5Decimals(testCase.input);
-
-		// Deep clone the input to prevent in-place modifications from affecting the original
-		const clonedInput = deepClone(roundedInput);
-
-		// Yield before function execution (in case it's CPU-intensive)
-		await new Promise((resolve) => setTimeout(resolve, 1));
-
 		let actual: any;
+		let convertedInputsUsed: any[] | null = null; // Store converted inputs for judge
 
-		// Check if problem has systemCode
-		if (problem?.systemCode?.javascript) {
-			// Use systemCode execution wrapper
-			actual = await executeWithSystemCode(
-				testCase,
-				problem.systemCode.javascript,
-				problem,
-				userCode || ""
+		// Priority 1: Use new parameters + returnType system (preferred)
+		// Also check if returnType is set - if so, we need to use type converters even if parameters aren't set
+		if (
+			(problem?.parameters && problem.parameters.length > 0) ||
+			problem?.returnType
+		) {
+			// We need to capture the converted inputs that were actually used
+			// because they get modified in-place by the function
+			// IMPORTANT: Use clonedInput (already deep cloned) to prevent shared state between test cases
+			const convertedInputs = clonedInput.map(
+				(value: any, index: number) => {
+					const param = problem.parameters?.[index];
+					if (param) {
+						return convertInput(value, param.type);
+					}
+					return value; // No type conversion needed
+				}
 			);
-		} else {
-			// Fallback to direct execution (backward compatibility)
-			actual = await executeDirectly(userFunction, clonedInput);
+			convertedInputsUsed = convertedInputs;
+
+			// Call user function with converted inputs
+			actual = userFunction(...convertedInputs);
+
+			// Convert output if needed
+			if (problem.returnType) {
+				const converted = convertOutput(actual, problem.returnType);
+				if (converted !== undefined) {
+					actual = converted;
+				}
+			}
+
+			// Handle in-place modifications
+			if (
+				(actual === undefined || actual === null) &&
+				convertedInputs.length > 0 &&
+				(Array.isArray(convertedInputs[0]) ||
+					typeof convertedInputs[0] === "object")
+			) {
+				actual = convertOutput(convertedInputs[0], problem.returnType);
+			}
+		}
+		// Priority 2: Direct execution (no type conversion needed)
+		else {
+			actual = executeDirectly(userFunction, clonedInput);
 		}
 
-		// Yield after function execution
-		await new Promise((resolve) => setTimeout(resolve, 1));
+		// Ensure output is converted if returnType is set (double-check for safety)
+		if (
+			problem?.returnType &&
+			!Array.isArray(actual) &&
+			typeof actual === "object" &&
+			actual !== null
+		) {
+			// If returnType is ListNode/TreeNode but result is still an object, try converting again
+			if (
+				problem.returnType === "ListNode" ||
+				problem.returnType === "TreeNode"
+			) {
+				const reconverted = convertOutput(actual, problem.returnType);
+				if (Array.isArray(reconverted)) {
+					actual = reconverted;
+				}
+			}
+		}
 
-		// Round expected output to 5 decimal places
-		const roundedExpected = roundTo5Decimals(testCase.output);
-
-		// Round actual output
-		actual = roundTo5Decimals(actual);
-
-		// Compare actual vs expected (both already rounded)
-		// Use outputOrderMatters from problem if available, default to true
+		// Use judge system if configured, otherwise fall back to auto-detection
+		const judgeConfig = problem?.judge;
 		const outputOrderMatters = problem?.outputOrderMatters ?? true;
-		const passed = deepEqual(actual, roundedExpected, outputOrderMatters);
+
+		let judgeResult: {
+			pass: boolean;
+			actual: any;
+			expected: any;
+			debug?: any;
+		};
+
+		// If judge config exists, use it
+		if (judgeConfig) {
+			// Get the runtime arguments that were actually used (and modified) by the function
+			let runtimeArgs: any[];
+			if (convertedInputsUsed !== null) {
+				// Use the converted inputs that were actually passed to the function
+				// These have been modified in-place by the function
+				runtimeArgs = convertedInputsUsed;
+			} else {
+				// No type conversion - use clonedInput directly (already modified in-place)
+				runtimeArgs = clonedInput;
+			}
+
+			judgeResult = executeJudge(
+				judgeConfig,
+				runtimeArgs,
+				actual,
+				testCase,
+				outputOrderMatters
+			);
+		} else {
+			// Fallback: Auto-detect pattern (backward compatibility)
+			const roundedExpected = roundTo5Decimals(testCase.output);
+			const isCountAndArrayPattern =
+				typeof actual === "number" &&
+				Array.isArray(roundedExpected) &&
+				clonedInput.length > 0 &&
+				Array.isArray(clonedInput[0]);
+
+			if (isCountAndArrayPattern) {
+				// Auto-detect: mutating-array-with-k pattern
+				const k = actual;
+				const expectedLength = roundedExpected.length;
+				const modifiedArray = clonedInput[0];
+				const firstKElements = modifiedArray.slice(0, k);
+
+				const returnValueMatches = k === expectedLength;
+				const arrayMatches = deepEqual(
+					roundTo5Decimals(firstKElements),
+					roundedExpected,
+					outputOrderMatters
+				);
+
+				judgeResult = {
+					pass: returnValueMatches && arrayMatches,
+					actual: {
+						returnValue: k,
+						array: roundTo5Decimals(firstKElements),
+					},
+					expected: {
+						returnValue: expectedLength,
+						array: roundedExpected,
+					},
+				};
+			} else {
+				// Normal comparison: just check return value
+				actual = roundTo5Decimals(actual);
+				judgeResult = {
+					pass: deepEqual(
+						actual,
+						roundedExpected,
+						outputOrderMatters
+					),
+					actual,
+					expected: roundedExpected,
+				};
+			}
+		}
+
 		const runtime = Date.now() - startTime;
 
 		return {
 			case: caseNumber,
-			passed,
+			passed: judgeResult.pass,
 			input: roundedInput,
-			expected: roundedExpected,
-			actual: actual,
+			expected: judgeResult.expected,
+			actual: judgeResult.actual,
 			runtime,
 		};
 	} catch (error) {
 		const runtime = Date.now() - startTime;
 
-		// Round input and expected even in error case
-		const roundedInput = roundTo5Decimals(testCase.input);
+		// Round expected even in error case
 		const roundedExpected = roundTo5Decimals(testCase.output);
+
+		// Format expected based on judge config or auto-detection
+		let finalExpected = roundedExpected;
+		if (problem?.judge?.kind === "mutating-array-with-k") {
+			if (Array.isArray(roundedExpected)) {
+				finalExpected = {
+					returnValue: roundedExpected.length,
+					array: roundedExpected,
+				};
+			}
+		} else if (!problem?.judge) {
+			// Auto-detect for backward compatibility
+			const isCountAndArrayPattern =
+				Array.isArray(roundedExpected) &&
+				clonedInput.length > 0 &&
+				Array.isArray(clonedInput[0]);
+
+			if (isCountAndArrayPattern) {
+				finalExpected = {
+					returnValue: roundedExpected.length,
+					array: roundedExpected,
+				};
+			}
+		}
 
 		return {
 			case: caseNumber,
 			passed: false,
 			input: roundedInput,
-			expected: roundedExpected,
+			expected: finalExpected,
 			error: error instanceof Error ? error.message : String(error),
 			runtime,
 		};
@@ -264,116 +476,86 @@ async function runSingleTest(
 }
 
 /**
- * Execute test case using systemCode wrapper
- * Injects user code into systemCode execution context so everything shares the same scope
+ * Execute test case using new centralized type conversion system
+ * Uses parameters and returnType to convert inputs/outputs automatically
  */
-function executeWithSystemCode(
+function executeWithTypeConverters(
+	userFunction: (...args: any[]) => any,
 	testCase: { input: any[]; output: any },
-	systemCode: string,
 	problem: AlgoProblemDetail,
-	userCode: string
+	userCode?: string
 ): any {
 	try {
-		// Extract function name from user code (not starting code, which might have ListNode)
-		// Try to find function declaration in user code - exclude ListNode, TreeNode, arrayToListNode, etc.
-		const excludedNames = [
-			"ListNode",
-			"TreeNode",
-			"arrayToListNode",
-			"listNodeToArray",
-			"arrayToTreeNode",
-			"treeNodeToArray",
-			"systemExecute",
-		];
-
-		// Find all function declarations in user code
-		const functionMatches = [
-			...userCode.matchAll(/function\s+(\w+)\s*\(/g),
-		];
-		const arrowMatches = [
-			...userCode.matchAll(
-				/(?:const|let|var)\s+(\w+)\s*=\s*(?:function|\([^)]*\)\s*=>)/g
-			),
-		];
-
-		// Find the first function that's not in the excluded list
-		let functionName: string | undefined;
-
-		// Check function declarations first
-		for (const match of functionMatches) {
-			if (match[1] && !excludedNames.includes(match[1])) {
-				functionName = match[1];
-				break;
+		// Convert inputs based on parameter types
+		const convertedInputs = testCase.input.map((value, index) => {
+			const param = problem.parameters?.[index];
+			if (param) {
+				return convertInput(value, param.type);
 			}
+			return value; // No type info, use as-is
+		});
+
+		// Call user function with converted inputs
+		const result = userFunction(...convertedInputs);
+
+		// Check if val is itself a ListNode (indicates incorrect wrapping)
+		if (
+			result &&
+			typeof result === "object" &&
+			"val" in result &&
+			result.val !== null &&
+			result.val !== undefined &&
+			typeof result.val === "object" &&
+			"val" in result.val &&
+			(problem.returnType === "ListNode" ||
+				problem.returnType === "TreeNode")
+		) {
+			const functionName =
+				problem.functionName || getMainFunctionName(problem);
+			console.error(
+				`[TypeConverter] CRITICAL: Function "${functionName}" returned ListNode where val is a ListNode!`,
+				`This indicates incorrect wrapping. The function likely does: return new ListNode(head) instead of: return head`
+			);
 		}
 
-		// If not found, check arrow functions
-		if (!functionName) {
-			for (const match of arrowMatches) {
-				if (match[1] && !excludedNames.includes(match[1])) {
-					functionName = match[1];
-					break;
-				}
+		// Convert output based on return type
+		if (problem.returnType) {
+			const converted = convertOutput(result, problem.returnType);
+
+			// Safety check: if returnType is ListNode/TreeNode, ensure we return an array
+			if (
+				(problem.returnType === "ListNode" ||
+					problem.returnType === "TreeNode") &&
+				!Array.isArray(converted)
+			) {
+				console.error(
+					`[TypeConverter] CRITICAL: Expected array for ${problem.returnType} but got:`,
+					typeof converted
+				);
 			}
+			return converted;
 		}
 
-		// Fallback to problem's starting code if not found in user code
-		if (!functionName) {
-			functionName = getMainFunctionName(problem);
+		// Handle in-place modifications (function returns undefined/null but modifies first arg)
+		if (
+			(result === undefined || result === null) &&
+			convertedInputs.length > 0 &&
+			(Array.isArray(convertedInputs[0]) ||
+				typeof convertedInputs[0] === "object")
+		) {
+			// First argument was modified in-place, return it
+			return convertOutput(convertedInputs[0], problem.returnType);
 		}
 
-		// SystemCode should be completely self-contained
-		// It defines its own data structures (ListNode, TreeNode, etc.) and conversion functions
-		// We inject user code into the same execution context so the function can access systemCode's ListNode
-		const wrappedCode = `
-			${systemCode}
-			
-			// Inject user's code into the same execution context
-			${userCode}
-			
-			// Extract the function from the user's code (now in same scope as systemCode's ListNode)
-			const userFunction = typeof ${functionName} === 'function' ? ${functionName} : null;
-			
-			if (!userFunction) {
-				throw new Error('Could not find function ${functionName} in user code.');
-			}
-			
-			// Modify systemExecute to use userFunction from outer scope
-			// If systemCode's systemExecute expects userFunction as parameter, we wrap it
-			const originalSystemExecute = systemExecute;
-			const wrappedSystemExecute = function(testCase) {
-				try {
-					// Check if original systemExecute expects userFunction parameter
-					if (originalSystemExecute.length === 2) {
-						// Old signature: systemExecute(userFunction, testCase)
-						const result = originalSystemExecute(userFunction, testCase);
-						return result;
-					} else {
-						// New signature: systemExecute(testCase) - userFunction in scope
-						return originalSystemExecute(testCase);
-					}
-				} catch (error) {
-					throw error;
-				}
-			};
-			
-			// Call the wrapped systemExecute
-			return wrappedSystemExecute(testCase);
-		`;
-
-		// Create the execution function (no parameters needed - everything is in the code)
-		const executeFunc = new Function("testCase", wrappedCode);
-
-		// Execute with systemCode and user code in same context
-		const result = executeFunc(testCase);
 		return result;
 	} catch (error) {
+		console.error("Error executing with type converters:", error);
 		throw error;
 	}
 }
 
 /**
- * Execute test case directly (fallback for problems without systemCode)
+ * Execute test case directly (for problems without type conversion)
  */
 function executeDirectly(
 	userFunction: (...args: any[]) => any,
@@ -384,7 +566,7 @@ function executeDirectly(
 
 	// Determine what to return:
 	// - If function returns undefined/null AND the first argument is an array/object,
-	//   it likely modifies in-place. Return the modified first argument.
+	//   it likely modifies in-place. Return the modified first argument (not all parameters).
 	// - Otherwise, return the return value
 	const firstArg = clonedInput.length > 0 ? clonedInput[0] : null;
 	const isFirstArgArrayOrObject =
@@ -396,8 +578,10 @@ function executeDirectly(
 		(returnValue === undefined || returnValue === null) &&
 		isFirstArgArrayOrObject
 	) {
-		// Likely in-place modification: return the modified first argument
-		return clonedInput.length === 1 ? clonedInput[0] : clonedInput;
+		// Likely in-place modification: return the modified first argument only
+		// This handles both single-parameter and multi-parameter functions
+		// (e.g., merge(nums1, m, nums2, n) modifies nums1, so return nums1)
+		return clonedInput[0];
 	} else {
 		// Normal return value
 		return returnValue;

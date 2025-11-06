@@ -41,7 +41,7 @@ interface AdminProblemsTableProps {
 
 export function AdminProblemsTable({ problems }: AdminProblemsTableProps) {
 	const [sortBy, setSortBy] = useState<FilterSortBy>("default");
-	const [sortAscending, setSortAscending] = useState(true);
+	const [sortAscending, setSortAscending] = useState(false);
 	const [searchTerm, setSearchTerm] = useState("");
 	const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
 	const [selectedDifficulties, setSelectedDifficulties] = useState<string[]>(

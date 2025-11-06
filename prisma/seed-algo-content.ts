@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { processMarkdown } from "@/components/MarkdownEditor/markdown-processor";
-import { algoProblems } from "../src/features/algorithms/data/problems/algoProblems";
+// import { algoProblems } from "../src/features/algorithms/data/problems/algoProblems"; // Removed - problems are now in database
 import { algoLessons } from "../src/features/algorithms/data/algoLessons";
 
 const prisma = new PrismaClient();
@@ -9,6 +9,9 @@ async function seedAlgoContent() {
 	console.log("Starting algorithm content migration...");
 
 	// Seed Problems
+	// Note: Problems are now managed through the admin interface and database
+	// Hardcoded algoProblems files have been removed
+	/*
 	console.log(`Migrating ${algoProblems.length} problems...`);
 	for (const problem of algoProblems) {
 		try {
@@ -36,7 +39,6 @@ async function seedAlgoContent() {
 						difficulty: problem.difficulty,
 						languages: problem.languages,
 						rubric: problem.rubric,
-						parameterNames: problem.parameterNames,
 						tests: problem.tests,
 						startingCode: problem.startingCode,
 						passingCode: problem.passingCode,
@@ -59,7 +61,6 @@ async function seedAlgoContent() {
 					difficulty: problem.difficulty,
 					languages: problem.languages,
 					rubric: problem.rubric,
-					parameterNames: problem.parameterNames,
 					tests: problem.tests,
 					startingCode: problem.startingCode,
 					passingCode: problem.passingCode,
@@ -71,6 +72,7 @@ async function seedAlgoContent() {
 			console.error(`✗ Failed to migrate ${problem.title}:`, error);
 		}
 	}
+	*/
 
 	// Seed Lessons
 	console.log(`\nMigrating ${algoLessons.length} lessons...`);

@@ -18,14 +18,18 @@ import {
 import { toast } from "sonner";
 import { TopicsDropdown } from "./TopicsDropdown";
 
+import { AlgoProblemMeta } from "@/types/algorithm-types";
+
 interface AlgorithmWorkspaceProps {
 	problem: AlgoProblemDetail;
 	relatedLessons: AlgoLesson[];
+	problemsMeta: AlgoProblemMeta[];
 }
 
 export function AlgorithmWorkspace({
 	problem,
 	relatedLessons,
+	problemsMeta,
 }: AlgorithmWorkspaceProps) {
 	const [chatMessages, setChatMessages] = useState<any[]>([]);
 	const [isThinking, setIsThinking] = useState(false);
@@ -649,6 +653,7 @@ export function AlgorithmWorkspace({
 				isThinking={isThinking}
 				streamingMessageId={streamingMessageId}
 				relatedLessons={relatedLessons}
+				problemsMeta={problemsMeta}
 			/>
 		</>
 	);

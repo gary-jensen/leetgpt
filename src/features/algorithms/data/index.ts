@@ -4,10 +4,10 @@ import {
 	AlgoProblemDetail,
 } from "@/types/algorithm-types";
 import { algoLessons } from "./algoLessons";
-import { algoProblems } from "./problems/algoProblems";
 import { prisma } from "@/lib/prisma";
 import { unstable_cache as nextCache, revalidateTag } from "next/cache";
 import { processMarkdown } from "@/components/MarkdownEditor/markdown-processor";
+import { inferParameterTypes } from "@/lib/utils/typeInference";
 
 export interface FilterOptions {
 	topic?: string;
@@ -60,6 +60,39 @@ export const getAlgoLessons = nextCache(
 	},
 	["algo:lessons:list:v1"],
 	{ tags: ["algo:lessons"] }
+);
+
+/**
+ * Get only problem metadata needed for navigation/sidebar (lightweight, cached)
+ * Only fetches: id, slug, title, topics, difficulty, languages, order
+ */
+export const getAlgoProblemsMeta = nextCache(
+	async (): Promise<AlgoProblemMeta[]> => {
+		const dbProblems = await prisma.algoProblem.findMany({
+			select: {
+				id: true,
+				slug: true,
+				title: true,
+				topics: true,
+				difficulty: true,
+				languages: true,
+				order: true,
+			},
+			orderBy: { order: "asc" },
+		});
+
+		return dbProblems.map((problem) => ({
+			id: problem.id,
+			slug: problem.slug,
+			title: problem.title,
+			topics: problem.topics,
+			difficulty: problem.difficulty as "easy" | "medium" | "hard",
+			languages: problem.languages,
+			order: problem.order,
+		}));
+	},
+	["algo:problems:meta:v1"],
+	{ tags: ["algo:problems"] }
 );
 
 export const getAlgoProblems = nextCache(
@@ -119,6 +152,53 @@ export async function getAlgoProblem(
 		return null;
 	}
 
+	// Get parameters and returnType (new fields), infer if missing (backward compatibility)
+	let parameters = (dbProblem as any).parameters
+		? ((dbProblem as any).parameters as { name: string; type: string }[])
+		: undefined;
+	let returnType = (dbProblem as any).returnType
+		? ((dbProblem as any).returnType as string)
+		: undefined;
+
+	// If parameters missing, build temporary problem object to infer types
+	if (!parameters || parameters.length === 0) {
+		const tempProblem: AlgoProblemDetail = {
+			id: dbProblem.id,
+			slug: dbProblem.slug,
+			title: dbProblem.title,
+			topics: dbProblem.topics,
+			difficulty: dbProblem.difficulty as "easy" | "medium" | "hard",
+			languages: dbProblem.languages,
+			order: dbProblem.order,
+			statementMd: dbProblem.statementMd,
+			statementHtml: dbProblem.statementHtml || null,
+			examplesAndConstraintsMd:
+				(dbProblem as any).examplesAndConstraintsMd || null,
+			examplesAndConstraintsHtml:
+				(dbProblem as any).examplesAndConstraintsHtml || null,
+			rubric: dbProblem.rubric as {
+				optimal_time: string;
+				acceptable_time: string[];
+			},
+			tests: dbProblem.tests as { input: any[]; output: any }[],
+			parameters: [],
+			startingCode: dbProblem.startingCode as {
+				[key: string]: string;
+			},
+			passingCode: dbProblem.passingCode as { [key: string]: string },
+			secondaryPassingCode: (dbProblem as any).secondaryPassingCode
+				? ((dbProblem as any).secondaryPassingCode as {
+						[key: string]: string;
+				  })
+				: undefined,
+			outputOrderMatters: (dbProblem as any).outputOrderMatters ?? true,
+			judge: (dbProblem as any).judge || undefined,
+		};
+		const inference = inferParameterTypes(tempProblem);
+		parameters = inference.parameters;
+		returnType = returnType || inference.returnType;
+	}
+
 	return {
 		id: dbProblem.id,
 		slug: dbProblem.slug,
@@ -138,7 +218,9 @@ export async function getAlgoProblem(
 			acceptable_time: string[];
 		},
 		tests: dbProblem.tests as { input: any[]; output: any }[],
-		parameterNames: dbProblem.parameterNames,
+		parameters: parameters || [], // Will be inferred if missing (backward compatibility)
+		returnType: returnType,
+		functionName: (dbProblem as any).functionName || undefined,
 		startingCode: dbProblem.startingCode as {
 			[key: string]: string;
 		},
@@ -148,10 +230,8 @@ export async function getAlgoProblem(
 					[key: string]: string;
 			  })
 			: undefined,
-		systemCode: (dbProblem as any).systemCode
-			? ((dbProblem as any).systemCode as { [key: string]: string })
-			: undefined,
 		outputOrderMatters: (dbProblem as any).outputOrderMatters ?? true,
+		judge: (dbProblem as any).judge || undefined, // Judge configuration
 	};
 }
 
@@ -215,6 +295,53 @@ export async function getAlgoProblemBySlug(
 		return null;
 	}
 
+	// Get parameters and returnType (new fields), infer if missing (backward compatibility)
+	let parameters = (dbProblem as any).parameters
+		? ((dbProblem as any).parameters as { name: string; type: string }[])
+		: undefined;
+	let returnType = (dbProblem as any).returnType
+		? ((dbProblem as any).returnType as string)
+		: undefined;
+
+	// If parameters missing, build temporary problem object to infer types
+	if (!parameters || parameters.length === 0) {
+		const tempProblem: AlgoProblemDetail = {
+			id: dbProblem.id,
+			slug: dbProblem.slug,
+			title: dbProblem.title,
+			topics: dbProblem.topics,
+			difficulty: dbProblem.difficulty as "easy" | "medium" | "hard",
+			languages: dbProblem.languages,
+			order: dbProblem.order,
+			statementMd: dbProblem.statementMd,
+			statementHtml: dbProblem.statementHtml || null,
+			examplesAndConstraintsMd:
+				(dbProblem as any).examplesAndConstraintsMd || null,
+			examplesAndConstraintsHtml:
+				(dbProblem as any).examplesAndConstraintsHtml || null,
+			rubric: dbProblem.rubric as {
+				optimal_time: string;
+				acceptable_time: string[];
+			},
+			tests: dbProblem.tests as { input: any[]; output: any }[],
+			parameters: [],
+			startingCode: dbProblem.startingCode as {
+				[key: string]: string;
+			},
+			passingCode: dbProblem.passingCode as { [key: string]: string },
+			secondaryPassingCode: (dbProblem as any).secondaryPassingCode
+				? ((dbProblem as any).secondaryPassingCode as {
+						[key: string]: string;
+				  })
+				: undefined,
+			outputOrderMatters: (dbProblem as any).outputOrderMatters ?? true,
+			judge: (dbProblem as any).judge || undefined,
+		};
+		const inference = inferParameterTypes(tempProblem);
+		parameters = inference.parameters;
+		returnType = returnType || inference.returnType;
+	}
+
 	return {
 		id: dbProblem.id,
 		slug: dbProblem.slug,
@@ -234,7 +361,9 @@ export async function getAlgoProblemBySlug(
 			acceptable_time: string[];
 		},
 		tests: dbProblem.tests as { input: any[]; output: any }[],
-		parameterNames: dbProblem.parameterNames,
+		parameters: parameters || [], // Will be inferred if missing (backward compatibility)
+		returnType: returnType,
+		functionName: (dbProblem as any).functionName || undefined,
 		startingCode: dbProblem.startingCode as {
 			[key: string]: string;
 		},
@@ -244,10 +373,8 @@ export async function getAlgoProblemBySlug(
 					[key: string]: string;
 			  })
 			: undefined,
-		systemCode: (dbProblem as any).systemCode
-			? ((dbProblem as any).systemCode as { [key: string]: string })
-			: undefined,
 		outputOrderMatters: (dbProblem as any).outputOrderMatters ?? true,
+		judge: (dbProblem as any).judge || undefined, // Judge configuration
 	};
 }
 
@@ -308,4 +435,4 @@ export async function getLessonsByTopics(
 }
 
 // Export the raw data for direct access if needed
-export { algoLessons, algoProblems };
+export { algoLessons };

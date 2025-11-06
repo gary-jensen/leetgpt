@@ -47,7 +47,12 @@ export default async function EditProblemPage({
 					difficulty: problem.difficulty,
 					languages: problem.languages,
 					rubric: problem.rubric as any,
-					parameterNames: problem.parameterNames,
+					parameters: (problem as any).parameters
+						? ((problem as any).parameters as { name: string; type: string }[])
+						: undefined,
+					returnType: (problem as any).returnType || undefined,
+					functionName: (problem as any).functionName || undefined,
+					judge: (problem as any).judge || undefined,
 					tests: problem.tests as any,
 					startingCode: problem.startingCode as any,
 					passingCode: problem.passingCode as any,

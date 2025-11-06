@@ -75,7 +75,7 @@ export function TestRunner() {
 			statementMd: "",
 			rubric: { optimal_time: "", acceptable_time: [] },
 			tests: [],
-			parameterNames: [],
+			parameters: [],
 			startingCode: {},
 			passingCode: {},
 		};

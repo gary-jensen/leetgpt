@@ -14,8 +14,9 @@ import { Loader2, CheckCircle2, XCircle, X } from "lucide-react";
 import {
 	cancelBuilder,
 	finishBuilderManually,
+	revalidateAlgorithmPaths,
 } from "@/lib/actions/adminProblemBuilderActions";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 interface ProblemBuilderCardProps {
 	state: BuilderState;
@@ -24,7 +25,28 @@ interface ProblemBuilderCardProps {
 export function ProblemBuilderCard({ state }: ProblemBuilderCardProps) {
 	const [isCancelling, setIsCancelling] = useState(false);
 	const [isFinishing, setIsFinishing] = useState(false);
+	const hasRevalidatedRef = useRef(false);
+	const previousPhaseRef = useRef(state.phase);
 	const elapsedTime = formatElapsedTime(Date.now() - state.phaseStartTime);
+
+	// Revalidate paths when builder completes (only once per completion)
+	useEffect(() => {
+		const justCompleted =
+			previousPhaseRef.current !== "completed" &&
+			state.phase === "completed";
+
+		if (justCompleted && !hasRevalidatedRef.current) {
+			hasRevalidatedRef.current = true;
+			// Call revalidation in a separate context after state update
+			setTimeout(() => {
+				revalidateAlgorithmPaths().catch((error) => {
+					console.error("Failed to revalidate paths:", error);
+				});
+			}, 100);
+		}
+
+		previousPhaseRef.current = state.phase;
+	}, [state.phase]);
 
 	const canCancel =
 		state.phase !== "completed" &&
@@ -68,6 +90,14 @@ export function ProblemBuilderCard({ state }: ProblemBuilderCardProps) {
 			const result = await finishBuilderManually(state.builderId);
 			if (!result.success) {
 				alert(`Failed to finish: ${result.error}`);
+			} else {
+				// Revalidate paths after successful manual finish
+				// Delay to ensure it's in a separate context
+				setTimeout(() => {
+					revalidateAlgorithmPaths().catch((error) => {
+						console.error("Failed to revalidate paths:", error);
+					});
+				}, 100);
 			}
 		} catch (error) {
 			console.error("Failed to finish builder:", error);

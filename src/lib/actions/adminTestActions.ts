@@ -64,7 +64,67 @@ export async function testAllProblems(): Promise<TestAllProblemsResult> {
 	}
 
 	// Convert database problems to AlgoProblemDetail format
-	const problems: AlgoProblemDetail[] = dbProblems.map((dbProblem) => ({
+	// Import type inference for backward compatibility
+	const { inferParameterTypes } = await import("@/lib/utils/typeInference");
+
+	const problems: AlgoProblemDetail[] = await Promise.all(
+		dbProblems.map(async (dbProblem) => {
+			// Get parameters and returnType (new fields), infer if missing (backward compatibility)
+			let parameters = (dbProblem as any).parameters
+				? ((dbProblem as any).parameters as {
+						name: string;
+						type: string;
+				  }[])
+				: undefined;
+			let returnType = (dbProblem as any).returnType
+				? ((dbProblem as any).returnType as string)
+				: undefined;
+			const functionName = (dbProblem as any).functionName
+				? ((dbProblem as any).functionName as string)
+				: undefined;
+
+			// If parameters missing, build temporary problem object to infer types
+			if (!parameters || parameters.length === 0) {
+				const tempProblem: AlgoProblemDetail = {
+					id: dbProblem.id,
+					slug: dbProblem.slug,
+					title: dbProblem.title,
+					topics: dbProblem.topics,
+					difficulty: dbProblem.difficulty as
+						| "easy"
+						| "medium"
+						| "hard",
+					languages: dbProblem.languages,
+					order: (dbProblem as any).order ?? 0,
+					statementMd: (dbProblem as any).statementMd || "",
+					statementHtml: (dbProblem as any).statementHtml || null,
+					examplesAndConstraintsMd:
+						(dbProblem as any).examplesAndConstraintsMd || null,
+					examplesAndConstraintsHtml:
+						(dbProblem as any).examplesAndConstraintsHtml || null,
+					rubric: (dbProblem as any).rubric || {
+						optimal_time: "",
+						acceptable_time: [],
+					},
+					tests: (dbProblem as any).tests || [],
+					parameters: [],
+					startingCode: (dbProblem as any).startingCode || {},
+					passingCode: (dbProblem as any).passingCode || {},
+					secondaryPassingCode: (dbProblem as any)
+						.secondaryPassingCode
+						? ((dbProblem as any).secondaryPassingCode as {
+								[key: string]: string;
+						  })
+						: undefined,
+					outputOrderMatters:
+						(dbProblem as any).outputOrderMatters ?? true,
+				};
+				const inference = inferParameterTypes(tempProblem);
+				parameters = inference.parameters;
+				returnType = returnType || inference.returnType;
+			}
+
+			return {
 		id: dbProblem.id,
 		slug: dbProblem.slug,
 		title: dbProblem.title,
@@ -74,12 +134,18 @@ export async function testAllProblems(): Promise<TestAllProblemsResult> {
 		order: (dbProblem as any).order ?? 0,
 		statementMd: (dbProblem as any).statementMd || "",
 		statementHtml: (dbProblem as any).statementHtml || null,
+				examplesAndConstraintsMd:
+					(dbProblem as any).examplesAndConstraintsMd || null,
+				examplesAndConstraintsHtml:
+					(dbProblem as any).examplesAndConstraintsHtml || null,
 		rubric: (dbProblem as any).rubric || {
 			optimal_time: "",
 			acceptable_time: [],
 		},
 		tests: (dbProblem as any).tests || [],
-		parameterNames: (dbProblem as any).parameterNames || [],
+				parameters: parameters || [],
+				returnType: returnType,
+				functionName: functionName,
 		startingCode: (dbProblem as any).startingCode || {},
 		passingCode: (dbProblem as any).passingCode || {},
 		secondaryPassingCode: (dbProblem as any).secondaryPassingCode
@@ -87,8 +153,12 @@ export async function testAllProblems(): Promise<TestAllProblemsResult> {
 					[key: string]: string;
 			  })
 			: undefined,
-		outputOrderMatters: (dbProblem as any).outputOrderMatters ?? true,
-	}));
+				outputOrderMatters:
+					(dbProblem as any).outputOrderMatters ?? true,
+				judge: (dbProblem as any).judge || undefined,
+			};
+		})
+	);
 
 	// Test each problem
 	const testResults: TestProblemResult[] = [];
@@ -179,6 +249,56 @@ export async function testSingleProblem(
 	}
 
 	// Convert database problem to AlgoProblemDetail format
+	// Import type inference for backward compatibility
+	const { inferParameterTypes } = await import("@/lib/utils/typeInference");
+
+	// Get parameters and returnType (new fields), infer if missing (backward compatibility)
+	let parameters = (dbProblem as any).parameters
+		? ((dbProblem as any).parameters as { name: string; type: string }[])
+		: undefined;
+	let returnType = (dbProblem as any).returnType
+		? ((dbProblem as any).returnType as string)
+		: undefined;
+	let functionName = (dbProblem as any).functionName
+		? ((dbProblem as any).functionName as string)
+		: undefined;
+
+	// If parameters missing, build temporary problem object to infer types
+	if (!parameters || parameters.length === 0) {
+		const tempProblem: AlgoProblemDetail = {
+			id: dbProblem.id,
+			slug: dbProblem.slug,
+			title: dbProblem.title,
+			topics: dbProblem.topics,
+			difficulty: dbProblem.difficulty as "easy" | "medium" | "hard",
+			languages: dbProblem.languages,
+			order: (dbProblem as any).order ?? 0,
+			statementMd: (dbProblem as any).statementMd || "",
+			statementHtml: (dbProblem as any).statementHtml || null,
+			examplesAndConstraintsMd:
+				(dbProblem as any).examplesAndConstraintsMd || null,
+			examplesAndConstraintsHtml:
+				(dbProblem as any).examplesAndConstraintsHtml || null,
+			rubric: (dbProblem as any).rubric || {
+				optimal_time: "",
+				acceptable_time: [],
+			},
+			tests: (dbProblem as any).tests || [],
+			parameters: [],
+			startingCode: (dbProblem as any).startingCode || {},
+			passingCode: (dbProblem as any).passingCode || {},
+			secondaryPassingCode: (dbProblem as any).secondaryPassingCode
+				? ((dbProblem as any).secondaryPassingCode as {
+						[key: string]: string;
+				  })
+				: undefined,
+			outputOrderMatters: (dbProblem as any).outputOrderMatters ?? true,
+		};
+		const inference = inferParameterTypes(tempProblem);
+		parameters = inference.parameters;
+		returnType = returnType || inference.returnType;
+	}
+
 	const problem: AlgoProblemDetail = {
 		id: dbProblem.id,
 		slug: dbProblem.slug,
@@ -189,12 +309,18 @@ export async function testSingleProblem(
 		order: (dbProblem as any).order ?? 0,
 		statementMd: (dbProblem as any).statementMd || "",
 		statementHtml: (dbProblem as any).statementHtml || null,
+		examplesAndConstraintsMd:
+			(dbProblem as any).examplesAndConstraintsMd || null,
+		examplesAndConstraintsHtml:
+			(dbProblem as any).examplesAndConstraintsHtml || null,
 		rubric: (dbProblem as any).rubric || {
 			optimal_time: "",
 			acceptable_time: [],
 		},
 		tests: (dbProblem as any).tests || [],
-		parameterNames: (dbProblem as any).parameterNames || [],
+		parameters: parameters || [],
+		returnType: returnType,
+		functionName: functionName,
 		startingCode: (dbProblem as any).startingCode || {},
 		passingCode: (dbProblem as any).passingCode || {},
 		secondaryPassingCode: (dbProblem as any).secondaryPassingCode
@@ -203,6 +329,7 @@ export async function testSingleProblem(
 			  })
 			: undefined,
 		outputOrderMatters: (dbProblem as any).outputOrderMatters ?? true,
+		judge: (dbProblem as any).judge || undefined,
 	};
 
 	const validation = await validatePassingCodeDetailed(problem);
