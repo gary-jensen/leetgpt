@@ -1,125 +1,66 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ProblemBuilderForm } from "./ProblemBuilderForm";
 import { ProblemBuilderCard } from "./ProblemBuilderCard";
-import { getBuilderState } from "@/lib/actions/adminProblemBuilderActions";
-import { BuilderState } from "@/lib/utils/problemBuilderUtils";
-import { Separator } from "@/components/ui/separator";
+import { useProblemBuilder } from "../hooks/useProblemBuilder";
+
+interface BuilderInstance {
+	builderId: string;
+	problemName: string;
+}
 
 export function ProblemBuilder() {
-	const [builderIds, setBuilderIds] = useState<string[]>([]);
-	const [builderStates, setBuilderStates] = useState<
-		Map<string, BuilderState>
-	>(new Map());
+	const [builders, setBuilders] = useState<BuilderInstance[]>([]);
 
-	// Poll for builder state updates
-	useEffect(() => {
-		if (builderIds.length === 0) {
-			return;
-		}
-
-		const pollInterval = setInterval(async () => {
-			const newStates = new Map<string, BuilderState>();
-
-			for (const builderId of builderIds) {
-				const state = await getBuilderState(builderId);
-				if (state) {
-					newStates.set(builderId, state);
-				}
-			}
-
-			setBuilderStates(newStates);
-
-			// Remove completed/failed builders from polling after a delay
-			const allFinished = Array.from(newStates.values()).every(
-				(state) =>
-					state.phase === "completed" || state.phase === "failed"
-			);
-
-			if (allFinished && builderIds.length > 0) {
-				// Keep polling for a bit longer, then stop
-				setTimeout(() => {
-					clearInterval(pollInterval);
-				}, 5000);
-			}
-		}, 2500); // Poll every 2.5 seconds
-
-		return () => clearInterval(pollInterval);
-	}, [builderIds]);
-
-	const handleStartBuilders = (newBuilderIds: string[]) => {
-		setBuilderIds((prev) => [...prev, ...newBuilderIds]);
+	const handleStartBuilders = (
+		newBuilders: { builderId: string; problemName: string }[]
+	) => {
+		setBuilders((prev) => [...prev, ...newBuilders]);
 	};
-
-	const activeBuilders = Array.from(builderStates.values()).filter(
-		(state) => state.phase !== "completed" && state.phase !== "failed"
-	);
-
-	const completedBuilders = Array.from(builderStates.values()).filter(
-		(state) => state.phase === "completed"
-	);
-
-	const failedBuilders = Array.from(builderStates.values()).filter(
-		(state) => state.phase === "failed"
-	);
 
 	return (
 		<div className="space-y-6">
 			<ProblemBuilderForm onStartBuilders={handleStartBuilders} />
 
-			{/* Active Builders */}
-			{activeBuilders.length > 0 && (
+			{/* All Builders */}
+			{builders.length > 0 && (
 				<div className="space-y-4">
 					<h3 className="text-lg font-semibold">
-						Active Builders ({activeBuilders.length})
+						Builders ({builders.length})
 					</h3>
 					<div className="space-y-4">
-						{activeBuilders.map((state) => (
-							<ProblemBuilderCard
-								key={state.builderId}
-								state={state}
-							/>
-						))}
-					</div>
-				</div>
-			)}
-
-			{/* Completed Builders */}
-			{completedBuilders.length > 0 && (
-				<div className="space-y-4">
-					<Separator />
-					<h3 className="text-lg font-semibold text-green-600">
-						Completed ({completedBuilders.length})
-					</h3>
-					<div className="space-y-4">
-						{completedBuilders.map((state) => (
-							<ProblemBuilderCard
-								key={state.builderId}
-								state={state}
-							/>
-						))}
-					</div>
-				</div>
-			)}
-
-			{/* Failed Builders */}
-			{failedBuilders.length > 0 && (
-				<div className="space-y-4">
-					<Separator />
-					<h3 className="text-lg font-semibold text-destructive">
-						Failed ({failedBuilders.length})
-					</h3>
-					<div className="space-y-4">
-						{failedBuilders.map((state) => (
-							<ProblemBuilderCard
-								key={state.builderId}
-								state={state}
+						{builders.map((builder, index) => (
+							<BuilderCardWrapper
+								key={`${builder.builderId}-${index}`}
+								builderId={builder.builderId}
+								problemName={builder.problemName}
 							/>
 						))}
 					</div>
 				</div>
 			)}
 		</div>
+	);
+}
+
+function BuilderCardWrapper({
+	builderId,
+	problemName,
+}: {
+	builderId: string;
+	problemName: string;
+}) {
+	const { state, cancel, finishManually } = useProblemBuilder(
+		builderId,
+		problemName
+	);
+
+	return (
+		<ProblemBuilderCard
+			state={state}
+			onCancel={cancel}
+			onFinishManually={finishManually}
+		/>
 	);
 }

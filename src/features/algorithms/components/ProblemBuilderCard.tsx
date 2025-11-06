@@ -11,18 +11,20 @@ import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Loader2, CheckCircle2, XCircle, X } from "lucide-react";
-import {
-	cancelBuilder,
-	finishBuilderManually,
-	revalidateAlgorithmPaths,
-} from "@/lib/actions/adminProblemBuilderActions";
+import { revalidateAlgorithmPaths } from "@/lib/actions/adminProblemBuilderActions";
 import { useState, useEffect, useRef } from "react";
 
 interface ProblemBuilderCardProps {
 	state: BuilderState;
+	onCancel: () => void;
+	onFinishManually: () => Promise<void>;
 }
 
-export function ProblemBuilderCard({ state }: ProblemBuilderCardProps) {
+export function ProblemBuilderCard({
+	state,
+	onCancel,
+	onFinishManually,
+}: ProblemBuilderCardProps) {
 	const [isCancelling, setIsCancelling] = useState(false);
 	const [isFinishing, setIsFinishing] = useState(false);
 	const hasRevalidatedRef = useRef(false);
@@ -61,12 +63,12 @@ export function ProblemBuilderCard({ state }: ProblemBuilderCardProps) {
 		state.phase !== "idle" &&
 		state.phase !== "generating_problem"; // Only allow after problem data is generated
 
-	const handleCancel = async () => {
+	const handleCancel = () => {
 		if (!canCancel || isCancelling) return;
 
 		setIsCancelling(true);
 		try {
-			await cancelBuilder(state.builderId);
+			onCancel();
 		} catch (error) {
 			console.error("Failed to cancel builder:", error);
 		} finally {
@@ -87,18 +89,14 @@ export function ProblemBuilderCard({ state }: ProblemBuilderCardProps) {
 
 		setIsFinishing(true);
 		try {
-			const result = await finishBuilderManually(state.builderId);
-			if (!result.success) {
-				alert(`Failed to finish: ${result.error}`);
-			} else {
-				// Revalidate paths after successful manual finish
-				// Delay to ensure it's in a separate context
-				setTimeout(() => {
-					revalidateAlgorithmPaths().catch((error) => {
-						console.error("Failed to revalidate paths:", error);
-					});
-				}, 100);
-			}
+			await onFinishManually();
+			// Revalidate paths after successful manual finish
+			// Delay to ensure it's in a separate context
+			setTimeout(() => {
+				revalidateAlgorithmPaths().catch((error) => {
+					console.error("Failed to revalidate paths:", error);
+				});
+			}, 100);
 		} catch (error) {
 			console.error("Failed to finish builder:", error);
 			alert(

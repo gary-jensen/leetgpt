@@ -9,6 +9,11 @@ const nextConfig: NextConfig = {
 		// Keep TypeScript checks enabled
 		ignoreBuildErrors: false,
 	},
+	experimental: {
+		serverActions: {
+			bodySizeLimit: "10mb", // Increased from default 1mb to handle large test case arrays
+		},
+	},
 };
 
 export default nextConfig;

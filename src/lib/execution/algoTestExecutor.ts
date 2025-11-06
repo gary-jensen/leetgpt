@@ -117,7 +117,7 @@ export async function executeAlgoTests(
  * Create a function from user code by extracting the main function
  * Injects ListNode/TreeNode definitions if problem uses them
  */
-function createFunctionFromCode(
+export function createFunctionFromCode(
 	code: string,
 	problem: AlgoProblemDetail
 ): ((...args: any[]) => any) | null {

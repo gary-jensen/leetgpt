@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { startMultipleBuilders } from "@/lib/actions/adminProblemBuilderActions";
+import { generateUUID } from "@/lib/cryptoUtils";
 
 interface ProblemBuilderFormProps {
-	onStartBuilders: (builderIds: string[]) => void;
+	onStartBuilders: (
+		builders: { builderId: string; problemName: string }[]
+	) => void;
 }
 
 export function ProblemBuilderForm({
@@ -40,13 +42,13 @@ export function ProblemBuilderForm({
 		setIsSubmitting(true);
 
 		try {
-			const result = await startMultipleBuilders(problemNamesArray);
-			if (!result.success || !result.builderIds) {
-				setError(result.error || "Failed to start builders");
-				return;
-			}
+			// Generate builder IDs and problem names on client
+			const builders = problemNamesArray.map((problemName) => ({
+				builderId: generateUUID(),
+				problemName: problemName.trim(),
+			}));
 
-			onStartBuilders(result.builderIds);
+			onStartBuilders(builders);
 			setProblemNames(""); // Clear form on success
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Unknown error");
@@ -63,7 +65,10 @@ export function ProblemBuilderForm({
 			<CardContent>
 				<form onSubmit={handleSubmit} className="space-y-4">
 					<div className="space-y-2">
-						<label htmlFor="problem-names" className="text-sm font-medium">
+						<label
+							htmlFor="problem-names"
+							className="text-sm font-medium"
+						>
 							Problem Names (one per line)
 						</label>
 						<Textarea
@@ -77,7 +82,8 @@ export function ProblemBuilderForm({
 						<div className="flex items-center gap-2">
 							<Badge variant="secondary">
 								{problemNamesArray.length} problem
-								{problemNamesArray.length !== 1 ? "s" : ""} entered
+								{problemNamesArray.length !== 1 ? "s" : ""}{" "}
+								entered
 							</Badge>
 							{problemNamesArray.length > 5 && (
 								<span className="text-sm text-destructive">
@@ -106,4 +112,3 @@ export function ProblemBuilderForm({
 		</Card>
 	);
 }
-

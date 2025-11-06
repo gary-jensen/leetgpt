@@ -47,6 +47,10 @@ export async function generateProblemData(problemName: string): Promise<{
 	data?: ProblemGenerationData & { order?: number };
 	error?: string;
 }> {
+	console.log(
+		`[SERVER] generateProblemData START for: ${problemName}`,
+		new Date().toISOString()
+	);
 	// Yield before auth check to prevent blocking
 	await yieldToEventLoop(10);
 
@@ -254,6 +258,10 @@ Example JSON structure:
 		console.log(`\n--- Return Type ---`);
 		console.log(parsed.returnType);
 		console.log(`\n=== End of Generated Data ===\n`);
+		console.log(
+			`[SERVER] generateProblemData END for: ${problemName}`,
+			new Date().toISOString()
+		);
 
 		return { success: true, data: parsed };
 	} catch (error) {
@@ -268,7 +276,12 @@ Example JSON structure:
  * Generate a test case generator function using LLM
  * The LLM creates a JavaScript function that we can execute to generate test cases
  */
-async function generateTestCaseGeneratorFunction(
+/**
+ * Generate test case generator function code via AI
+ * This is the ONLY server-side operation - just calls OpenAI API
+ * The actual execution of the generator function happens client-side
+ */
+export async function generateTestCaseGeneratorFunction(
 	problemData: ProblemGenerationData,
 	existingTests: TestCase[]
 ): Promise<{
@@ -276,6 +289,10 @@ async function generateTestCaseGeneratorFunction(
 	generatorFunction?: string;
 	error?: string;
 }> {
+	console.log(
+		`[SERVER] generateTestCaseGeneratorFunction START for: ${problemData.title}`,
+		new Date().toISOString()
+	);
 	// Yield before auth check
 	await yieldToEventLoop(10);
 
@@ -334,12 +351,17 @@ ${outputStructureInstructions}
 - ⚠️ ALL test cases MUST strictly follow the constraints above - extract min/max values and NEVER exceed them
 - ⚠️ If constraints say "1 <= n <= 9", generate test cases ONLY for n=1 through n=9, NOT higher.
 - ⚠️ If constraints limit array length to 100, NEVER generate arrays longer than 100
-- Generate as many unique test cases as constraints allow (target ~40, but if constraints only allow 9, generate 9)
+- ⚠️ MAXIMUM 100 test cases - if constraints allow more, sample strategically (e.g., edge cases, small values, boundary values) rather than generating all combinations
+- ⚠️ DO NOT generate all possible combinations - this will cause memory overflow. Instead, generate a diverse set of ~40-100 test cases covering edge cases, boundaries, and typical inputs
+- Generate as many unique test cases as constraints allow (target ~40-100, maximum 100)
 - Return: [{input: [...], output: ...}]
 - Input format: array of parameter values (e.g., [[nums], val])
 - Deep clone inputs: JSON.parse(JSON.stringify(caseInput))
 - Convert ListNode/TreeNode params using \`arrayToListNode\` (available in context)
 - Convert ListNode outputs using \`listNodeToArray\` (available in context)
+- ⚠️ CRITICAL: For \`void\` return type, the output should be the modified first parameter (usually an array that was mutated in-place)
+  - Example: If function is \`sortColors(nums)\` with return type \`void\`, after calling \`passingCode(nums)\`, the output should be the modified \`nums\` array, not \`undefined\`
+  - Use: \`let output = passingCode(...converted); if (output === undefined || output === null) { output = converted[0]; }\`
 ${
 	problemData.judge?.kind === "mutating-array-with-k"
 		? `- For mutating arrays: return modified array (first k elements), not the return value`
@@ -353,7 +375,9 @@ function generateTestCases({existingTests, constraints, parameters, passingCode,
   // Example: const maxN = 9; // from constraints "1 <= n <= 9"
   const cases = [];
   // Generate cases within constraint limits only
+  // ⚠️ DO NOT generate all combinations - sample strategically (edge cases, boundaries, typical values)
   // Example: for (let n = 1; n <= 9; n++) { cases.push([n]); }
+  // ⚠️ If constraints allow many combinations, sample ~40-100 diverse cases, NOT all combinations
   
   return cases.map((caseInput) => {
     const cloned = JSON.parse(JSON.stringify(caseInput));
@@ -363,6 +387,11 @@ function generateTestCases({existingTests, constraints, parameters, passingCode,
         : val
     );
     let output = passingCode(...converted);
+    // Handle void return type - output is the modified first parameter
+    if (output === undefined || output === null) {
+      output = converted[0];
+    }
+    // Convert ListNode/TreeNode to array
     if (${JSON.stringify(problemData.returnType)} === 'ListNode' && output) {
       output = listNodeToArray(output);
     }
@@ -429,8 +458,17 @@ Return ONLY the function code, no markdown or explanations.`;
 			functionCode = functionCode.replace(/\n?```$/, "");
 		}
 
+		console.log(
+			`[SERVER] generateTestCaseGeneratorFunction END for: ${problemData.title}`,
+			new Date().toISOString()
+		);
 		return { success: true, generatorFunction: functionCode };
 	} catch (error) {
+		console.log(
+			`[SERVER] generateTestCaseGeneratorFunction ERROR for: ${problemData.title}`,
+			new Date().toISOString(),
+			error
+		);
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Unknown error",
@@ -439,8 +477,8 @@ Return ONLY the function code, no markdown or explanations.`;
 }
 
 /**
- * Generate all test cases for a problem using function generation
- * Generates all test cases at once (target 40+, but flexible based on constraints)
+ * @deprecated Use generateTestCaseGeneratorFunction and executeGeneratorFunctionClient instead
+ * This function is kept for backwards compatibility but execution should happen client-side
  */
 export async function generateTestCases(
 	problemData: ProblemGenerationData,
@@ -797,6 +835,15 @@ async function executeGeneratorFunction(
 				"Generator function did not return an array. Got: " +
 					typeof testCases
 			);
+		}
+
+		// Safety check: Limit maximum number of test cases to prevent memory issues
+		const MAX_TEST_CASES = 100;
+		if (testCases.length > MAX_TEST_CASES) {
+			console.warn(
+				`[TestCaseGenerator] Generated ${testCases.length} test cases exceeds maximum of ${MAX_TEST_CASES}. Limiting to first ${MAX_TEST_CASES} cases.`
+			);
+			testCases.splice(MAX_TEST_CASES);
 		}
 
 		// Validate each test case structure and log first few
