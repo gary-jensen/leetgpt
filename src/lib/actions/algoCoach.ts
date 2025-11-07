@@ -412,7 +412,7 @@ export async function getSubmissionResponse(
 				optimalityInfo = `\nOptimality Review:\n- Current Complexity: ${optimality.currentComplexity}\n- Optimal Complexity: ${optimality.suggestedComplexity}\n- Is Optimal: ${optimality.isOptimal}\n`;
 				context += optimalityInfo;
 			} catch (error) {
-				console.error("Error reviewing optimality:", error);
+				// console.error("Error reviewing optimality:", error);
 			}
 		}
 

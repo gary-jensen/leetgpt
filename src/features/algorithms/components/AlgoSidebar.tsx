@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Home, ListChecks, BookOpenCheck, BarChart3 } from "lucide-react";
 import { useProgress } from "@/contexts/ProgressContext";
+import { useSession } from "next-auth/react";
+import { getAlgoProgress } from "@/lib/actions/algoProgress";
 
 type Difficulty = "easy" | "medium" | "hard";
 
@@ -59,6 +61,7 @@ interface AlgoSidebarProps {
 export function AlgoSidebar({ problems, lessonsTotal }: AlgoSidebarProps) {
 	const pathname = usePathname();
 	const progress = useProgress();
+	const isProgressLoaded = !progress.isAlgoProgressLoading;
 
 	const links = [
 		// { href: "/algorithms", label: "Home", icon: Home },
@@ -107,25 +110,28 @@ export function AlgoSidebar({ problems, lessonsTotal }: AlgoSidebarProps) {
 				<div className="flex items-center justify-between">
 					<span className="text-emerald-400">Easy</span>
 					<span className="font-medium">
-						{solvedByDifficulty.easy ?? 0}/{problemTotals.easy}
+						{isProgressLoaded && solvedByDifficulty.easy}/
+						{problemTotals.easy}
 					</span>
 				</div>
 				<div className="flex items-center justify-between">
 					<span className="text-yellow-400">Medium</span>
 					<span className="font-medium">
-						{solvedByDifficulty.medium ?? 0}/{problemTotals.medium}
+						{isProgressLoaded && solvedByDifficulty.medium}/
+						{problemTotals.medium}
 					</span>
 				</div>
 				<div className="flex items-center justify-between">
 					<span className="text-red-500">Hard</span>
 					<span className="font-medium">
-						{solvedByDifficulty.hard ?? 0}/{problemTotals.hard}
+						{isProgressLoaded && solvedByDifficulty.hard}/
+						{problemTotals.hard}
 					</span>
 				</div>
 				<div className="flex items-center justify-between pt-1">
 					Total
 					<span className="font-medium">
-						{totalSolved}/{problemTotals.total}
+						{isProgressLoaded && totalSolved}/{problemTotals.total}
 					</span>
 				</div>
 
@@ -136,7 +142,8 @@ export function AlgoSidebar({ problems, lessonsTotal }: AlgoSidebarProps) {
 				<div className="flex items-center justify-between">
 					Completed
 					<span className="font-medium">
-						{lessonsCompleted}/{lessonsTotal ?? 0}
+						{isProgressLoaded && lessonsCompleted}/
+						{lessonsTotal ?? 0}
 					</span>
 				</div>
 			</div>

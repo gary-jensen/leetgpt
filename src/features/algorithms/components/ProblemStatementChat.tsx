@@ -91,10 +91,10 @@ export function ProblemStatementChat({
 					);
 					setProcessedExamplesAndConstraints(html);
 				} catch (error) {
-					console.error(
-						"Error processing examples/constraints:",
-						error
-					);
+					// console.error(
+					// 	"Error processing examples/constraints:",
+					// 	error
+					// );
 					setProcessedExamplesAndConstraints("");
 				}
 			} else {

@@ -35,10 +35,7 @@ export default function WorkspaceContent({
 	const { progress, getCurrentStep } = useProgress();
 	const currentLesson = lessons[currentLessonIndex];
 
-	const { data: session } = useSession();
-	if (!session?.user) {
-		redirect("/login");
-	}
+	const { data: session, status } = useSession();
 
 	// Initialize currentStepIndex from progress
 	useEffect(() => {
@@ -94,6 +91,13 @@ export default function WorkspaceContent({
 		setAttemptsCount,
 		lessonStreaming.addSystemMessage
 	);
+
+	// if (status === "loading") {
+	// 	return;
+	// }
+	// if (!session?.user) {
+	// 	redirect("/login");
+	// }
 
 	// Show coming soon screen if all lessons are completed
 	if (allLessonsCompleted) {

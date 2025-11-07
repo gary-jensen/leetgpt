@@ -53,6 +53,7 @@ import { getAlgoProgress } from "@/lib/actions/algoProgress";
 interface ProgressContextType {
 	progress: UserProgress;
 	isProgressLoading: boolean;
+	isAlgoProgressLoading: boolean;
 	addStepXP: (xp: number, lessonId: string, newStepIndex: number) => void;
 	addLessonXP: (
 		lessonId: string,
@@ -321,7 +322,7 @@ function progressReducer(
 interface ProgressProviderProps {
 	children: ReactNode;
 	lessonMetadata?: { id: string; skillNodeId: string }[];
-	session: Session | null;
+	session?: Session | null;
 	initialAlgoProblemProgress?: AlgoProblemProgress[];
 	initialAlgoLessonProgress?: AlgoLessonProgress[];
 	initialAlgoSubmissions?: AlgoProblemSubmission[];
@@ -376,7 +377,7 @@ export function ProgressProvider({
 }: ProgressProviderProps) {
 	const { data: session, status } = useSession();
 	// Use server session for initial render, then client session after hydration
-	const activeSession = session ?? serverSession;
+	const activeSession = serverSession ?? session;
 
 	const [state, dispatch] = useReducer(
 		progressReducer,
@@ -387,6 +388,7 @@ export function ProgressProvider({
 	const hasMigratedRef = useRef(false);
 	const prevLevelRef = useRef(state.level);
 	const hasInitializedLevelTracking = useRef(false);
+	const hasLoadedAlgoProgressRef = useRef(false);
 
 	// Algorithm progress state
 	const [algoProblemProgress, setAlgoProblemProgress] = useState<
@@ -408,6 +410,60 @@ export function ProgressProvider({
 		: true; // Guest -> check localStorage
 
 	const [isProgressLoading, setIsProgressLoading] = useState(needsAsyncLoad);
+	const [isAlgoProgressLoading, setIsAlgoProgressLoading] = useState(
+		initialAlgoProblemProgress === undefined
+	);
+
+	// Load algo progress when session becomes available
+	useEffect(() => {
+		// Wait for session to load
+		if (status === "loading") return;
+
+		// Skip if we already loaded algo progress (from initial props or previous fetch)
+		if (hasLoadedAlgoProgressRef.current) {
+			setIsAlgoProgressLoading(false);
+			return;
+		}
+
+		// If we have initial props, mark as loaded immediately
+		if (
+			initialAlgoProblemProgress ||
+			initialAlgoLessonProgress ||
+			initialAlgoSubmissions
+		) {
+			hasLoadedAlgoProgressRef.current = true;
+			setIsAlgoProgressLoading(false);
+			return;
+		}
+
+		// If user is not authenticated, no algo progress to load
+		if (!activeSession?.user?.id) {
+			setIsAlgoProgressLoading(false);
+			return;
+		}
+
+		// Fetch algo progress for authenticated user
+		hasLoadedAlgoProgressRef.current = true;
+		setIsAlgoProgressLoading(true);
+		getAlgoProgress(activeSession.user.id)
+			.then((algoData) => {
+				setAlgoProblemProgress(algoData.problemProgress);
+				setAlgoLessonProgress(algoData.lessonProgress);
+				setAlgoSubmissions(algoData.submissions);
+				setIsAlgoProgressLoading(false);
+			})
+			.catch((error) => {
+				// console.error("Error loading algorithm progress:", error);
+				hasLoadedAlgoProgressRef.current = false; // Allow retry on error
+				setIsAlgoProgressLoading(false);
+			});
+	}, [
+		status,
+		activeSession?.user?.id,
+		initialAlgoProblemProgress,
+		initialAlgoLessonProgress,
+		initialAlgoSubmissions,
+	]);
 
 	// Load progress from database or localStorage on mount
 	useEffect(() => {
@@ -503,7 +559,12 @@ export function ProgressProvider({
 						setIsProgressLoading(false);
 
 						// Load algorithm progress after migration
-						if (activeSession?.user?.id) {
+						if (
+							activeSession?.user?.id &&
+							!hasLoadedAlgoProgressRef.current
+						) {
+							hasLoadedAlgoProgressRef.current = true;
+							setIsAlgoProgressLoading(true);
 							getAlgoProgress(activeSession.user.id)
 								.then((algoData) => {
 									setAlgoProblemProgress(
@@ -513,12 +574,15 @@ export function ProgressProvider({
 										algoData.lessonProgress
 									);
 									setAlgoSubmissions(algoData.submissions);
+									setIsAlgoProgressLoading(false);
 								})
 								.catch((error) => {
-									console.error(
-										"Error loading algorithm progress:",
-										error
-									);
+									// console.error(
+									// 	"Error loading algorithm progress:",
+									// 	error
+									// );
+									hasLoadedAlgoProgressRef.current = false; // Allow retry
+									setIsAlgoProgressLoading(false);
 								});
 						}
 						return;
@@ -552,8 +616,6 @@ export function ProgressProvider({
 			}
 
 			setIsProgressLoading(false);
-
-			// Algorithm progress is preloaded in layout when available
 		};
 
 		loadProgress();
@@ -869,6 +931,7 @@ export function ProgressProvider({
 	const value: ProgressContextType = {
 		progress: state,
 		isProgressLoading,
+		isAlgoProgressLoading,
 		addStepXP,
 		addLessonXP,
 		getCurrentSkillNode,

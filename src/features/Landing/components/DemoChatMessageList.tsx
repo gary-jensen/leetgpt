@@ -25,7 +25,7 @@ const MessageContent = ({
 				const processedHtml = await processMarkdown(content);
 				setHtml(processedHtml);
 			} catch (error) {
-				console.error("Error processing markdown:", error);
+				// console.error("Error processing markdown:", error);
 				setHtml(content.replace(/</g, "&lt;").replace(/>/g, "&gt;"));
 			} finally {
 				setIsProcessing(false);

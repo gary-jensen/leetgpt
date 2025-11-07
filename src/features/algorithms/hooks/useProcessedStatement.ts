@@ -11,13 +11,13 @@ export function useProcessedStatement(problem: AlgoProblemDetail) {
 	useEffect(() => {
 		// Only process markdown if we don't have pre-processed HTML
 		if (problem.statementHtml) {
-			console.log("✅ Using pre-processed HTML - zero loading time!");
+			// console.log("✅ Using pre-processed HTML - zero loading time!");
 			return;
 		}
 
-		console.log(
-			"⚠️ No pre-processed HTML, processing markdown on client..."
-		);
+		// console.log(
+		// 	"⚠️ No pre-processed HTML, processing markdown on client..."
+		// );
 
 		const processStatement = async () => {
 			try {
@@ -28,7 +28,7 @@ export function useProcessedStatement(problem: AlgoProblemDetail) {
 				});
 				setProcessedStatement(html);
 			} catch (error) {
-				console.error("Error processing markdown:", error);
+				// console.error("Error processing markdown:", error);
 				// Fallback to plain text if markdown processing fails
 				setProcessedStatement(
 					problem.statementMd

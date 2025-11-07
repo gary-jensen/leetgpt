@@ -120,16 +120,16 @@ export function executeJudge(
 	testCase: { input: any[]; output: any },
 	outputOrderMatters: boolean = true
 ): JudgeResult {
-	console.log(
-		`[Judge] executeJudge called with kind: ${judgeConfig?.kind || "none"}`
-	);
-	console.log(`[Judge] Return value:`, returnValue);
-	console.log(`[Judge] Runtime args:`, runtimeArgs);
-	console.log(`[Judge] Expected output:`, testCase.output);
+	// console.log(
+	// 	`[Judge] executeJudge called with kind: ${judgeConfig?.kind || "none"}`
+	// );
+	// console.log(`[Judge] Return value:`, returnValue);
+	// console.log(`[Judge] Runtime args:`, runtimeArgs);
+	// console.log(`[Judge] Expected output:`, testCase.output);
 
 	// If no judge config, use default return-value judge
 	if (!judgeConfig || judgeConfig.kind === "return-value") {
-		console.log(`[Judge] Using default return-value judge`);
+		// console.log(`[Judge] Using default return-value judge`);
 		return judgeReturnValue(
 			returnValue,
 			testCase.output,
@@ -140,7 +140,7 @@ export function executeJudge(
 	// Route to appropriate judge based on kind
 	switch (judgeConfig.kind) {
 		case "mutating-array-with-k":
-			console.log(`[Judge] Routing to mutating-array-with-k judge`);
+			// console.log(`[Judge] Routing to mutating-array-with-k judge`);
 			const result = judgeMutatingArrayWithK(
 				judgeConfig,
 				runtimeArgs,
@@ -148,10 +148,10 @@ export function executeJudge(
 				testCase.output,
 				outputOrderMatters
 			);
-			console.log(`[Judge] Result:`, result);
+			// console.log(`[Judge] Result:`, result);
 			return result;
 		case "custom-script":
-			console.log(`[Judge] Routing to custom-script judge`);
+			// console.log(`[Judge] Routing to custom-script judge`);
 			return judgeCustomScript(
 				judgeConfig,
 				runtimeArgs,
@@ -160,11 +160,11 @@ export function executeJudge(
 			);
 		default:
 			// Fallback to return-value
-			console.log(
-				`[Judge] Unknown kind "${
-					(judgeConfig as any).kind
-				}", falling back to return-value judge`
-			);
+			// console.log(
+			// 	`[Judge] Unknown kind "${
+			// 		(judgeConfig as any).kind
+			// 	}", falling back to return-value judge`
+			// );
 			return judgeReturnValue(
 				returnValue,
 				testCase.output,
@@ -204,22 +204,22 @@ function judgeMutatingArrayWithK(
 	expected: any,
 	outputOrderMatters: boolean
 ): JudgeResult {
-	console.log(`[Judge] judgeMutatingArrayWithK - Config:`, config);
-	console.log(
-		`[Judge] judgeMutatingArrayWithK - Return value (k):`,
-		returnValue
-	);
-	console.log(`[Judge] judgeMutatingArrayWithK - Runtime args:`, runtimeArgs);
-	console.log(
-		`[Judge] judgeMutatingArrayWithK - Array param index:`,
-		config.arrayParamIndex
-	);
+	// console.log(`[Judge] judgeMutatingArrayWithK - Config:`, config);
+	// console.log(
+	// 	`[Judge] judgeMutatingArrayWithK - Return value (k):`,
+	// 	returnValue
+	// );
+	// console.log(`[Judge] judgeMutatingArrayWithK - Runtime args:`, runtimeArgs);
+	// console.log(
+	// 	`[Judge] judgeMutatingArrayWithK - Array param index:`,
+	// 	config.arrayParamIndex
+	// );
 
 	const k: number = returnValue;
 	const arrayParam = runtimeArgs[config.arrayParamIndex] as any[];
 
-	console.log(`[Judge] judgeMutatingArrayWithK - Array param:`, arrayParam);
-	console.log(`[Judge] judgeMutatingArrayWithK - Expected:`, expected);
+	// console.log(`[Judge] judgeMutatingArrayWithK - Array param:`, arrayParam);
+	// console.log(`[Judge] judgeMutatingArrayWithK - Expected:`, expected);
 
 	if (!Array.isArray(arrayParam)) {
 		return {
@@ -241,21 +241,21 @@ function judgeMutatingArrayWithK(
 		// Preferred format: expected is directly the array of first k elements
 		expectedArray = expected;
 		expectedK = expected.length;
-		console.log(
-			`[Judge] judgeMutatingArrayWithK - Expected is an array, checking k and array contents`
-		);
+		// console.log(
+		// 	`[Judge] judgeMutatingArrayWithK - Expected is an array, checking k and array contents`
+		// );
 	} else if (typeof expected === "number") {
 		// Legacy format: expected is just k (backward compatibility)
 		// Only check k, not array contents
-		console.log(
-			`[Judge] judgeMutatingArrayWithK - Expected is a number (k only, legacy format), checking k match only`
-		);
+		// console.log(
+		// 	`[Judge] judgeMutatingArrayWithK - Expected is a number (k only, legacy format), checking k match only`
+		// );
 		const pass = k === expected;
-		console.log(
-			`[Judge] judgeMutatingArrayWithK - k match:`,
-			pass,
-			`(${k} === ${expected})`
-		);
+		// console.log(
+		// 	`[Judge] judgeMutatingArrayWithK - k match:`,
+		// 	pass,
+		// 	`(${k} === ${expected})`
+		// );
 
 		// For legacy format (number), return just the array for display
 		return {
@@ -286,9 +286,9 @@ function judgeMutatingArrayWithK(
 			};
 		}
 		expectedK = expectedArray.length;
-		console.log(
-			`[Judge] judgeMutatingArrayWithK - Expected is custom structure with expectedNums, checking k and array contents`
-		);
+		// console.log(
+		// 	`[Judge] judgeMutatingArrayWithK - Expected is custom structure with expectedNums, checking k and array contents`
+		// );
 	} else {
 		return {
 			pass: false,
@@ -315,15 +315,15 @@ function judgeMutatingArrayWithK(
 				true // Always use order-dependent comparison after sorting
 			);
 
-		console.log(
-			`[Judge] judgeMutatingArrayWithK - k matches:`,
-			k === expectedK,
-			`(${k} === ${expectedK})`
-		);
-		console.log(
-			`[Judge] judgeMutatingArrayWithK - Array matches (sorted):`,
-			pass && k === expectedK
-		);
+		// console.log(
+		// 	`[Judge] judgeMutatingArrayWithK - k matches:`,
+		// 	k === expectedK,
+		// 	`(${k} === ${expectedK})`
+		// );
+		// console.log(
+		// 	`[Judge] judgeMutatingArrayWithK - Array matches (sorted):`,
+		// 	pass && k === expectedK
+		// );
 
 		// For display, return just the array (LeetCode-style)
 		return {
@@ -345,24 +345,24 @@ function judgeMutatingArrayWithK(
 	);
 	const pass = kMatches && arrayMatches;
 
-	console.log(
-		`[Judge] judgeMutatingArrayWithK - k matches:`,
-		kMatches,
-		`(${k} === ${expectedK})`
-	);
-	console.log(
-		`[Judge] judgeMutatingArrayWithK - Array matches:`,
-		arrayMatches
-	);
-	console.log(
-		`[Judge] judgeMutatingArrayWithK - Actual slice:`,
-		roundedActualSlice
-	);
-	console.log(
-		`[Judge] judgeMutatingArrayWithK - Expected array:`,
-		roundedExpectedArray
-	);
-	console.log(`[Judge] judgeMutatingArrayWithK - Final pass:`, pass);
+	// console.log(
+	// 	`[Judge] judgeMutatingArrayWithK - k matches:`,
+	// 	kMatches,
+	// 	`(${k} === ${expectedK})`
+	// );
+	// console.log(
+	// 	`[Judge] judgeMutatingArrayWithK - Array matches:`,
+	// 	arrayMatches
+	// );
+	// console.log(
+	// 	`[Judge] judgeMutatingArrayWithK - Actual slice:`,
+	// 	roundedActualSlice
+	// );
+	// console.log(
+	// 	`[Judge] judgeMutatingArrayWithK - Expected array:`,
+	// 	roundedExpectedArray
+	// );
+	// console.log(`[Judge] judgeMutatingArrayWithK - Final pass:`, pass);
 
 	// For display, return just the array (LeetCode-style)
 	// The returnValue (k) is implicit in the array length

@@ -50,7 +50,7 @@ export function MarkLessonCompleteButton({
 			// Refresh progress context
 			window.location.reload(); // Simple refresh for now
 		} catch (error) {
-			console.error("Error marking lesson complete:", error);
+			// console.error("Error marking lesson complete:", error);
 			toast.error("Failed to mark lesson as complete");
 		} finally {
 			setIsCompleting(false);

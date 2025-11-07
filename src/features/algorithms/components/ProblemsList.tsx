@@ -37,6 +37,7 @@ interface ProblemsListProps {
 }
 
 export function ProblemsList({ problems, allTopics }: ProblemsListProps) {
+	const progress = useProgress();
 	const filters = useAlgoFilters({ saveOnUnmount: true, autoPersist: false });
 
 	const [filterSearch, setFilterSearch] = useState("");
@@ -348,13 +349,23 @@ export function ProblemsList({ problems, allTopics }: ProblemsListProps) {
 
 				{/* List */}
 				<div className="w-full border border-border rounded-md overflow-hidden">
-					{filteredProblems.map((problem, idx) => (
-						<ProblemRow
-							key={problem.id}
-							index={idx + 1}
-							problem={problem}
-						/>
-					))}
+					{filteredProblems.map((problem, idx) => {
+						const problemProgress = progress.getAlgoProblemProgress(
+							problem.id,
+							"javascript"
+						);
+
+						const isCompleted =
+							problemProgress?.status === "completed";
+						return (
+							<ProblemRow
+								key={problem.id}
+								index={idx + 1}
+								problem={problem}
+								isCompleted={isCompleted}
+							/>
+						);
+					})}
 				</div>
 
 				{filteredProblems.length === 0 && (
@@ -388,17 +399,13 @@ export function ProblemsList({ problems, allTopics }: ProblemsListProps) {
 function ProblemRow({
 	problem,
 	index,
+	isCompleted,
 }: {
 	problem: AlgoProblemMeta;
 	index: number;
+	isCompleted: boolean;
 }) {
-	const progress = useProgress();
 	const displayNumber = problem.order ?? index;
-	const problemProgress = progress.getAlgoProblemProgress?.(
-		problem.id,
-		"javascript"
-	);
-	const isCompleted = problemProgress?.status === "completed";
 
 	return (
 		<Link

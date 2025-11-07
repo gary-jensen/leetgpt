@@ -5,9 +5,12 @@ import { useProgress } from "../../contexts/ProgressContext";
 import WorkspaceContent from "./WorkspaceContent";
 // import { mockLessons as lessons } from "./mock-lessons";
 import { lessons } from "./lesson-data/lessons";
+import { useSession } from "next-auth/react";
 
 const Workspace = () => {
-	const { progress, isProgressLoading } = useProgress();
+	const { data: session, status } = useSession();
+	const progress = session?.progress;
+	const isProgressLoading = status === "loading";
 	const [currentLessonIndex, setCurrentLessonIndex] = useState(0);
 	const [isInitialized, setIsInitialized] = useState(false);
 	const lastProcessedLessons = useRef<string[]>([]);
@@ -16,7 +19,9 @@ const Workspace = () => {
 	useEffect(() => {
 		if (!isProgressLoading) {
 			// Get completed lessons from lessonProgress
-			const completedLessons = Object.entries(progress.lessonProgress)
+			const completedLessons = Object.entries(
+				progress?.lessonProgress ?? {}
+			)
 				.filter(([_, progress]) => progress.completed)
 				.map(([lessonId, _]) => lessonId);
 
@@ -48,7 +53,7 @@ const Workspace = () => {
 				}
 			}
 		}
-	}, [isProgressLoading, progress.lessonProgress]);
+	}, [isProgressLoading, progress?.lessonProgress]);
 
 	return (
 		<WorkspaceContent

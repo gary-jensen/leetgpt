@@ -17,8 +17,13 @@ import {
 } from "@/lib/analytics";
 import { UserIcon } from "lucide-react";
 import SoundToggle from "./SoundToggle";
+import { cn } from "@/lib/utils";
 
-export default function AuthButton() {
+export default function AuthButton({
+	size = "md",
+}: {
+	size?: "sm" | "md" | "lg";
+}) {
 	const { data: session, status } = useSession();
 
 	// Note: Sign-in tracking is handled in ProgressContext to avoid duplicates
@@ -55,7 +60,16 @@ export default function AuthButton() {
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
 					<button className="focus:outline-none focus:ring-0 focus:ring-transparent rounded-full">
-						<div className="w-10 h-10 rounded-full bg-[#455a64] flex items-center justify-center text-white text-xl font-medium cursor-pointer hover:bg-[#3d4e56]  transition-colors">
+						<div
+							className={cn(
+								"w-10 h-10 rounded-full bg-[#455a64] flex items-center justify-center text-white text-xl font-medium cursor-pointer hover:bg-[#3d4e56]  transition-colors",
+								size === "sm"
+									? "w-7 h-7 text-sm"
+									: size === "md"
+									? "w-9 h-9 text-base"
+									: "w-11 h-11 text-lg"
+							)}
+						>
 							{session.user.name?.charAt(0).toUpperCase() || "U"}
 						</div>
 						{/* {session.user.image ? (

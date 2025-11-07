@@ -1,15 +1,15 @@
-import {
-	getAlgoProblems,
-	getAllTopics,
-	getAlgoLessons,
-} from "@/features/algorithms/data";
-import { ProblemsList } from "@/features/algorithms/components/ProblemsList";
 import { AlgoNavbar } from "@/features/algorithms/components/AlgoNavbar";
 import { AlgoSidebar } from "@/features/algorithms/components/AlgoSidebar";
+import { ProblemsList } from "@/features/algorithms/components/ProblemsList";
+import {
+	getAlgoLessons,
+	getAlgoProblemsMeta,
+	getAllTopics,
+} from "@/features/algorithms/data";
 
 export default async function ProblemsListPage() {
 	const [problems, allTopics, lessons] = await Promise.all([
-		getAlgoProblems(),
+		getAlgoProblemsMeta(),
 		getAllTopics(),
 		getAlgoLessons(),
 	]);

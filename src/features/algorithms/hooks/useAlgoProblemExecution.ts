@@ -83,7 +83,7 @@ export function useAlgoProblemExecution(problem: AlgoProblemDetail | null) {
 	const addSystemMessage = useCallback(
 		(content: string, messageType?: "error" | "success" | "info") => {
 			// This would be used for AI feedback in the real implementation
-			console.log("System message:", content, messageType);
+			// console.log("System message:", content, messageType);
 		},
 		[]
 	);
@@ -152,10 +152,14 @@ export function useAlgoProblemExecution(problem: AlgoProblemDetail | null) {
 						// Mark as completed on first successful run
 						if (passed && session?.user?.id) {
 							// Optimistically update local state immediately
-							progress.updateAlgoProblemProgressLocal?.(problem.id, "javascript", {
-								status: "completed",
-								completedAt: new Date(),
-							});
+							progress.updateAlgoProblemProgressLocal?.(
+								problem.id,
+								"javascript",
+								{
+									status: "completed",
+									completedAt: new Date(),
+								}
+							);
 
 							try {
 								await markProblemCompleted(
@@ -164,12 +168,19 @@ export function useAlgoProblemExecution(problem: AlgoProblemDetail | null) {
 									"javascript"
 								);
 							} catch (error) {
-								console.error("Error marking problem completed:", error);
+								// console.error(
+								// 	"Error marking problem completed:",
+								// 	error
+								// );
 								// Revert optimistic update on error
-								progress.updateAlgoProblemProgressLocal?.(problem.id, "javascript", {
-									status: "in_progress",
-									completedAt: undefined,
-								});
+								progress.updateAlgoProblemProgressLocal?.(
+									problem.id,
+									"javascript",
+									{
+										status: "in_progress",
+										completedAt: undefined,
+									}
+								);
 							}
 						}
 
@@ -192,13 +203,13 @@ export function useAlgoProblemExecution(problem: AlgoProblemDetail | null) {
 							result.runMs || 0
 						);
 					} catch (error) {
-						console.error("Error creating submission:", error);
+						// console.error("Error creating submission:", error);
 						// Don't throw, submission creation failure shouldn't block the UI
 					}
 				}
 			}
 		} catch (error) {
-			console.error("Execution error:", error);
+			// console.error("Execution error:", error);
 			setTestResults([
 				{
 					case: 1,

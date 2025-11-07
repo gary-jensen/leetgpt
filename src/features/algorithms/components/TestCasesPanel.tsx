@@ -156,10 +156,10 @@ function ExamplesTab({ problem }: ExamplesTabProps) {
 					);
 					setProcessedExamplesAndConstraints(html);
 				} catch (error) {
-					console.error(
-						"Error processing examples/constraints:",
-						error
-					);
+					// console.error(
+					// 	"Error processing examples/constraints:",
+					// 	error
+					// );
 					setProcessedExamplesAndConstraints("");
 				}
 			} else {
@@ -250,7 +250,7 @@ function TestCaseTab({
 							(value, index) => (
 								<div key={index}>
 									<span className="text-sm font-medium text-foreground">
-									{problem.parameters?.[index]?.name ||
+										{problem.parameters?.[index]?.name ||
 											`param${index + 1}`}{" "}
 										=
 									</span>
@@ -467,7 +467,8 @@ function TestResultsTab({
 										(value, index) => (
 											<div key={index}>
 												<span className="text-sm font-medium text-foreground">
-													{problem.parameters?.[index]?.name ||
+													{problem.parameters?.[index]
+														?.name ||
 														`param${
 															index + 1
 														}`}{" "}

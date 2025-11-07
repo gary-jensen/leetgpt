@@ -52,16 +52,26 @@ export async function getAlgoProgress(userId: string): Promise<{
 		prisma.algoProblemProgress.findMany({
 			where: { userId },
 			orderBy: { updatedAt: "desc" },
+			select: { id: true, status: true, problemId: true, language: true },
 		}),
 		prisma.algoLessonProgress.findMany({
 			where: { userId },
 			orderBy: { updatedAt: "desc" },
+			select: {
+				id: true,
+				// lessonId: true,
+				status: true,
+				// completedAt: true,
+				// createdAt: true,
+				// updatedAt: true,
+			},
 		}),
-		prisma.algoProblemSubmission.findMany({
-			where: { userId },
-			orderBy: { submittedAt: "desc" },
-			take: 100, // Limit to last 100 submissions for performance
-		}),
+		// prisma.algoProblemSubmission.findMany({
+		// 	where: { userId },
+		// 	orderBy: { submittedAt: "desc" },
+		// 	take: 100, // Limit to last 100 submissions for performance
+		// }),
+		[],
 	]);
 
 	return {

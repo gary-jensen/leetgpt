@@ -117,10 +117,10 @@ export function AlgorithmWorkspace({
 				// Debug: log test results to verify errors are present
 				const hasErrors = testResults.some((r) => r.error);
 				if (hasErrors) {
-					console.log(
-						"Creating submission message with errors:",
-						testResults
-					);
+					// console.log(
+					// 	"Creating submission message with errors:",
+					// 	testResults
+					// );
 				}
 
 				// Generate unique ID with counter to avoid duplicates
@@ -150,7 +150,7 @@ export function AlgorithmWorkspace({
 
 				// Auto-trigger AI response after submission (async, don't await)
 				handleSubmissionResponse(submissionMessage).catch((error) => {
-					console.error("Error handling submission response:", error);
+					// console.error("Error handling submission response:", error);
 				});
 			}
 		}
@@ -269,7 +269,7 @@ export function AlgorithmWorkspace({
 					}
 				},
 				(error) => {
-					console.error("Error streaming hint:", error);
+					// console.error("Error streaming hint:", error);
 					setStreamingMessageId(null);
 					setIsThinking(false);
 					setChatMessages((prev) =>
@@ -299,7 +299,7 @@ export function AlgorithmWorkspace({
 				}
 			);
 		} catch (error) {
-			console.error("Error getting hint:", error);
+			// console.error("Error getting hint:", error);
 			setStreamingMessageId(null);
 			setIsThinking(false);
 			setChatMessages((prev) =>
@@ -378,10 +378,10 @@ export function AlgorithmWorkspace({
 					}
 				},
 				(error) => {
-					console.error(
-						"Error streaming submission response:",
-						error
-					);
+					// console.error(
+					// 	"Error streaming submission response:",
+					// 	error
+					// );
 					setStreamingMessageId(null);
 					setIsThinking(false);
 					// Remove empty message on error - silent failure for auto-responses
@@ -434,10 +434,10 @@ export function AlgorithmWorkspace({
 							}
 						);
 					} catch (error) {
-						console.error(
-							"Error saving submission response:",
-							error
-						);
+						// console.error(
+						// 	"Error saving submission response:",
+						// 	error
+						// );
 						// Revert optimistic update on error
 						progress.updateAlgoProblemProgressLocal?.(
 							problem.id,
@@ -448,11 +448,11 @@ export function AlgorithmWorkspace({
 						);
 					}
 				} catch (error) {
-					console.error("Error saving submission response:", error);
+					// console.error("Error saving submission response:", error);
 				}
 			}
 		} catch (error) {
-			console.error("Error getting submission response:", error);
+			// console.error("Error getting submission response:", error);
 			setStreamingMessageId(null);
 			setIsThinking(false);
 			// Remove empty message on error - silent failure for auto-responses
@@ -524,7 +524,7 @@ export function AlgorithmWorkspace({
 					}
 				},
 				(error) => {
-					console.error("Error streaming AI response:", error);
+					// console.error("Error streaming AI response:", error);
 					setStreamingMessageId(null);
 					setIsThinking(false);
 					// Update message with error
@@ -589,7 +589,7 @@ export function AlgorithmWorkspace({
 							}
 						);
 					} catch (error) {
-						console.error("Error saving chat history:", error);
+						// console.error("Error saving chat history:", error);
 						// Revert optimistic update on error
 						progress.updateAlgoProblemProgressLocal?.(
 							problem.id,
@@ -600,11 +600,11 @@ export function AlgorithmWorkspace({
 						);
 					}
 				} catch (error) {
-					console.error("Error saving chat history:", error);
+					// console.error("Error saving chat history:", error);
 				}
 			}
 		} catch (error) {
-			console.error("Error getting AI response:", error);
+			// console.error("Error getting AI response:", error);
 			setStreamingMessageId(null);
 			setIsThinking(false);
 

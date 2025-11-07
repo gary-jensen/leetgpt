@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import AuthButton from "@/components/AuthButton";
 
 export function AlgoNavbar() {
 	const pathname = usePathname();
@@ -50,6 +51,7 @@ export function AlgoNavbar() {
 						))}
 					</nav>
 				</div>
+				<AuthButton size="sm" />
 			</div>
 		</div>
 	);

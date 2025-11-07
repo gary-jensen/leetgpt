@@ -136,7 +136,10 @@ export function createFunctionFromCode(
 		// Priority 3: If topics suggest Linked List/Tree
 		const needsDataStructures =
 			problem.parameters?.some(
-				(p) => p.type === "ListNode" || p.type === "TreeNode" || p.type === "_Node"
+				(p) =>
+					p.type === "ListNode" ||
+					p.type === "TreeNode" ||
+					p.type === "_Node"
 			) ||
 			problem.returnType === "ListNode" ||
 			problem.returnType === "TreeNode" ||
@@ -170,7 +173,7 @@ export function createFunctionFromCode(
 		const func = new Function(wrappedCode);
 		return func();
 	} catch (error) {
-		console.error("Error creating function from code:", error);
+		// console.error("Error creating function from code:", error);
 		return null;
 	}
 }
@@ -325,7 +328,10 @@ async function runSingleTest(
 					actual = convertOutput(convertedInputs[0], firstParam.type);
 				} else {
 					// For non-void return types, use returnType
-					actual = convertOutput(convertedInputs[0], problem.returnType);
+					actual = convertOutput(
+						convertedInputs[0],
+						problem.returnType
+					);
 				}
 			}
 		}
@@ -521,10 +527,10 @@ function executeWithTypeConverters(
 		) {
 			const functionName =
 				problem.functionName || getMainFunctionName(problem);
-			console.error(
-				`[TypeConverter] CRITICAL: Function "${functionName}" returned ListNode where val is a ListNode!`,
-				`This indicates incorrect wrapping. The function likely does: return new ListNode(head) instead of: return head`
-			);
+			// console.error(
+			// 	`[TypeConverter] CRITICAL: Function "${functionName}" returned ListNode where val is a ListNode!`,
+			// 	`This indicates incorrect wrapping. The function likely does: return new ListNode(head) instead of: return head`
+			// );
 		}
 
 		// Convert output based on return type
@@ -537,10 +543,10 @@ function executeWithTypeConverters(
 					problem.returnType === "TreeNode") &&
 				!Array.isArray(converted)
 			) {
-				console.error(
-					`[TypeConverter] CRITICAL: Expected array for ${problem.returnType} but got:`,
-					typeof converted
-				);
+				// console.error(
+				// 	`[TypeConverter] CRITICAL: Expected array for ${problem.returnType} but got:`,
+				// 	typeof converted
+				// );
 			}
 			return converted;
 		}
@@ -565,7 +571,7 @@ function executeWithTypeConverters(
 
 		return result;
 	} catch (error) {
-		console.error("Error executing with type converters:", error);
+		// console.error("Error executing with type converters:", error);
 		throw error;
 	}
 }

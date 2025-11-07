@@ -3,11 +3,11 @@ import SessionProvider from "@/components/SessionProvider";
 import { ProgressProvider } from "@/contexts/ProgressContext";
 import { lessonMetadata } from "@/features/Workspace/lesson-data/lessons";
 import { getSession, setLessonMetadata } from "@/lib/auth";
-import { getAlgoProgress } from "@/lib/actions/algoProgress";
 import type { Metadata } from "next";
 import { DM_Sans, Inter } from "next/font/google";
 import { Analytics as VercelAnalytics } from "@vercel/analytics/next";
 import "./globals.css";
+import { prisma } from "@/lib/prisma";
 
 const dmSans = DM_Sans({
 	variable: "--font-dm-sans",
@@ -57,23 +57,18 @@ export default async function RootLayout({
 }: Readonly<{
 	children: React.ReactNode;
 }>) {
-	const session = await getSession();
-	const initialAlgo = session?.user?.id
-		? await getAlgoProgress(session.user.id)
-		: { problemProgress: [], lessonProgress: [], submissions: [] };
-
 	return (
 		<html lang="en">
 			<body
 				className={`${inter.variable} ${dmSans.variable} antialiased`}
 			>
-				<SessionProvider session={session}>
+				<SessionProvider>
 					<ProgressProvider
 						lessonMetadata={lessonMetadata}
-						session={session}
-						initialAlgoProblemProgress={initialAlgo.problemProgress}
-						initialAlgoLessonProgress={initialAlgo.lessonProgress}
-						initialAlgoSubmissions={initialAlgo.submissions}
+						// session={session}
+						// initialAlgoProblemProgress={initialAlgo.problemProgress}
+						// initialAlgoLessonProgress={initialAlgo.lessonProgress}
+						// initialAlgoSubmissions={initialAlgo.submissions}
 					>
 						<Analytics />
 						<VercelAnalytics />

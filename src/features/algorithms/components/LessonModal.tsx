@@ -52,7 +52,7 @@ export function LessonModal({ lesson, children }: LessonModalProps) {
 					});
 					setProcessedHtml(html);
 				} catch (error) {
-					console.error("Error processing markdown:", error);
+					// console.error("Error processing markdown:", error);
 					// Fallback to escaped plain text
 					setProcessedHtml(
 						lesson.bodyMd
@@ -88,7 +88,7 @@ export function LessonModal({ lesson, children }: LessonModalProps) {
 			trackAlgoLessonCompleted(lesson.id, lesson.title);
 			toast.success("Lesson marked as complete!");
 		} catch (error) {
-			console.error("Error marking lesson complete:", error);
+			// console.error("Error marking lesson complete:", error);
 			// Revert optimistic update on error
 			progress.updateAlgoLessonProgressLocal?.(lesson.id, "in_progress");
 			toast.error("Failed to mark lesson as complete");

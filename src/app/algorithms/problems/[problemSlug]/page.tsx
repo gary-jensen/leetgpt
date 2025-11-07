@@ -21,7 +21,7 @@ export async function generateMetadata({
 
 	if (!problem) {
 		return {
-			title: "Problem Not Found",
+			title: `Problem Not Found: ${problemSlug}`,
 		};
 	}
 
@@ -70,7 +70,6 @@ export default async function AlgorithmWorkspacePage({
 	]);
 
 	if (!problem) {
-		console.error("Problem not found");
 		redirect("/algorithms/problems");
 	}
 
