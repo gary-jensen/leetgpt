@@ -25,20 +25,188 @@ export interface AlgoExecutionResult {
 }
 
 /**
+ * Check if we're in a browser environment
+ */
+function isBrowser(): boolean {
+	return typeof window !== "undefined" && typeof Worker !== "undefined";
+}
+
+/**
  * Execute algorithm problem tests against user code
  * @param cancellationCheck - Optional function that returns true if execution should be cancelled
+ * @param timeoutMs - Maximum execution time in milliseconds (default: 10000 = 10 seconds)
+ * @param useWorker - Whether to use Web Worker (browser only, can terminate infinite loops)
  */
 export async function executeAlgoTests(
 	problem: AlgoProblemDetail,
 	code: string,
 	language: string = "javascript",
-	cancellationCheck?: () => boolean
+	cancellationCheck?: () => boolean,
+	timeoutMs: number = 10000,
+	useWorker: boolean = true
+): Promise<AlgoExecutionResult> {
+	// Use Web Worker in browser if available and requested
+	// This can terminate infinite loops by killing the worker
+	if (isBrowser() && useWorker) {
+		return executeAlgoTestsInWorker(problem, code, language, timeoutMs);
+	}
+
+	// Fall back to direct execution (server-side or if worker disabled)
+	return executeAlgoTestsDirect(
+		problem,
+		code,
+		language,
+		cancellationCheck,
+		timeoutMs
+	);
+}
+
+/**
+ * Execute tests in a Web Worker (can terminate infinite loops)
+ */
+async function executeAlgoTestsInWorker(
+	problem: AlgoProblemDetail,
+	code: string,
+	language: string,
+	timeoutMs: number
+): Promise<AlgoExecutionResult> {
+	return new Promise((resolve) => {
+		const messageId = `worker_${Date.now()}_${Math.random()
+			.toString(36)
+			.substring(7)}`;
+		let worker: Worker | null = null;
+		let timeoutId: NodeJS.Timeout | null = null;
+
+		try {
+			// Create worker from public file
+			worker = new Worker("/algo-test-worker.js");
+
+			// Set up timeout
+			timeoutId = setTimeout(() => {
+				if (worker) {
+					worker.terminate(); // This kills infinite loops!
+					worker = null;
+				}
+				resolve({
+					status: "error",
+					results: [],
+					message: `Execution timed out after ${Math.round(
+						timeoutMs / 1000
+					)} seconds`,
+					runMs: timeoutMs,
+				});
+			}, timeoutMs);
+
+			// Listen for messages
+			const messageHandler = (e: MessageEvent) => {
+				if (e.data.messageId !== messageId) return;
+
+				// Clean up
+				if (timeoutId) {
+					clearTimeout(timeoutId);
+					timeoutId = null;
+				}
+
+				if (worker) {
+					worker.removeEventListener("message", messageHandler);
+					worker.removeEventListener("error", errorHandler);
+					worker.terminate();
+					worker = null;
+				}
+
+				if (e.data.type === "result") {
+					resolve(e.data.result);
+				} else if (e.data.type === "error") {
+					resolve({
+						status: "error",
+						results: [],
+						message: e.data.error || "Unknown error",
+					});
+				}
+			};
+
+			const errorHandler = (error: ErrorEvent) => {
+				if (timeoutId) {
+					clearTimeout(timeoutId);
+					timeoutId = null;
+				}
+
+				if (worker) {
+					worker.removeEventListener("message", messageHandler);
+					worker.removeEventListener("error", errorHandler);
+					worker.terminate();
+					worker = null;
+				}
+
+				resolve({
+					status: "error",
+					results: [],
+					message: error.message || "Worker error",
+				});
+			};
+
+			worker.addEventListener("message", messageHandler);
+			worker.addEventListener("error", errorHandler);
+
+			// Send execution request
+			worker.postMessage({
+				type: "execute",
+				messageId,
+				problem,
+				code,
+				language,
+				timeoutMs,
+			});
+		} catch (error) {
+			// If worker creation fails, fall back to direct execution
+			if (timeoutId) clearTimeout(timeoutId);
+			if (worker) {
+				worker.terminate();
+			}
+			// Fall back to direct execution
+			return executeAlgoTestsDirect(
+				problem,
+				code,
+				language,
+				undefined,
+				timeoutMs
+			);
+		}
+	});
+}
+
+/**
+ * Execute tests directly (original implementation)
+ * WARNING: Cannot terminate infinite loops - will freeze browser
+ */
+async function executeAlgoTestsDirect(
+	problem: AlgoProblemDetail,
+	code: string,
+	language: string = "javascript",
+	cancellationCheck?: () => boolean,
+	timeoutMs: number = 10000
 ): Promise<AlgoExecutionResult> {
 	const startTime = Date.now();
+	let timeoutId: NodeJS.Timeout | null = null;
+	let isTimedOut = false;
 
 	try {
+		// Set up overall timeout for the entire test suite
+		const timeoutPromise = new Promise<AlgoExecutionResult>((resolve) => {
+			timeoutId = setTimeout(() => {
+				isTimedOut = true;
+				resolve({
+					status: "error",
+					results: [],
+					message: `Execution timed out after ${timeoutMs}ms`,
+					runMs: Date.now() - startTime,
+				});
+			}, timeoutMs);
+		});
+
 		// Check for cancellation before starting
 		if (cancellationCheck && cancellationCheck()) {
+			if (timeoutId) clearTimeout(timeoutId);
 			return {
 				status: "error",
 				results: [],
@@ -57,51 +225,84 @@ export async function executeAlgoTests(
 			};
 		}
 
-		// Run all test cases
-		const results: AlgoTestResult[] = [];
+		// Run all test cases with timeout protection
+		const executionPromise = (async () => {
+			const results: AlgoTestResult[] = [];
 
-		for (let i = 0; i < problem.tests.length; i++) {
-			// Check for cancellation before each test case
-			if (cancellationCheck && cancellationCheck()) {
-				return {
-					status: "error",
-					results,
-					message: "Execution was cancelled",
-				};
-			}
-
-			const testCase = problem.tests[i];
-			const result = await runSingleTest(
-				userFunction,
-				testCase,
-				i + 1,
-				problem,
-				code
-			);
-			results.push(result);
-
-			// Yield to event loop every 10 tests to prevent blocking (only for long test suites)
-			if (i > 0 && i % 10 === 0) {
-				await new Promise((resolve) => setTimeout(resolve, 0));
-				// Check again after yielding
-				if (cancellationCheck && cancellationCheck()) {
+			for (let i = 0; i < problem.tests.length; i++) {
+				// Check for cancellation or timeout before each test case
+				if (isTimedOut) {
 					return {
-						status: "error",
+						status: "error" as const,
 						results,
-						message: "Execution was cancelled",
+						message: "Execution timed out",
+						runMs: Date.now() - startTime,
 					};
 				}
+
+				if (cancellationCheck && cancellationCheck()) {
+					return {
+						status: "error" as const,
+						results,
+						message: "Execution was cancelled",
+						runMs: Date.now() - startTime,
+					};
+				}
+
+				const testCase = problem.tests[i];
+				const result = await runSingleTest(
+					userFunction,
+					testCase,
+					i + 1,
+					problem,
+					code,
+					timeoutMs / problem.tests.length // Per-test timeout (distribute total timeout)
+				);
+				results.push(result);
+
+				// Yield to event loop every 10 tests to prevent blocking (only for long test suites)
+				if (i > 0 && i % 10 === 0) {
+					await new Promise((resolve) => setTimeout(resolve, 0));
+					// Check again after yielding
+					if (isTimedOut) {
+						return {
+							status: "error" as const,
+							results,
+							message: "Execution timed out",
+							runMs: Date.now() - startTime,
+						};
+					}
+					if (cancellationCheck && cancellationCheck()) {
+						return {
+							status: "error" as const,
+							results,
+							message: "Execution was cancelled",
+							runMs: Date.now() - startTime,
+						};
+					}
+				}
 			}
-		}
 
-		const runMs = Date.now() - startTime;
+			const runMs = Date.now() - startTime;
 
-		return {
-			status: "ok",
-			results,
-			runMs,
-		};
+			return {
+				status: "ok" as const,
+				results,
+				runMs,
+			};
+		})();
+
+		// Race between execution and timeout
+		const result = await Promise.race([executionPromise, timeoutPromise]);
+
+		// Clear timeout if execution completed first
+		if (timeoutId) clearTimeout(timeoutId);
+
+		return result;
 	} catch (error) {
+		// Clear timeout on error
+		if (timeoutId) clearTimeout(timeoutId);
+
 		const runMs = Date.now() - startTime;
 
 		return {
@@ -263,13 +464,15 @@ function deepClone(value: any): any {
 /**
  * Run a single test case
  * Uses type converters if parameters/returnType are available, otherwise falls back to direct execution
+ * @param timeoutMs - Maximum time for this test case in milliseconds (default: 5000 = 5 seconds)
  */
 async function runSingleTest(
 	userFunction: (...args: any[]) => any,
 	testCase: { input: any[]; output: any },
 	caseNumber: number,
 	problem?: AlgoProblemDetail,
-	userCode?: string
+	userCode?: string,
+	timeoutMs: number = 5000
 ): Promise<AlgoTestResult> {
 	const startTime = Date.now();
 
@@ -303,8 +506,31 @@ async function runSingleTest(
 			);
 			convertedInputsUsed = convertedInputs;
 
-			// Call user function with converted inputs
-			actual = userFunction(...convertedInputs);
+			// Call user function with converted inputs - with timeout protection
+			actual = await Promise.race([
+				new Promise<any>((resolve, reject) => {
+					try {
+						const result = userFunction(...convertedInputs);
+						// Handle both sync and async results
+						if (result instanceof Promise) {
+							result.then(resolve).catch(reject);
+						} else {
+							resolve(result);
+						}
+					} catch (error) {
+						reject(error);
+					}
+				}),
+				new Promise<never>((_, reject) => {
+					setTimeout(() => {
+						reject(
+							new Error(
+								`Test case ${caseNumber} timed out after ${timeoutMs}ms`
+							)
+						);
+					}, timeoutMs);
+				}),
+			]);
 
 			// Convert output if needed
 			if (problem.returnType) {
@@ -337,7 +563,34 @@ async function runSingleTest(
 		}
 		// Priority 2: Direct execution (no type conversion needed)
 		else {
-			actual = executeDirectly(userFunction, clonedInput);
+			// Direct execution with timeout protection
+			actual = await Promise.race([
+				new Promise<any>((resolve, reject) => {
+					try {
+						const result = executeDirectly(
+							userFunction,
+							clonedInput
+						);
+						// Handle both sync and async results
+						if (result instanceof Promise) {
+							result.then(resolve).catch(reject);
+						} else {
+							resolve(result);
+						}
+					} catch (error) {
+						reject(error);
+					}
+				}),
+				new Promise<never>((_, reject) => {
+					setTimeout(() => {
+						reject(
+							new Error(
+								`Test case ${caseNumber} timed out after ${timeoutMs}ms`
+							)
+						);
+					}, timeoutMs);
+				}),
+			]);
 		}
 
 		// Ensure output is converted if returnType is set (double-check for safety)
