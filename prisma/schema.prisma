@@ -165,7 +165,8 @@ model AlgoProblem {
     passingCode                Json
     secondaryPassingCode       Json? // Non-optimal passing code for test case validation
     outputOrderMatters         Boolean  @default(true) // If false, arrays of arrays are compared as sets (order-independent)
-    judge                     Json? // Optional judge configuration: { kind: "return-value" | "mutating-array-with-k" | "custom-script", ... }
+    judge                      Json? // Optional judge configuration: { kind: "return-value" | "mutating-array-with-k" | "custom-script", ... }
+    published                  Boolean  @default(false)
     createdAt                  DateTime @default(now())
     updatedAt                  DateTime @updatedAt
 

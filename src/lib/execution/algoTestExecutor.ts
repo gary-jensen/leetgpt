@@ -136,10 +136,11 @@ export function createFunctionFromCode(
 		// Priority 3: If topics suggest Linked List/Tree
 		const needsDataStructures =
 			problem.parameters?.some(
-				(p) => p.type === "ListNode" || p.type === "TreeNode"
+				(p) => p.type === "ListNode" || p.type === "TreeNode" || p.type === "_Node"
 			) ||
 			problem.returnType === "ListNode" ||
 			problem.returnType === "TreeNode" ||
+			problem.returnType === "_Node" ||
 			problem.topics.some(
 				(t) =>
 					t.includes("Linked List") ||
@@ -310,14 +311,22 @@ async function runSingleTest(
 				}
 			}
 
-			// Handle in-place modifications
+			// Handle in-place modifications (void return type)
 			if (
 				(actual === undefined || actual === null) &&
 				convertedInputs.length > 0 &&
 				(Array.isArray(convertedInputs[0]) ||
 					typeof convertedInputs[0] === "object")
 			) {
-				actual = convertOutput(convertedInputs[0], problem.returnType);
+				// For void return types, check the first parameter's type, not returnType
+				const firstParam = problem.parameters?.[0];
+				if (firstParam && problem.returnType === "void") {
+					// Convert based on first parameter type (TreeNode/ListNode/_Node need conversion)
+					actual = convertOutput(convertedInputs[0], firstParam.type);
+				} else {
+					// For non-void return types, use returnType
+					actual = convertOutput(convertedInputs[0], problem.returnType);
+				}
 			}
 		}
 		// Priority 2: Direct execution (no type conversion needed)
@@ -543,8 +552,15 @@ function executeWithTypeConverters(
 			(Array.isArray(convertedInputs[0]) ||
 				typeof convertedInputs[0] === "object")
 		) {
-			// First argument was modified in-place, return it
-			return convertOutput(convertedInputs[0], problem.returnType);
+			// For void return types, check the first parameter's type, not returnType
+			const firstParam = problem.parameters?.[0];
+			if (firstParam && problem.returnType === "void") {
+				// Convert based on first parameter type (TreeNode/ListNode/_Node need conversion)
+				return convertOutput(convertedInputs[0], firstParam.type);
+			} else {
+				// For non-void return types, use returnType
+				return convertOutput(convertedInputs[0], problem.returnType);
+			}
 		}
 
 		return result;

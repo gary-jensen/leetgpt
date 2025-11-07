@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
 		}
 
 		const body = await req.json();
-		const { problemName } = body;
+		const { problemName, previousError } = body;
 
 		if (!problemName || typeof problemName !== "string") {
 			return new Response(
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 			);
 		}
 
-		const result = await generateProblemData(problemName);
+		const result = await generateProblemData(problemName, previousError);
 
 		return new Response(JSON.stringify(result), {
 			status: result.success ? 200 : 500,
@@ -48,4 +48,3 @@ export async function POST(req: NextRequest) {
 		);
 	}
 }
-

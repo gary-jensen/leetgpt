@@ -56,9 +56,7 @@ export async function getProblemsNeedingSecondaryCode(): Promise<
  * Generate secondary passing code for a problem using AI
  * This should be a non-optimal but passing solution (e.g., O(n^2) instead of O(n))
  */
-export async function generateSecondaryPassingCode(
-	problemId: string
-): Promise<{
+export async function generateSecondaryPassingCode(problemId: string): Promise<{
 	success: boolean;
 	secondaryCode?: { [language: string]: string };
 	error?: string;
@@ -66,7 +64,7 @@ export async function generateSecondaryPassingCode(
 	requireAdmin();
 
 	try {
-		const problem = await getAlgoProblem(problemId);
+		const problem = await getAlgoProblem(problemId, true);
 		if (!problem) {
 			return { success: false, error: "Problem not found" };
 		}
@@ -115,11 +113,14 @@ CRITICAL RULES:
 			let cleanedResponse = aiResponse.trim();
 			// Remove markdown code blocks if present
 			if (cleanedResponse.startsWith("```")) {
-				cleanedResponse = cleanedResponse.replace(/^```(?:json)?\n?/, "");
+				cleanedResponse = cleanedResponse.replace(
+					/^```(?:json)?\n?/,
+					""
+				);
 				cleanedResponse = cleanedResponse.replace(/\n?```$/, "");
 			}
 			const parsed = JSON.parse(cleanedResponse);
-			
+
 			if (!parsed.javascript || typeof parsed.javascript !== "string") {
 				return {
 					success: false,
@@ -143,11 +144,16 @@ CRITICAL RULES:
 			// Try to parse the code to check for syntax errors
 			new Function(secondaryCode.javascript);
 		} catch (syntaxError) {
-			console.error("Generated code has syntax errors:", secondaryCode.javascript);
+			console.error(
+				"Generated code has syntax errors:",
+				secondaryCode.javascript
+			);
 			return {
 				success: false,
 				error: `Generated code has syntax errors: ${
-					syntaxError instanceof Error ? syntaxError.message : "Unknown syntax error"
+					syntaxError instanceof Error
+						? syntaxError.message
+						: "Unknown syntax error"
 				}. Code logged to console.`,
 			};
 		}
@@ -160,7 +166,10 @@ CRITICAL RULES:
 		);
 
 		if (testResult.status === "error") {
-			console.error("Generated code execution error:", testResult.message);
+			console.error(
+				"Generated code execution error:",
+				testResult.message
+			);
 			console.error("Generated code:", secondaryCode.javascript);
 			return {
 				success: false,
@@ -172,7 +181,9 @@ CRITICAL RULES:
 		if (!allPassed) {
 			// If it doesn't pass all tests, that indicates the test cases may be too strict
 			// We should still save the code so the validation can show this issue
-			const failedCount = testResult.results.filter(r => !r.passed).length;
+			const failedCount = testResult.results.filter(
+				(r) => !r.passed
+			).length;
 			console.warn(
 				`Warning: Generated secondary code failed ${failedCount} out of ${testResult.results.length} test cases for problem ${problemId}. This may indicate test cases are too strict. Code will be saved for validation.`
 			);
@@ -236,7 +247,9 @@ function buildSecondaryCodePrompt(problem: any): string {
 	prompt += `Test Cases (${problem.tests.length} total):\n`;
 	// Show first 3 test cases as examples
 	problem.tests.slice(0, 3).forEach((test: any, i: number) => {
-		prompt += `Test ${i + 1}: Input: ${JSON.stringify(test.input)}, Expected Output: ${JSON.stringify(test.output)}\n`;
+		prompt += `Test ${i + 1}: Input: ${JSON.stringify(
+			test.input
+		)}, Expected Output: ${JSON.stringify(test.output)}\n`;
 	});
 	prompt += `... (${problem.tests.length - 3} more test cases)\n\n`;
 

@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
 		}
 
 		const body = await req.json();
-		const { problemData, existingTests } = body;
+		const { problemData, existingTests, previousError } = body;
 
 		if (!problemData) {
 			return new Response(
@@ -32,7 +32,8 @@ export async function POST(req: NextRequest) {
 
 		const result = await generateTestCaseGeneratorFunction(
 			problemData as any, // ProblemGenerationData type is internal
-			(existingTests || []) as TestCase[]
+			(existingTests || []) as TestCase[],
+			previousError
 		);
 
 		return new Response(JSON.stringify(result), {
@@ -52,4 +53,3 @@ export async function POST(req: NextRequest) {
 		);
 	}
 }
-

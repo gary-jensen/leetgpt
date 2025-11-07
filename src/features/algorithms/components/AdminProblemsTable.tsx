@@ -36,6 +36,8 @@ interface AdminProblemsTableProps {
 		difficulty: string;
 		languages: string[];
 		order?: number;
+		tests?: any;
+		published?: boolean;
 	}>;
 }
 
@@ -354,6 +356,8 @@ export function AdminProblemsTable({ problems }: AdminProblemsTableProps) {
 							<TableHead>Difficulty</TableHead>
 							<TableHead>Topics</TableHead>
 							<TableHead>Languages</TableHead>
+							<TableHead>Total Testcases</TableHead>
+							<TableHead>Published</TableHead>
 							<TableHead>Actions</TableHead>
 						</TableRow>
 					</TableHeader>
@@ -361,7 +365,7 @@ export function AdminProblemsTable({ problems }: AdminProblemsTableProps) {
 						{filteredAndSortedProblems.length === 0 ? (
 							<TableRow>
 								<TableCell
-									colSpan={5}
+									colSpan={7}
 									className="text-center py-12"
 								>
 									<p className="text-muted-foreground">

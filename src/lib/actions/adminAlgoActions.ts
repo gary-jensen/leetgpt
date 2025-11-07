@@ -241,3 +241,26 @@ export async function getAllAlgoLessons() {
 		return null;
 	}
 }
+
+export async function updateProblemPublishedStatus(
+	id: string,
+	published: boolean
+) {
+	try {
+		requireAdmin();
+
+		await prisma.algoProblem.update({
+			where: { id },
+			data: { published },
+		});
+
+		// Revalidate algorithm pages
+		revalidatePath("/admin/problems");
+		revalidatePath("/algorithms");
+		revalidatePath("/algorithms/problems");
+
+		return { success: true };
+	} catch (error: any) {
+		return { success: false, error: error.message };
+	}
+}

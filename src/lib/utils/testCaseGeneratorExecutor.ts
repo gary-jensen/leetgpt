@@ -73,6 +73,123 @@ export async function executeGeneratorFunctionClient(
 				return result;
 			}
 			
+			// Helper function: arrayToTreeNode (convert array to TreeNode, level-order)
+			function arrayToTreeNode(arr) {
+				if (!arr || arr.length === 0 || arr[0] === null) return null;
+				const root = TreeNode(arr[0]);
+				const queue = [root];
+				let i = 1;
+				while (queue.length > 0 && i < arr.length) {
+					const node = queue.shift();
+					if (!node) continue;
+					if (i < arr.length && arr[i] !== null && arr[i] !== '#') {
+						node.left = TreeNode(arr[i]);
+						queue.push(node.left);
+					}
+					i++;
+					if (i < arr.length && arr[i] !== null && arr[i] !== '#') {
+						node.right = TreeNode(arr[i]);
+						queue.push(node.right);
+					}
+					i++;
+				}
+				return root;
+			}
+			
+			// Helper function: arrayTo_Node (convert array to _Node with next pointers, level-order)
+			function arrayTo_Node(arr) {
+				if (!arr || arr.length === 0 || arr[0] === null) return null;
+				const root = _Node(arr[0]);
+				const queue = [root];
+				let i = 1;
+				while (queue.length > 0 && i < arr.length) {
+					const node = queue.shift();
+					if (!node) continue;
+					// Skip # markers (they represent next pointers, handled separately)
+					if (i < arr.length && arr[i] === '#') {
+						i++;
+					}
+					if (i < arr.length && arr[i] !== null && arr[i] !== '#') {
+						node.left = _Node(arr[i]);
+						queue.push(node.left);
+					}
+					i++;
+					if (i < arr.length && arr[i] === '#') {
+						i++;
+					}
+					if (i < arr.length && arr[i] !== null && arr[i] !== '#') {
+						node.right = _Node(arr[i]);
+						queue.push(node.right);
+					}
+					i++;
+				}
+				return root;
+			}
+			
+			// Helper function: treeNodeToArray (convert TreeNode back to array, level-order)
+			// Alias: treeToArray for convenience
+			function treeNodeToArray(root) {
+				if (!root) return [];
+				const result = [];
+				const queue = [root];
+				while (queue.length > 0) {
+					const node = queue.shift();
+					if (node) {
+						result.push(node.val);
+						queue.push(node.left);
+						queue.push(node.right);
+					} else {
+						result.push(null);
+					}
+					if (queue.every(n => n === null)) break;
+				}
+				while (result.length > 0 && result[result.length - 1] === null) {
+					result.pop();
+				}
+				return result;
+			}
+			
+			// Helper function: _NodeToArray (convert _Node back to array with # markers for next pointers)
+			function _NodeToArray(root) {
+				if (!root) return [];
+				const result = [];
+				const queue = [root];
+				while (queue.length > 0) {
+					const levelSize = queue.length;
+					let hasNodesInLevel = false;
+					for (let i = 0; i < levelSize; i++) {
+						const node = queue.shift();
+						if (node) {
+							result.push(node.val);
+							hasNodesInLevel = true;
+							queue.push(node.left);
+							queue.push(node.right);
+						} else {
+							result.push(null);
+						}
+					}
+					// Add # after each level to represent next pointer
+					// Always add # if we processed any nodes in this level (even if next level is empty)
+					if (hasNodesInLevel) {
+						result.push('#');
+					}
+				}
+				// Remove trailing nulls (but keep # markers as they mark level boundaries)
+				while (result.length > 0 && result[result.length - 1] === null) {
+					result.pop();
+				}
+				// Remove trailing # only if it's followed by nothing (shouldn't happen, but safety check)
+				if (result.length > 1 && result[result.length - 1] === '#' && result[result.length - 2] === null) {
+					result.pop();
+				}
+				return result;
+			}
+			
+			// Alias for convenience (some AI models use this name)
+			function treeToArray(root) {
+				return treeNodeToArray(root);
+			}
+			
 			${generatorFunctionCode}
 			
 			// If the code just defines the function, return it

@@ -69,6 +69,9 @@ export const getAlgoLessons = nextCache(
 export const getAlgoProblemsMeta = nextCache(
 	async (): Promise<AlgoProblemMeta[]> => {
 		const dbProblems = await prisma.algoProblem.findMany({
+			where: {
+				published: true,
+			},
 			select: {
 				id: true,
 				slug: true,
@@ -91,13 +94,16 @@ export const getAlgoProblemsMeta = nextCache(
 			order: problem.order,
 		}));
 	},
-	["algo:problems:meta:v1"],
+	["algo:problems:meta:v2"],
 	{ tags: ["algo:problems"] }
 );
 
 export const getAlgoProblems = nextCache(
 	async (filters?: FilterOptions): Promise<AlgoProblemMeta[]> => {
 		const dbProblems = await prisma.algoProblem.findMany({
+			where: {
+				published: true,
+			},
 			orderBy: { createdAt: "desc" },
 			// selecting order if it exists in schema; safe even if not
 		});
@@ -137,18 +143,24 @@ export const getAlgoProblems = nextCache(
 
 		return filtered;
 	},
-	["algo:problems:list:v1"],
+	["algo:problems:list:v2"],
 	{ tags: ["algo:problems"] }
 );
 
 export async function getAlgoProblem(
-	problemId: string
+	problemId: string,
+	includeUnpublished: boolean = false
 ): Promise<AlgoProblemDetail | null> {
 	const dbProblem = await prisma.algoProblem.findUnique({
 		where: { id: problemId },
 	});
 
 	if (!dbProblem) {
+		return null;
+	}
+
+	// For user-facing pages, only return published problems
+	if (!includeUnpublished && !dbProblem.published) {
 		return null;
 	}
 
@@ -261,6 +273,9 @@ export async function getAlgoLesson(
 export const getAllTopics = nextCache(
 	async (): Promise<string[]> => {
 		const dbProblems = (await prisma.algoProblem.findMany({
+			where: {
+				published: true,
+			},
 			select: { topics: true },
 		})) as AlgoProblemDetail[];
 		const dbLessons = (await prisma.algoLesson.findMany({
@@ -272,7 +287,7 @@ export const getAllTopics = nextCache(
 
 		return Array.from(new Set([...problemTopics, ...lessonTopics])).sort();
 	},
-	["algo:topics:list:v1"],
+	["algo:topics:list:v2"],
 	{ tags: ["algo:topics"] }
 );
 
@@ -285,13 +300,19 @@ export function getDifficultyLevels(): string[] {
 
 // Helper function to get problem by slug
 export async function getAlgoProblemBySlug(
-	slug: string
+	slug: string,
+	includeUnpublished: boolean = false
 ): Promise<AlgoProblemDetail | null> {
 	const dbProblem = await prisma.algoProblem.findUnique({
 		where: { slug },
 	});
 
 	if (!dbProblem) {
+		return null;
+	}
+
+	// For user-facing pages, only return published problems
+	if (!includeUnpublished && !dbProblem.published) {
 		return null;
 	}
 

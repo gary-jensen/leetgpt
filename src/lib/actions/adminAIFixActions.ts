@@ -86,7 +86,7 @@ export async function generateProblemFix(
 	requireAdmin();
 
 	try {
-		const problem = await getAlgoProblem(problemId);
+		const problem = await getAlgoProblem(problemId, true);
 		if (!problem) {
 			return { success: false, error: "Problem not found" };
 		}
@@ -205,7 +205,10 @@ function buildFixPrompt(
 	prompt += `Problem Statement:\n${problem.statementMd}\n\n`;
 	prompt += `Topics: ${problem.topics.join(", ")}\n`;
 	prompt += `Difficulty: ${problem.difficulty}\n\n`;
-	prompt += `Parameters: ${problem.parameters?.map(p => `${p.name}: ${p.type}`).join(", ") || "N/A"}\n\n`;
+	prompt += `Parameters: ${
+		problem.parameters?.map((p) => `${p.name}: ${p.type}`).join(", ") ||
+		"N/A"
+	}\n\n`;
 
 	prompt += `Current Passing Code (${language}) - PRIMARY:\n\`\`\`javascript\n${
 		problem.passingCode[language] || "N/A"
@@ -505,7 +508,7 @@ export async function testProposedFix(
 	requireAdmin();
 
 	try {
-		const problem = await getAlgoProblem(problemId);
+		const problem = await getAlgoProblem(problemId, true);
 		if (!problem) {
 			return {
 				success: false,
@@ -669,7 +672,7 @@ export async function applyProblemFix(
 	requireAdmin();
 
 	try {
-		const problem = await getAlgoProblem(problemId);
+		const problem = await getAlgoProblem(problemId, true);
 		if (!problem) {
 			return { success: false, error: "Problem not found" };
 		}

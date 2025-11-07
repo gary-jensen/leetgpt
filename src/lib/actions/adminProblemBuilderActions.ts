@@ -24,6 +24,56 @@ export async function revalidateAlgorithmPaths() {
 }
 
 /**
+ * Check if problems exist by their names
+ * Returns a map of problem names to whether they exist
+ */
+export async function checkExistingProblems(
+	problemNames: string[]
+): Promise<Record<string, boolean>> {
+	requireAdmin();
+
+	try {
+		// Get all existing problems
+		const existingProblems = await prisma.algoProblem.findMany({
+			select: {
+				slug: true,
+				title: true,
+			},
+		});
+
+		// Create sets for quick lookup
+		const existingSlugs = new Set(existingProblems.map((p) => p.slug));
+		const existingTitles = new Set(
+			existingProblems.map((p) => p.title.toLowerCase().trim())
+		);
+
+		// Import utilities
+		const { problemNameToSlug, extractTitleFromProblemName } = await import(
+			"@/lib/utils/slugUtils"
+		);
+
+		// Check each problem name
+		const result: Record<string, boolean> = {};
+		for (const problemName of problemNames) {
+			// Extract title (removes leading number like "51. " to match AI behavior)
+			const title = extractTitleFromProblemName(problemName);
+			const slug = problemNameToSlug(problemName); // This also extracts title internally
+			const normalizedTitle = title.toLowerCase().trim();
+
+			// Check against both slug and title (both without the number)
+			result[problemName] =
+				existingSlugs.has(slug) || existingTitles.has(normalizedTitle);
+		}
+
+		return result;
+	} catch (error) {
+		console.error("Error checking existing problems:", error);
+		// On error, assume none exist (safer to allow building)
+		return Object.fromEntries(problemNames.map((name) => [name, false]));
+	}
+}
+
+/**
  * Save problem to database
  * This server action handles the database save operation for completed problems
  */
