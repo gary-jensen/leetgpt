@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import OpenAI from "openai";
 import { getSession } from "@/lib/auth";
-import { checkRateLimit, getRateLimitKey } from "@/lib/rateLimit";
+import { checkHourlyLimit } from "@/lib/hourlyLimits";
 import { getAlgoProblem } from "@/features/algorithms/data";
 
 const openai = new OpenAI({
@@ -55,22 +55,56 @@ export async function POST(req: NextRequest) {
 			type = "chat", // 'chat' | 'hint' | 'submission'
 		} = body;
 
-		// Check rate limit
-		const rateLimitKey = getRateLimitKey(
-			session.user.id,
-			null,
-			`algo-coach-${type}`
-		);
-		const rateLimitCheck = await checkRateLimit(rateLimitKey, 60, 3600000);
-		if (!rateLimitCheck.allowed) {
-			return new Response(
-				JSON.stringify({
-					error: `Rate limit exceeded. Try again in ${Math.ceil(
-						(rateLimitCheck.resetTime - Date.now()) / 60000
-					)} minutes.`,
-				}),
-				{ status: 429 }
+		// Get user role (default to BASIC if not set)
+		const userRole = (session.user.role || "BASIC") as
+			| "BASIC"
+			| "PRO"
+			| "ADMIN";
+
+		// Map request type to limit type
+		// 'hint' and 'chat' share the same limit pool
+		const limitType = type === "submission" ? "submission" : "hint-chat";
+
+		// Only check rate limit for submissions if they passed (successful submissions use AI)
+		// Failing submissions should not reach this API route (handled in component with hardcoded responses)
+		const shouldCheckLimit =
+			type !== "submission" ||
+			(type === "submission" && submissionData?.allPassed === true);
+
+		if (shouldCheckLimit) {
+			// Check hourly limit based on user role
+			const limitCheck = await checkHourlyLimit(
+				session.user.id,
+				limitType,
+				userRole
 			);
+
+			if (!limitCheck.allowed) {
+				const minutesRemaining = Math.ceil(
+					(limitCheck.resetTime - Date.now()) / 60000
+				);
+				const actionName =
+					type === "submission"
+						? "submission responses"
+						: type === "hint"
+						? "hints"
+						: "chat messages";
+
+				let errorMessage = `You've reached your hourly limit of ${
+					limitCheck.limit
+				} ${actionName}. Please try again in ${minutesRemaining} minute${
+					minutesRemaining !== 1 ? "s" : ""
+				}.`;
+
+				// Add upgrade suggestion for BASIC users
+				if (userRole === "BASIC") {
+					errorMessage += ` Upgrade to Pro for higher limits!`;
+				}
+
+				return new Response(JSON.stringify({ error: errorMessage }), {
+					status: 429,
+				});
+			}
 		}
 
 		// Get problem if needed

@@ -20,6 +20,7 @@ import {
 } from "@/lib/analytics";
 import { AlgoProblemSubmission } from "@/types/algorithm-types";
 import { playSuccessSound, playErrorSound } from "@/lib/soundManager";
+import { toast } from "sonner";
 
 export function useAlgoProblemExecution(
 	problem: AlgoProblemDetail | null,
@@ -33,6 +34,7 @@ export function useAlgoProblemExecution(
 	const runCountRef = useRef(0);
 	const problemStartTimeRef = useRef<number | null>(null);
 	const initialCodeRef = useRef<string>("");
+	const lastExecutionTimeRef = useRef<number | null>(null);
 
 	// Initialize problem start time and initial code
 	useEffect(() => {
@@ -40,6 +42,7 @@ export function useAlgoProblemExecution(
 			problemStartTimeRef.current = Date.now();
 			initialCodeRef.current = problem.startingCode.javascript || "";
 			runCountRef.current = 0;
+			lastExecutionTimeRef.current = null; // Reset execution time when problem changes
 		}
 	}, [problem]);
 
@@ -167,6 +170,23 @@ export function useAlgoProblemExecution(
 			return;
 		}
 
+		// Check rate limit for BASIC users (8 seconds between runs)
+		const userRole = session?.user?.role || "BASIC";
+		if (userRole === "BASIC" && lastExecutionTimeRef.current !== null) {
+			const timeSinceLastRun = Date.now() - lastExecutionTimeRef.current;
+			const MIN_RUN_INTERVAL_MS = 8 * 1000; // 8 seconds
+
+			if (timeSinceLastRun < MIN_RUN_INTERVAL_MS) {
+				const secondsRemaining = Math.ceil(
+					(MIN_RUN_INTERVAL_MS - timeSinceLastRun) / 1000
+				);
+				toast.error(
+					`You are submitting too frequently. Please wait ${secondsRemaining} second${secondsRemaining !== 1 ? "s" : ""} before running again. Upgrade to Pro to remove this limit.`
+				);
+				return;
+			}
+		}
+
 		// Ensure CodeExecutor is initialized with iframe
 		if (!codeExecutorRef.current) {
 			if (iframeRef.current) {
@@ -205,6 +225,9 @@ export function useAlgoProblemExecution(
 
 		setIsExecuting(true);
 		setTestResults([]);
+		
+		// Update last execution time
+		lastExecutionTimeRef.current = Date.now();
 
 		try {
 			// Execute tests using the new algorithm test executor

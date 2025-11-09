@@ -8,7 +8,7 @@ import {
 } from "@/types/algorithm-types";
 import { getAlgoProblem } from "@/features/algorithms/data";
 import { getSession } from "@/lib/auth";
-import { checkRateLimit, getRateLimitKey } from "@/lib/rateLimit";
+import { checkHourlyLimit } from "@/lib/hourlyLimits";
 
 const openai = new OpenAI({
 	apiKey: process.env.OPENAI_API_KEY,
@@ -124,19 +124,27 @@ export async function reviewOptimality(
 		throw new Error("Authentication required to use AI coach");
 	}
 
-	// Check rate limit (60/hour per user)
-	const rateLimitKey = getRateLimitKey(
+	// Get user role (default to BASIC if not set)
+	const userRole = (session.user.role || "BASIC") as "BASIC" | "PRO" | "ADMIN";
+
+	// Check hourly limit (optimality reviews use submission limit since they're part of submission flow)
+	const limitCheck = await checkHourlyLimit(
 		session.user.id,
-		null,
-		"algo-coach-optimality"
+		"submission",
+		userRole
 	);
-	const rateLimitCheck = await checkRateLimit(rateLimitKey, 60, 3600000); // 60 requests per 3600 seconds (1 hour)
-	if (!rateLimitCheck.allowed) {
-		throw new Error(
-			`Rate limit exceeded. You've used all 60 reviews for this hour. Try again in ${Math.ceil(
-				(rateLimitCheck.resetTime - Date.now()) / 60000
-			)} minutes.`
+	if (!limitCheck.allowed) {
+		const minutesRemaining = Math.ceil(
+			(limitCheck.resetTime - Date.now()) / 60000
 		);
+		let errorMessage = `You've reached your hourly limit of ${limitCheck.limit} optimality reviews. Please try again in ${minutesRemaining} minute${minutesRemaining !== 1 ? "s" : ""}.`;
+		
+		// Add upgrade suggestion for BASIC users
+		if (userRole === "BASIC") {
+			errorMessage += ` Upgrade to Pro for higher limits!`;
+		}
+		
+		throw new Error(errorMessage);
 	}
 
 	// const problem = await getAlgoProblem(problemId);

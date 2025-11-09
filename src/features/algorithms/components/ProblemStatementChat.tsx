@@ -381,32 +381,30 @@ export function ProblemStatementChat({
 							Description
 						</button>
 
-						{session?.user?.id && (
-							<button
-								onClick={() => {
-									if (activeTab !== "submissions") {
-										trackAlgoTabSwitched(
-											problem.id,
-											activeTab,
-											"submissions"
-										);
-										// Track submissions tab viewed
-										trackAlgoSubmissionsTabViewed(
-											problem.id,
-											submissions.length
-										);
-									}
-									setActiveTab("submissions");
-								}}
-								className={`text-sm px-1.5 py-1 rounded-md hover:bg-white/10 hover:cursor-pointer flex items-center gap-1.5 ${
-									activeTab !== "submissions" &&
-									"text-muted-foreground"
-								}`}
-							>
-								<FlaskConicalIcon className="h-4 w-4 text-[#007bff]" />
-								Submissions
-							</button>
-						)}
+						<button
+							onClick={() => {
+								if (activeTab !== "submissions") {
+									trackAlgoTabSwitched(
+										problem.id,
+										activeTab,
+										"submissions"
+									);
+									// Track submissions tab viewed
+									trackAlgoSubmissionsTabViewed(
+										problem.id,
+										submissions.length
+									);
+								}
+								setActiveTab("submissions");
+							}}
+							className={`text-sm px-1.5 py-1 rounded-md hover:bg-white/10 hover:cursor-pointer flex items-center gap-1.5 ${
+								activeTab !== "submissions" &&
+								"text-muted-foreground"
+							}`}
+						>
+							<FlaskConicalIcon className="h-4 w-4 text-[#007bff]" />
+							Submissions
+						</button>
 
 						{selectedSubmission && (
 							<div

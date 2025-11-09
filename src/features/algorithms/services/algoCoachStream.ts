@@ -31,6 +31,16 @@ export const streamAlgoCoachMessage = async (
 		});
 
 		if (!response.ok) {
+			// Handle rate limit errors (429)
+			if (response.status === 429) {
+				try {
+					const errorData = await response.json();
+					const errorMessage = errorData.error || "Rate limit exceeded";
+					throw new Error(errorMessage);
+				} catch (parseError) {
+					throw new Error("Rate limit exceeded. Please try again later.");
+				}
+			}
 			throw new Error(`HTTP error! status: ${response.status}`);
 		}
 

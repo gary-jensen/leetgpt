@@ -392,23 +392,17 @@ export function AlgorithmWorkspace({
 					// console.error("Error streaming hint:", error);
 					setStreamingMessageId(null);
 					setIsThinking(false);
-					setChatMessages((prev) =>
-						prev.map((msg) =>
-							msg.id === hintMessageId
-								? {
-										...msg,
-										content:
-											"Sorry, I encountered an error. Please try again.",
-								  }
-								: msg
-						)
-					);
+
+					let errorContent =
+						"Sorry, I encountered an error. Please try again.";
 					if (error instanceof Error) {
 						if (error.message.includes("Rate limit")) {
+							errorContent = error.message;
 							toast.error(error.message);
 						} else if (
 							error.message.includes("Authentication required")
 						) {
+							errorContent = "Please sign in to use AI hints";
 							toast.error("Please sign in to use AI hints");
 						} else {
 							toast.error(
@@ -416,6 +410,17 @@ export function AlgorithmWorkspace({
 							);
 						}
 					}
+
+					setChatMessages((prev) =>
+						prev.map((msg) =>
+							msg.id === hintMessageId
+								? {
+										...msg,
+										content: errorContent,
+								  }
+								: msg
+						)
+					);
 				}
 			);
 		} catch (error) {
@@ -445,9 +450,132 @@ export function AlgorithmWorkspace({
 		}
 	};
 
+	// Hardcoded failure messages (5 different responses)
+	const FAILURE_MESSAGES = [
+		"Not quite there yet! Keep trying - you're making progress. Ask me a question if you would like some help!",
+		"Some tests are still failing, but don't give up! Review your logic and try again. Ask me a question if you would like some help!",
+		"You're on the right track! Take another look at the failing test cases. Ask me a question if you would like some help!",
+		"Almost there! Check your code for any edge cases you might have missed. Ask me a question if you would like some help!",
+		"Keep going! Debugging is part of the learning process. Ask me a question if you would like some help!",
+	];
+
 	const handleSubmissionResponse = async (submissionMessage: any) => {
 		if (!session?.user?.id) return; // Skip if not authenticated
 
+		const submissionData = submissionMessage.submissionData;
+		const allPassed = submissionData?.allPassed ?? false;
+
+		// For failing submissions, use hardcoded response (no API call, no rate limit)
+		if (!allPassed) {
+			// Show thinking animation for 500ms to make it look like AI
+			setIsThinking(true);
+
+			const submissionMessageId = `submission-${Date.now()}`;
+			const submissionAiMessage = {
+				id: submissionMessageId,
+				role: "assistant" as const,
+				content: "",
+				timestamp: new Date(),
+			};
+
+			setChatMessages((prev) => [...prev, submissionAiMessage]);
+			setStreamingMessageId(submissionMessageId);
+
+			// Wait 500ms before showing the hardcoded message
+			await new Promise((resolve) => setTimeout(resolve, 500));
+
+			const randomMessage =
+				FAILURE_MESSAGES[
+					Math.floor(Math.random() * FAILURE_MESSAGES.length)
+				];
+
+			setIsThinking(false);
+			// Keep streamingMessageId set to enable streaming animation
+
+			// Stream the message word by word to simulate AI typing
+			const words = randomMessage.split(" ");
+			let streamedContent = "";
+			for (let i = 0; i < words.length; i++) {
+				streamedContent += (i > 0 ? " " : "") + words[i];
+				setChatMessages((prev) =>
+					prev.map((msg) =>
+						msg.id === submissionMessageId
+							? { ...msg, content: streamedContent }
+							: msg
+					)
+				);
+				// Delay between words (adjust for typing speed)
+				await new Promise((resolve) => setTimeout(resolve, 20));
+			}
+
+			// Clear streaming state after message is complete
+			setStreamingMessageId(null);
+
+			// Persist chat history to database
+			if (currentSessionId) {
+				try {
+					const savedProgress = progress.getAlgoProblemProgress?.(
+						problem.id,
+						"javascript"
+					);
+					const existingSessions = savedProgress?.chatHistory || [];
+
+					const currentSession = {
+						id: currentSessionId,
+						createdAt: new Date(),
+						messages: [
+							...chatMessagesRef.current.filter(
+								(msg) =>
+									msg.id !== "problem-statement" &&
+									msg.id !== "examples-constraints"
+							),
+							submissionMessage,
+							{ ...submissionAiMessage, content: randomMessage },
+						],
+					};
+
+					const updatedChatHistory = [
+						...existingSessions,
+						currentSession,
+					];
+
+					// Optimistically update local state immediately
+					progress.updateAlgoProblemProgressLocal?.(
+						problem.id,
+						"javascript",
+						{
+							chatHistory: updatedChatHistory,
+						}
+					);
+
+					try {
+						await updateAlgoProblemProgress(
+							session.user.id,
+							problem.id,
+							"javascript",
+							{
+								chatHistory: updatedChatHistory,
+							}
+						);
+					} catch (error) {
+						// Revert optimistic update on error
+						progress.updateAlgoProblemProgressLocal?.(
+							problem.id,
+							"javascript",
+							{
+								chatHistory: existingSessions,
+							}
+						);
+					}
+				} catch (error) {
+					// Silently fail - non-critical
+				}
+			}
+
+			return; // Early return for failing submissions
+		}
+
+		// For successful submissions, use AI (rate limited)
 		setIsThinking(true);
 
 		const submissionMessageId = `submission-${Date.now()}`;
@@ -464,7 +592,7 @@ export function AlgorithmWorkspace({
 		let fullContent = "";
 
 		try {
-			// Stream submission response
+			// Stream submission response (only for successful submissions)
 			await streamAlgoCoachMessage(
 				{
 					problemId: problem.id,
@@ -504,10 +632,29 @@ export function AlgorithmWorkspace({
 					// );
 					setStreamingMessageId(null);
 					setIsThinking(false);
-					// Remove empty message on error - silent failure for auto-responses
-					setChatMessages((prev) =>
-						prev.filter((msg) => msg.id !== submissionMessageId)
-					);
+
+					// For rate limit errors, show message in chat; otherwise silent failure for auto-responses
+					if (
+						error instanceof Error &&
+						error.message.includes("Rate limit")
+					) {
+						setChatMessages((prev) =>
+							prev.map((msg) =>
+								msg.id === submissionMessageId
+									? {
+											...msg,
+											content: error.message,
+									  }
+									: msg
+							)
+						);
+						toast.error(error.message);
+					} else {
+						// Remove empty message on error - silent failure for auto-responses
+						setChatMessages((prev) =>
+							prev.filter((msg) => msg.id !== submissionMessageId)
+						);
+					}
 				}
 			);
 
@@ -681,14 +828,29 @@ export function AlgorithmWorkspace({
 						"stream_error",
 						errorMessage
 					);
+
+					// Determine error content
+					let errorContent =
+						"Sorry, I encountered an error. Please try again.";
+					if (error instanceof Error) {
+						if (error.message.includes("Rate limit")) {
+							errorContent = error.message;
+							toast.error(error.message);
+						} else if (
+							error.message.includes("Authentication required")
+						) {
+							errorContent = "Please sign in to use AI chat";
+							toast.error("Please sign in to use AI chat");
+						}
+					}
+
 					// Update message with error
 					setChatMessages((prev) =>
 						prev.map((msg) =>
 							msg.id === aiMessageId
 								? {
 										...msg,
-										content:
-											"Sorry, I encountered an error. Please try again.",
+										content: errorContent,
 								  }
 								: msg
 						)

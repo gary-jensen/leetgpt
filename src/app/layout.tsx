@@ -6,6 +6,7 @@ import { getSession, setLessonMetadata } from "@/lib/auth";
 import type { Metadata } from "next";
 import { DM_Sans, Inter } from "next/font/google";
 import { Analytics as VercelAnalytics } from "@vercel/analytics/next";
+import { Toaster } from "sonner";
 import "./globals.css";
 import { prisma } from "@/lib/prisma";
 
@@ -72,6 +73,7 @@ export default async function RootLayout({
 					>
 						<Analytics />
 						<VercelAnalytics />
+						<Toaster />
 						{children}
 					</ProgressProvider>
 				</SessionProvider>
