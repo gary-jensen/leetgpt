@@ -1,11 +1,7 @@
 import { AlgoProblemDetail } from "@/types/algorithm-types";
 import { roundTo5Decimals } from "@/utils/numberUtils";
-import {
-	convertInput,
-	convertOutput,
-	getTypeDefinitionsCode,
-} from "@/lib/utils/typeConverters";
-import { executeJudge } from "./judges";
+import { getTypeDefinitionsCode } from "@/lib/utils/typeConverters";
+import { CodeExecutor } from "./codeExecutor";
 
 export interface AlgoTestResult {
 	case: number;
@@ -25,293 +21,173 @@ export interface AlgoExecutionResult {
 }
 
 /**
- * Check if we're in a browser environment
- */
-function isBrowser(): boolean {
-	return typeof window !== "undefined" && typeof Worker !== "undefined";
-}
-
-/**
- * Execute algorithm problem tests against user code
- * @param cancellationCheck - Optional function that returns true if execution should be cancelled
+ * Execute algorithm problem tests against user code using CodeExecutor (iframe-based sandboxing)
  * @param timeoutMs - Maximum execution time in milliseconds (default: 10000 = 10 seconds)
- * @param useWorker - Whether to use Web Worker (browser only, can terminate infinite loops)
+ * @param codeExecutor - CodeExecutor instance for iframe-based execution (required)
+ * @throws Error if codeExecutor is not provided or if called server-side
  */
 export async function executeAlgoTests(
 	problem: AlgoProblemDetail,
 	code: string,
 	language: string = "javascript",
-	cancellationCheck?: () => boolean,
 	timeoutMs: number = 10000,
-	useWorker: boolean = true
+	codeExecutor?: CodeExecutor
 ): Promise<AlgoExecutionResult> {
-	// Use Web Worker in browser if available and requested
-	// This can terminate infinite loops by killing the worker
-	if (isBrowser() && useWorker) {
-		return executeAlgoTestsInWorker(problem, code, language, timeoutMs);
+	if (!codeExecutor) {
+		return {
+			status: "error",
+			results: [],
+			message:
+				"CodeExecutor is required. Algorithm test execution must run client-side with an iframe.",
+		};
 	}
 
-	// Fall back to direct execution (server-side or if worker disabled)
-	return executeAlgoTestsDirect(
+	return executeAlgoTestsWithCodeExecutor(
 		problem,
 		code,
-		language,
-		cancellationCheck,
-		timeoutMs
+		timeoutMs,
+		codeExecutor
 	);
 }
 
 /**
- * Execute tests in a Web Worker (can terminate infinite loops)
+ * Execute algorithm tests using CodeExecutor (iframe-based sandboxing)
  */
-async function executeAlgoTestsInWorker(
+async function executeAlgoTestsWithCodeExecutor(
 	problem: AlgoProblemDetail,
 	code: string,
-	language: string,
-	timeoutMs: number
+	timeoutMs: number,
+	codeExecutor: CodeExecutor
 ): Promise<AlgoExecutionResult> {
-	return new Promise((resolve) => {
-		const messageId = `worker_${Date.now()}_${Math.random()
-			.toString(36)
-			.substring(7)}`;
-		let worker: Worker | null = null;
-		let timeoutId: NodeJS.Timeout | null = null;
+	// Generate execution script
+	const executionScript = generateAlgoTestExecutionScript(
+		problem,
+		code,
+		timeoutMs
+	);
 
-		try {
-			// Create worker from public file
-			worker = new Worker("/algo-test-worker.js");
-
-			// Set up timeout
-			timeoutId = setTimeout(() => {
-				if (worker) {
-					worker.terminate(); // This kills infinite loops!
-					worker = null;
-				}
-				resolve({
-					status: "error",
-					results: [],
-					message: `Execution timed out after ${Math.round(
-						timeoutMs / 1000
-					)} seconds`,
-					runMs: timeoutMs,
-				});
-			}, timeoutMs);
-
-			// Listen for messages
-			const messageHandler = (e: MessageEvent) => {
-				if (e.data.messageId !== messageId) return;
-
-				// Clean up
-				if (timeoutId) {
-					clearTimeout(timeoutId);
-					timeoutId = null;
-				}
-
-				if (worker) {
-					worker.removeEventListener("message", messageHandler);
-					worker.removeEventListener("error", errorHandler);
-					worker.terminate();
-					worker = null;
-				}
-
-				if (e.data.type === "result") {
-					resolve(e.data.result);
-				} else if (e.data.type === "error") {
-					resolve({
-						status: "error",
-						results: [],
-						message: e.data.error || "Unknown error",
-					});
-				}
-			};
-
-			const errorHandler = (error: ErrorEvent) => {
-				if (timeoutId) {
-					clearTimeout(timeoutId);
-					timeoutId = null;
-				}
-
-				if (worker) {
-					worker.removeEventListener("message", messageHandler);
-					worker.removeEventListener("error", errorHandler);
-					worker.terminate();
-					worker = null;
-				}
-
-				resolve({
-					status: "error",
-					results: [],
-					message: error.message || "Worker error",
-				});
-			};
-
-			worker.addEventListener("message", messageHandler);
-			worker.addEventListener("error", errorHandler);
-
-			// Send execution request
-			worker.postMessage({
-				type: "execute",
-				messageId,
-				problem,
-				code,
-				language,
-				timeoutMs,
-			});
-		} catch (error) {
-			// If worker creation fails, fall back to direct execution
-			if (timeoutId) clearTimeout(timeoutId);
-			if (worker) {
-				worker.terminate();
-			}
-			// Fall back to direct execution
-			return executeAlgoTestsDirect(
-				problem,
-				code,
-				language,
-				undefined,
-				timeoutMs
-			);
-		}
-	});
-}
-
-/**
- * Execute tests directly (original implementation)
- * WARNING: Cannot terminate infinite loops - will freeze browser
- */
-async function executeAlgoTestsDirect(
-	problem: AlgoProblemDetail,
-	code: string,
-	language: string = "javascript",
-	cancellationCheck?: () => boolean,
-	timeoutMs: number = 10000
-): Promise<AlgoExecutionResult> {
-	const startTime = Date.now();
-	let timeoutId: NodeJS.Timeout | null = null;
-	let isTimedOut = false;
-
+	// Execute using CodeExecutor with custom script
+	let executionResult;
 	try {
-		// Set up overall timeout for the entire test suite
-		const timeoutPromise = new Promise<AlgoExecutionResult>((resolve) => {
-			timeoutId = setTimeout(() => {
-				isTimedOut = true;
-				resolve({
-					status: "error",
-					results: [],
-					message: `Execution timed out after ${timeoutMs}ms`,
-					runMs: Date.now() - startTime,
-				});
-			}, timeoutMs);
+		executionResult = await codeExecutor.executeCode(
+			code,
+			false,
+			executionScript,
+			timeoutMs
+		);
+	} catch (error) {
+		console.error("CodeExecutor execution threw error:", error);
+		return {
+			status: "error",
+			results: [],
+			message: error instanceof Error ? error.message : String(error),
+		};
+	}
+
+	// Parse result from CodeExecutor format to AlgoExecutionResult format
+	if (executionResult.error) {
+		console.error("Execution result has error:", executionResult.error);
+		console.error("Execution logs:", executionResult.logs);
+		return {
+			status: "error",
+			results: [],
+			message: executionResult.error,
+		};
+	}
+
+	// Check if execution was cancelled (timeout)
+	if (executionResult.cancelled) {
+		return {
+			status: "error",
+			results: [],
+			message: `Execution timed out after ${Math.round(
+				timeoutMs / 1000
+			)} seconds`,
+		};
+	}
+
+	// Extract algorithm test results from ExecutionResult
+	// The result structure from our execution script is: { status: 'ok', results: [...], runMs: ... }
+	const resultData = executionResult.result;
+
+	// Check if we have the expected structure
+	if (!resultData || !resultData.results) {
+		// Log for debugging
+		console.error("Unexpected result structure:", {
+			executionResult,
+			result: executionResult.result,
+			success: executionResult.success,
+			cancelled: executionResult.cancelled,
+			logs: executionResult.logs,
 		});
 
-		// Check for cancellation before starting
-		if (cancellationCheck && cancellationCheck()) {
-			if (timeoutId) clearTimeout(timeoutId);
-			return {
-				status: "error",
-				results: [],
-				message: "Execution was cancelled",
-			};
-		}
-
-		// Create a function from the user's code
-		const userFunction = createFunctionFromCode(code, problem);
-
-		if (!userFunction) {
-			return {
-				status: "error",
-				results: [],
-				message: "Could not extract function from code",
-			};
-		}
-
-		// Run all test cases with timeout protection
-		const executionPromise = (async () => {
-			const results: AlgoTestResult[] = [];
-
-			for (let i = 0; i < problem.tests.length; i++) {
-				// Check for cancellation or timeout before each test case
-				if (isTimedOut) {
-					return {
-						status: "error" as const,
-						results,
-						message: "Execution timed out",
-						runMs: Date.now() - startTime,
-					};
-				}
-
-				if (cancellationCheck && cancellationCheck()) {
-					return {
-						status: "error" as const,
-						results,
-						message: "Execution was cancelled",
-						runMs: Date.now() - startTime,
-					};
-				}
-
-				const testCase = problem.tests[i];
-				const result = await runSingleTest(
-					userFunction,
-					testCase,
-					i + 1,
-					problem,
-					code,
-					timeoutMs / problem.tests.length // Per-test timeout (distribute total timeout)
-				);
-				results.push(result);
-
-				// Yield to event loop every 10 tests to prevent blocking (only for long test suites)
-				if (i > 0 && i % 10 === 0) {
-					await new Promise((resolve) => setTimeout(resolve, 0));
-					// Check again after yielding
-					if (isTimedOut) {
-						return {
-							status: "error" as const,
-							results,
-							message: "Execution timed out",
-							runMs: Date.now() - startTime,
-						};
-					}
-					if (cancellationCheck && cancellationCheck()) {
-						return {
-							status: "error" as const,
-							results,
-							message: "Execution was cancelled",
-							runMs: Date.now() - startTime,
-						};
-					}
-				}
-			}
-
-			const runMs = Date.now() - startTime;
-
-			return {
-				status: "ok" as const,
-				results,
-				runMs,
-			};
-		})();
-
-		// Race between execution and timeout
-		const result = await Promise.race([executionPromise, timeoutPromise]);
-
-		// Clear timeout if execution completed first
-		if (timeoutId) clearTimeout(timeoutId);
-
-		return result;
-	} catch (error) {
-		// Clear timeout on error
-		if (timeoutId) clearTimeout(timeoutId);
-
-		const runMs = Date.now() - startTime;
+		// Try to extract from logs or other fields
+		const errorMessage =
+			executionResult.logs?.join("\n") ||
+			"Execution completed but result structure was unexpected. Check console for details.";
 
 		return {
 			status: "error",
 			results: [],
-			runMs,
-			message: error instanceof Error ? error.message : "Unknown error",
+			message: errorMessage,
 		};
 	}
+
+	const algoResults = resultData.results || [];
+	const runMs = resultData.runMs;
+
+	// Convert to AlgoExecutionResult format
+	// Normalize actual values: if expected is an array but actual is {returnValue, array}, extract the array
+	return {
+		status:
+			resultData.status === "ok" && executionResult.success
+				? "ok"
+				: "error",
+		results: algoResults.map((r: any) => {
+			let normalizedActual = r.actual;
+			let normalizedExpected = r.expected;
+
+			// Handle mutating-array-with-k pattern: both actual and expected might be objects with {returnValue, array}
+			// Extract just the array for display if the expected from problem is an array
+			if (
+				r.actual &&
+				typeof r.actual === "object" &&
+				!Array.isArray(r.actual) &&
+				"array" in r.actual &&
+				Array.isArray(r.actual.array)
+			) {
+				// Check if expected is also an object with array property, or if it's just an array
+				if (
+					r.expected &&
+					typeof r.expected === "object" &&
+					!Array.isArray(r.expected) &&
+					"array" in r.expected
+				) {
+					// Both are objects, extract arrays from both
+					normalizedActual = r.actual.array;
+					normalizedExpected = r.expected.array;
+				} else if (Array.isArray(r.expected)) {
+					// Expected is just an array, extract array from actual
+					normalizedActual = r.actual.array;
+				}
+			}
+
+			return {
+				case: r.case,
+				passed: r.passed,
+				input: r.input,
+				expected: normalizedExpected,
+				actual: normalizedActual,
+				error: r.error,
+				runtime: r.runtime,
+			};
+		}),
+		runMs,
+		message:
+			resultData.status === "ok"
+				? undefined
+				: resultData.message || "Execution failed",
+	};
 }
 
 /**
@@ -377,6 +253,733 @@ export function createFunctionFromCode(
 		// console.error("Error creating function from code:", error);
 		return null;
 	}
+}
+
+/**
+ * Generate complete execution script for algorithm tests to run in iframe
+ * This script includes type definitions, type converters, judge system, and test execution
+ */
+function generateAlgoTestExecutionScript(
+	problem: AlgoProblemDetail,
+	code: string,
+	timeoutMs: number
+): string {
+	const functionName =
+		problem.functionName ||
+		extractFunctionNameFromCode(code) ||
+		getMainFunctionName(problem);
+
+	// Get type definitions if needed
+	const needsDataStructures =
+		problem.parameters?.some(
+			(p) =>
+				p.type === "ListNode" ||
+				p.type === "TreeNode" ||
+				p.type === "_Node"
+		) ||
+		problem.returnType === "ListNode" ||
+		problem.returnType === "TreeNode" ||
+		problem.returnType === "_Node" ||
+		problem.topics.some(
+			(t) =>
+				t.includes("Linked List") ||
+				t.includes("Tree") ||
+				t.includes("Binary")
+		);
+
+	const typeDefinitions = needsDataStructures ? getTypeDefinitionsCode() : "";
+
+	// Escape code for embedding in template string
+	// IMPORTANT: We only escape backticks and ${} expressions, NOT backslashes
+	// This preserves regex patterns like \d, \., etc.
+	const escapedCode = code.replace(/`/g, "\\`").replace(/\${/g, "\\${");
+
+	// Serialize problem data for the script
+	const problemData = JSON.stringify({
+		tests: problem.tests,
+		parameters: problem.parameters || [],
+		returnType: problem.returnType || "void", // Default to "void" if not defined
+		judge: problem.judge,
+		outputOrderMatters: problem.outputOrderMatters ?? true,
+	});
+
+	// Generate the complete execution script
+	// Note: This returns a template string that will be inserted into CodeExecutor's template
+	// The ${functionName} and ${problemData} are evaluated here in TypeScript
+	// We embed the user code directly (with only backticks and ${} escaped) to preserve regex patterns
+	const scriptTemplate = `
+		${typeDefinitions}
+		
+		// Mock storage and cache APIs to prevent errors in sandboxed iframe
+		// In sandboxed iframes, accessing these properties throws an error
+		// So we need to define them before any code tries to access them
+		Object.defineProperty(window, 'sessionStorage', {
+			value: {
+				getItem: () => null,
+				setItem: () => {},
+				removeItem: () => {},
+				clear: () => {},
+				length: 0,
+				key: () => null
+			},
+			writable: false,
+			configurable: false
+		});
+		Object.defineProperty(window, 'localStorage', {
+			value: {
+				getItem: () => null,
+				setItem: () => {},
+				removeItem: () => {},
+				clear: () => {},
+				length: 0,
+				key: () => null
+			},
+			writable: false,
+			configurable: false
+		});
+		Object.defineProperty(window, 'caches', {
+			value: {
+				open: () => Promise.resolve({
+					match: () => Promise.resolve(undefined),
+					put: () => Promise.resolve(),
+					delete: () => Promise.resolve(false),
+					keys: () => Promise.resolve([])
+				}),
+				has: () => Promise.resolve(false),
+				delete: () => Promise.resolve(false),
+				keys: () => Promise.resolve([]),
+				match: () => Promise.resolve(undefined)
+			},
+			writable: false,
+			configurable: false
+		});
+		
+		// User code - embed directly in the script (no eval needed!)
+		${escapedCode}
+		
+		// Helper: Deep clone
+		function deepClone(obj) {
+			if (obj === null || typeof obj !== 'object') return obj;
+			if (obj instanceof Date) return new Date(obj.getTime());
+			if (Array.isArray(obj)) return obj.map(item => deepClone(item));
+			const cloned = {};
+			for (let key in obj) {
+				if (obj.hasOwnProperty(key)) {
+					cloned[key] = deepClone(obj[key]);
+				}
+			}
+			return cloned;
+		}
+		
+		// Helper: Round to 5 decimals
+		function roundTo5Decimals(value) {
+			// Preserve primitive types that don't need rounding
+			if (typeof value === 'boolean' || typeof value === 'string' || value === null || value === undefined) {
+				return value;
+			}
+			if (typeof value === 'number') {
+				return Math.round(value * 100000) / 100000;
+			}
+			if (Array.isArray(value)) {
+				return value.map(item => roundTo5Decimals(item));
+			}
+			if (value !== null && typeof value === 'object') {
+				const rounded = {};
+				for (let key in value) {
+					rounded[key] = roundTo5Decimals(value[key]);
+				}
+				return rounded;
+			}
+			return value;
+		}
+		
+		// Helper: Deep equality check
+		function deepEqual(a, b, orderMatters = true) {
+			const roundedA = roundTo5Decimals(a);
+			const roundedB = roundTo5Decimals(b);
+			
+			// Strict equality check (handles primitives including booleans)
+			if (roundedA === roundedB) return true;
+			
+			// Handle null/undefined
+			if (roundedA == null || roundedB == null) return roundedA === roundedB;
+			
+			// Handle arrays
+			if (Array.isArray(roundedA) && Array.isArray(roundedB)) {
+				if (roundedA.length !== roundedB.length) return false;
+				if (!orderMatters) {
+					const sortedA = [...roundedA].sort((x, y) => JSON.stringify(x).localeCompare(JSON.stringify(y)));
+					const sortedB = [...roundedB].sort((x, y) => JSON.stringify(x).localeCompare(JSON.stringify(y)));
+					return sortedA.every((val, idx) => deepEqual(val, sortedB[idx], orderMatters));
+				}
+				return roundedA.every((val, idx) => deepEqual(val, roundedB[idx], orderMatters));
+			}
+			
+			// Handle objects (but not null, which is typeof 'object' in JavaScript)
+			if (typeof roundedA === 'object' && typeof roundedB === 'object' && 
+			    roundedA !== null && roundedB !== null &&
+			    !Array.isArray(roundedA) && !Array.isArray(roundedB)) {
+				const keysA = Object.keys(roundedA);
+				const keysB = Object.keys(roundedB);
+				if (keysA.length !== keysB.length) return false;
+				return keysA.every(key => deepEqual(roundedA[key], roundedB[key], orderMatters));
+			}
+			
+			return false;
+		}
+		
+		// Type converters (matching typeConverters.ts logic)
+		function convertInputValue(value, paramType) {
+			switch (paramType) {
+				case 'ListNode':
+					if (Array.isArray(value)) {
+						// Convert array to ListNode
+						if (value.length === 0) return null;
+						let head = new ListNode(value[0]);
+						let current = head;
+						for (let i = 1; i < value.length; i++) {
+							current.next = new ListNode(value[i]);
+							current = current.next;
+						}
+						return head;
+					}
+					return value; // Already ListNode or null
+				case 'TreeNode':
+					if (Array.isArray(value)) {
+						// Convert array to TreeNode (level-order)
+						if (value.length === 0 || value[0] === null) return null;
+						const root = new TreeNode(value[0]);
+						const queue = [root];
+						let i = 1;
+						while (queue.length > 0 && i < value.length) {
+							const node = queue.shift();
+							if (node) {
+								if (i < value.length && value[i] !== null) {
+									node.left = new TreeNode(value[i]);
+									queue.push(node.left);
+								} else {
+									queue.push(null);
+								}
+								i++;
+								if (i < value.length && value[i] !== null) {
+									node.right = new TreeNode(value[i]);
+									queue.push(node.right);
+								} else {
+									queue.push(null);
+								}
+								i++;
+							}
+						}
+						return root;
+					}
+					return value; // Already TreeNode or null
+				case '_Node':
+					if (Array.isArray(value)) {
+						// Convert array to _Node (level-order with # markers for next pointers)
+						if (value.length === 0 || value[0] === null) return null;
+						const root = new _Node(value[0]);
+						const queue = [root];
+						let i = 1;
+						while (queue.length > 0 && i < value.length) {
+							const node = queue.shift();
+							if (node) {
+								if (i < value.length && value[i] !== null && value[i] !== '#') {
+									node.left = new _Node(value[i]);
+									queue.push(node.left);
+								} else {
+									queue.push(null);
+								}
+								i++;
+								if (i < value.length && value[i] !== null && value[i] !== '#') {
+									node.right = new _Node(value[i]);
+									queue.push(node.right);
+								} else {
+									queue.push(null);
+								}
+								i++;
+							}
+						}
+						return root;
+					}
+					return value; // Already _Node or null
+				case 'number[]':
+				case 'string[]':
+					// For arrays, return a shallow clone to prevent shared state
+					return Array.isArray(value) ? [...value] : value;
+				case 'number[][]':
+					// For 2D arrays, return a deep clone to prevent shared state
+					return Array.isArray(value) ? value.map(row => Array.isArray(row) ? [...row] : row) : value;
+				case 'string':
+				case 'number':
+				case 'boolean':
+					// No conversion needed for primitive types
+					return value;
+				default:
+					// Unknown type, return as-is
+					return value;
+			}
+		}
+		
+		// Helper: Convert ListNode-like object to array
+		function listNodeToArrayFromAny(head) {
+			const result = [];
+			let current = head;
+			
+			if (current === null || current === undefined) return [];
+			if (Array.isArray(current)) return current;
+			
+			// Handle case where head itself has a val that is a ListNode object
+			if (current && typeof current === 'object' && 'val' in current && 
+			    current.val !== undefined && current.val !== null && 
+			    typeof current.val === 'object' && 'val' in current.val && 
+			    !Array.isArray(current.val)) {
+				current = current.val;
+			}
+			
+			let iterations = 0;
+			while (current !== null && current !== undefined) {
+				iterations++;
+				const val = current.val !== undefined ? current.val : current.value;
+				if (val !== undefined && val !== null && typeof val !== 'object') {
+					result.push(val);
+				}
+				current = current.next;
+				if (iterations > 10000) break; // Safety check
+			}
+			return result;
+		}
+		
+		// Helper: Convert TreeNode-like object to array
+		function treeNodeToArrayFromAny(root) {
+			if (!root) return [];
+			const result = [];
+			const queue = [root];
+			while (queue.length > 0) {
+				const node = queue.shift();
+				if (node) {
+					result.push(node.val);
+					queue.push(node.left);
+					queue.push(node.right);
+				} else {
+					result.push(null);
+				}
+			}
+			// Remove trailing nulls
+			while (result.length > 0 && result[result.length - 1] === null) {
+				result.pop();
+			}
+			return result;
+		}
+		
+		// Helper: Convert _Node-like object to array with next pointer serialization
+		function _NodeToArrayFromAny(root) {
+			if (!root) return [];
+			const result = [];
+			const queue = [root];
+			while (queue.length > 0) {
+				const levelSize = queue.length;
+				let hasNodesInLevel = false;
+				for (let i = 0; i < levelSize; i++) {
+					const node = queue.shift();
+					if (node) {
+						result.push(node.val);
+						hasNodesInLevel = true;
+						queue.push(node.left);
+						queue.push(node.right);
+					} else {
+						result.push(null);
+					}
+				}
+				if (hasNodesInLevel) {
+					result.push('#');
+				}
+			}
+			// Remove trailing nulls
+			while (result.length > 0 && result[result.length - 1] === null) {
+				result.pop();
+			}
+			return result;
+		}
+		
+		function convertOutputValue(value, returnType) {
+			// Default to "void" if returnType is not provided
+			if (!returnType) returnType = "void";
+			
+			switch (returnType) {
+				case 'ListNode':
+					// Always try to convert when returnType is ListNode
+					if (value === null || value === undefined) return [];
+					// If it's an array, check if it contains ListNode objects
+					if (Array.isArray(value)) {
+						if (value.length === 0) return [];
+						const firstElement = value[0];
+						if (firstElement && typeof firstElement === 'object' && 
+						    ('val' in firstElement || 'next' in firstElement)) {
+							// It's an array containing ListNode(s), convert the first one
+							return listNodeToArrayFromAny(firstElement);
+						}
+						// Otherwise, it's already an array of values (numbers), return as-is
+						return value;
+					}
+					// If it's an object, try to convert it (assume it's a ListNode)
+					if (typeof value === 'object') {
+						return listNodeToArrayFromAny(value);
+					}
+					return value;
+				case 'TreeNode':
+					// Always try to convert when returnType is TreeNode
+					if (value === null || value === undefined) return [];
+					// If it's already an array, check if it's a TreeNode array representation
+					if (Array.isArray(value)) {
+						if (value.length === 0) return [];
+						const firstElement = value[0];
+						if (firstElement && typeof firstElement === 'object' && 
+						    !('length' in firstElement) && 
+						    ('val' in firstElement || 'left' in firstElement || 'right' in firstElement)) {
+							// It's an array containing TreeNode object(s), convert the first one
+							return treeNodeToArrayFromAny(firstElement);
+						}
+						// Otherwise, it's already a TreeNode array representation (already converted)
+						return value;
+					}
+					// If it's an object, try to convert it (assume it's a TreeNode)
+					if (typeof value === 'object') {
+						return treeNodeToArrayFromAny(value);
+					}
+					return value;
+				case 'TreeNode[]':
+					// Convert array of TreeNode objects to array of arrays
+					if (value === null || value === undefined) return [];
+					if (Array.isArray(value)) {
+						return value.map(treeNode => {
+							if (treeNode === null || treeNode === undefined) return [];
+							if (Array.isArray(treeNode)) return treeNode;
+							if (typeof treeNode === 'object') {
+								return treeNodeToArrayFromAny(treeNode);
+							}
+							return treeNode;
+						});
+					}
+					if (typeof value === 'object') {
+						return [treeNodeToArrayFromAny(value)];
+					}
+					return value;
+				case 'ListNode[]':
+					// Convert array of ListNode objects to array of arrays
+					if (value === null || value === undefined) return [];
+					if (Array.isArray(value)) {
+						return value.map(listNode => {
+							if (listNode === null || listNode === undefined) return [];
+							if (Array.isArray(listNode)) return listNode;
+							if (typeof listNode === 'object') {
+								return listNodeToArrayFromAny(listNode);
+							}
+							return listNode;
+						});
+					}
+					if (typeof value === 'object') {
+						return [listNodeToArrayFromAny(value)];
+					}
+					return value;
+				case '_Node':
+					// Convert _Node to array with next pointer serialization (# markers)
+					if (value === null || value === undefined) return [];
+					if (Array.isArray(value)) {
+						if (value.length === 0) return [];
+						const firstElement = value[0];
+						if (firstElement && typeof firstElement === 'object' && 
+						    !('length' in firstElement) && 
+						    ('val' in firstElement || 'left' in firstElement || 'right' in firstElement || 'next' in firstElement)) {
+							return _NodeToArrayFromAny(firstElement);
+						}
+						return value;
+					}
+					if (typeof value === 'object') {
+						return _NodeToArrayFromAny(value);
+					}
+					return value;
+				case 'number[]':
+				case 'number[][]':
+				case 'string':
+				case 'string[]':
+				case 'number':
+				case 'boolean':
+				case 'void':
+					// No conversion needed for primitive types
+					return value;
+				default:
+					// Unknown type, return as-is
+					return value;
+			}
+		}
+		
+		// Simplified judge execution
+		function executeJudge(judgeConfig, runtimeArgs, returnValue, expected, orderMatters) {
+			if (!judgeConfig || judgeConfig.kind === 'return-value') {
+				return {
+					pass: deepEqual(roundTo5Decimals(returnValue), roundTo5Decimals(expected), orderMatters),
+					actual: roundTo5Decimals(returnValue),
+					expected: roundTo5Decimals(expected)
+				};
+			}
+			
+			if (judgeConfig.kind === 'mutating-array-with-k') {
+				const k = returnValue;
+				const expectedLength = Array.isArray(expected) ? expected.length : 0;
+				const modifiedArray = runtimeArgs[0];
+				const firstKElements = Array.isArray(modifiedArray) ? modifiedArray.slice(0, k) : [];
+				
+				return {
+					pass: k === expectedLength && deepEqual(roundTo5Decimals(firstKElements), roundTo5Decimals(expected), orderMatters),
+					actual: { returnValue: k, array: roundTo5Decimals(firstKElements) },
+					expected: { returnValue: expectedLength, array: roundTo5Decimals(expected) }
+				};
+			}
+			
+			// Fallback to return-value
+			return {
+				pass: deepEqual(roundTo5Decimals(returnValue), roundTo5Decimals(expected), orderMatters),
+				actual: roundTo5Decimals(returnValue),
+				expected: roundTo5Decimals(expected)
+			};
+		}
+		
+		// Global cancellation flag
+		let cancelled = false;
+		
+		// Listen for cancellation messages from parent
+		window.addEventListener('message', (event) => {
+			if (event.data && event.data.type === 'cancel-execution' && event.data.messageId === '__MESSAGE_ID_PLACEHOLDER__') {
+				cancelled = true;
+				console.log('Algorithm test execution cancelled due to timeout');
+			}
+		});
+		
+		// Main execution
+		(async function() {
+			try {
+				console.log('Algorithm test execution starting...');
+				const problem = ${problemData};
+				const results = [];
+				const startTime = Date.now();
+				console.log('Problem loaded, tests count:', problem.tests.length);
+				
+				// Check for cancellation before starting
+				if (cancelled) {
+					throw new Error('Execution was cancelled before starting');
+				}
+				
+				// Get user function - try multiple ways to find it
+				const functionName = ${JSON.stringify(functionName)};
+				let userFunction = null;
+				
+				// Try 1: Direct reference using eval (safest for finding functions)
+				try {
+					const func = eval(functionName);
+					if (typeof func === 'function') {
+						userFunction = func;
+					}
+				} catch (e) {
+					// Function not found via direct eval, try other methods
+				}
+				
+				// Try 2: Window object
+				if (!userFunction && typeof window[functionName] === 'function') {
+					userFunction = window[functionName];
+				}
+				
+				// Try 3: Check if it's defined in current scope (using typeof check)
+				if (!userFunction) {
+					try {
+						const funcCheck = 'typeof ' + functionName + ' !== "undefined"';
+						if (eval(funcCheck)) {
+							userFunction = eval(functionName);
+						}
+					} catch (e) {
+						// Still not found
+					}
+				}
+				
+				if (!userFunction) {
+					const available = Object.keys(window).filter(k => typeof window[k] === 'function' && !k.startsWith('_') && !['deepClone', 'roundTo5Decimals', 'deepEqual', 'convertInputValue', 'convertOutputValue', 'executeJudge'].includes(k)).slice(0, 10).join(', ');
+					throw new Error('Function ' + functionName + ' not found. Available functions: ' + (available || 'none'));
+				}
+				
+				console.log('Function found:', functionName);
+				console.log('Starting test execution, total tests:', problem.tests.length);
+				
+				// Run all test cases
+				for (let i = 0; i < problem.tests.length; i++) {
+					// Check for cancellation before each test
+					if (cancelled) {
+						console.log('Execution cancelled, stopping test execution');
+						break;
+					}
+					
+					const testCase = problem.tests[i];
+					const testStartTime = Date.now();
+					
+					try {
+						// Clone input
+						const clonedInput = deepClone(testCase.input);
+						
+						// Convert inputs based on parameter types
+						const convertedInputs = [];
+						for (let j = 0; j < clonedInput.length; j++) {
+							const paramType = problem.parameters[j]?.type || 'any';
+							convertedInputs.push(convertInputValue(clonedInput[j], paramType));
+						}
+						
+						// Debug: Log inputs for first test case
+						if (i === 0) {
+							console.log('First test case - Original input:', JSON.stringify(clonedInput));
+							console.log('First test case - Converted inputs:', convertedInputs.map(x => ({value: x, type: typeof x, stringified: JSON.stringify(x)})));
+							console.log('First test case - Calling function with:', convertedInputs[0], 'type:', typeof convertedInputs[0]);
+							// Test the regex directly
+							const testInput = convertedInputs[0];
+							if (typeof testInput === 'string') {
+								const trimmed = testInput.trim();
+								// Test with the exact regex from the user's code
+								const regex1 = /^[+-]?\d*(\.\d+)?([eE][+-]?\d+)?$/;
+								// Test with a corrected regex that requires at least one digit
+								const regex2 = /^[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?$/;
+								// Test with a simpler pattern
+								const regex3 = /^[+-]?\d+([eE][+-]?\d+)?$/;
+								console.log('First test case - Testing regex directly:');
+								console.log('  Input:', JSON.stringify(testInput));
+								console.log('  Trimmed:', JSON.stringify(trimmed));
+								console.log('  Input length:', trimmed.length);
+								console.log('  Input char codes:', Array.from(trimmed).map(c => c.charCodeAt(0)));
+								console.log('  Regex1 (original) test result:', regex1.test(trimmed));
+								console.log('  Regex1 (original) match:', trimmed.match(regex1));
+								console.log('  Regex2 (corrected) test result:', regex2.test(trimmed));
+								console.log('  Regex3 (simple) test result:', regex3.test(trimmed));
+								// Test if the regex itself is the issue
+								console.log('  Direct test: /^[+-]?\\d*(\.\\d+)?([eE][+-]?\\d+)?$/.test("42"):', /^[+-]?\d*(\.\d+)?([eE][+-]?\d+)?$/.test("42"));
+							}
+						}
+						
+						// Execute function
+						const result = userFunction(...convertedInputs);
+						if (i === 0) {
+							console.log('First test case - Function executed, result:', result, 'type:', typeof result);
+						}
+						
+						// Convert output
+						// Always convert the result first (convertOutputValue handles null/undefined correctly)
+						// Default returnType to "void" if not defined
+						const returnType = problem.returnType || 'void';
+						let actual = convertOutputValue(result, returnType);
+						console.log('After convertOutputValue, actual:', actual, 'type:', typeof actual, 'isBoolean:', typeof actual === 'boolean');
+						
+						// Only use in-place modification for void return types or mutating-array-with-k judge
+						// For other return types (like ListNode), trust the return value even if it's null
+						if ((result === undefined || result === null) && 
+						    (returnType === 'void' || problem.judge?.kind === 'mutating-array-with-k') &&
+						    convertedInputs.length > 0 && 
+						    (Array.isArray(convertedInputs[0]) || typeof convertedInputs[0] === 'object')) {
+							// This is an in-place modification problem
+							const firstParam = problem.parameters[0];
+							if (firstParam) {
+								actual = convertOutputValue(convertedInputs[0], firstParam.type);
+							}
+						}
+						
+						// Judge
+						const judgeResult = executeJudge(
+							problem.judge,
+							convertedInputs,
+							actual,
+							testCase.output,
+							problem.outputOrderMatters
+						);
+						
+						const runtime = Date.now() - testStartTime;
+						
+						results.push({
+							case: i + 1,
+							passed: judgeResult.pass,
+							input: roundTo5Decimals(testCase.input),
+							expected: judgeResult.expected,
+							actual: judgeResult.actual,
+							runtime: runtime
+						});
+					} catch (error) {
+						const runtime = Date.now() - testStartTime;
+						results.push({
+							case: i + 1,
+							passed: false,
+							input: roundTo5Decimals(testCase.input),
+							expected: roundTo5Decimals(testCase.output),
+							error: error.message || String(error),
+							runtime: runtime
+						});
+					}
+				}
+				
+				const totalRuntime = Date.now() - startTime;
+				
+				// Check if execution was cancelled
+				if (cancelled) {
+					console.log('Execution was cancelled, sending timeout result');
+					const msgId = '__MESSAGE_ID_PLACEHOLDER__';
+					window.parent.postMessage({
+						type: 'execution-complete',
+						messageId: msgId,
+						result: {
+							status: 'error',
+							results: results, // Send partial results if any
+							runMs: totalRuntime
+						},
+						logs: ['Execution timed out'],
+						success: false,
+						cancelled: true,
+						tracked: { variables: {}, variableTrace: {}, functions: {} }
+					}, PARENT_ORIGIN);
+					return;
+				}
+				
+				console.log('All tests completed, total runtime:', totalRuntime, 'ms');
+				console.log('Results:', results);
+				
+				// Send results back to parent (messageId will be replaced by CodeExecutor)
+				// Use PARENT_ORIGIN constant (set by CodeExecutor) since srcdoc iframes have null origin
+				const msgId = '__MESSAGE_ID_PLACEHOLDER__';
+				console.log('Sending results to parent, messageId:', msgId);
+				window.parent.postMessage({
+					type: 'execution-complete',
+					messageId: msgId,
+					result: {
+						status: 'ok',
+						results: results,
+						runMs: totalRuntime
+					},
+					logs: [],
+					success: true,
+					cancelled: false,
+					tracked: { variables: {}, variableTrace: {}, functions: {} }
+				}, PARENT_ORIGIN);
+			} catch (error) {
+				const msgId = '__MESSAGE_ID_PLACEHOLDER__';
+				const errorMessage = error instanceof Error ? error.message : String(error);
+				const errorStack = error instanceof Error ? error.stack : '';
+				console.error('Algorithm test execution error:', errorMessage, errorStack);
+				// Use PARENT_ORIGIN constant (set by CodeExecutor) since srcdoc iframes have null origin
+				window.parent.postMessage({
+					type: 'execution-complete',
+					messageId: msgId,
+					error: errorMessage,
+					logs: [errorMessage, errorStack].filter(Boolean),
+					success: false,
+					tracked: { variables: {}, variableTrace: {}, functions: {} }
+				}, PARENT_ORIGIN);
+			}
+		})();
+	`.trim();
+
+	// Escape backticks for safe insertion into CodeExecutor's template literal
+	// Note: ${} expressions are already evaluated by TypeScript, so we only need to escape backticks
+	return scriptTemplate.replace(/`/g, "\\`");
 }
 
 /**
@@ -461,407 +1064,8 @@ function deepClone(value: any): any {
 	return cloned;
 }
 
-/**
- * Run a single test case
- * Uses type converters if parameters/returnType are available, otherwise falls back to direct execution
- * @param timeoutMs - Maximum time for this test case in milliseconds (default: 5000 = 5 seconds)
- */
-async function runSingleTest(
-	userFunction: (...args: any[]) => any,
-	testCase: { input: any[]; output: any },
-	caseNumber: number,
-	problem?: AlgoProblemDetail,
-	userCode?: string,
-	timeoutMs: number = 5000
-): Promise<AlgoTestResult> {
-	const startTime = Date.now();
-
-	// Round test case input to 5 decimal places
-	const roundedInput = roundTo5Decimals(testCase.input);
-
-	// Deep clone the input to prevent in-place modifications from affecting the original
-	const clonedInput = deepClone(roundedInput);
-
-	try {
-		let actual: any;
-		let convertedInputsUsed: any[] | null = null; // Store converted inputs for judge
-
-		// Priority 1: Use new parameters + returnType system (preferred)
-		// Also check if returnType is set - if so, we need to use type converters even if parameters aren't set
-		if (
-			(problem?.parameters && problem.parameters.length > 0) ||
-			problem?.returnType
-		) {
-			// We need to capture the converted inputs that were actually used
-			// because they get modified in-place by the function
-			// IMPORTANT: Use clonedInput (already deep cloned) to prevent shared state between test cases
-			const convertedInputs = clonedInput.map(
-				(value: any, index: number) => {
-					const param = problem.parameters?.[index];
-					if (param) {
-						return convertInput(value, param.type);
-					}
-					return value; // No type conversion needed
-				}
-			);
-			convertedInputsUsed = convertedInputs;
-
-			// Call user function with converted inputs - with timeout protection
-			actual = await Promise.race([
-				new Promise<any>((resolve, reject) => {
-					try {
-						const result = userFunction(...convertedInputs);
-						// Handle both sync and async results
-						if (result instanceof Promise) {
-							result.then(resolve).catch(reject);
-						} else {
-							resolve(result);
-						}
-					} catch (error) {
-						reject(error);
-					}
-				}),
-				new Promise<never>((_, reject) => {
-					setTimeout(() => {
-						reject(
-							new Error(
-								`Test case ${caseNumber} timed out after ${timeoutMs}ms`
-							)
-						);
-					}, timeoutMs);
-				}),
-			]);
-
-			// Convert output if needed
-			if (problem.returnType) {
-				const converted = convertOutput(actual, problem.returnType);
-				if (converted !== undefined) {
-					actual = converted;
-				}
-			}
-
-			// Handle in-place modifications (void return type)
-			if (
-				(actual === undefined || actual === null) &&
-				convertedInputs.length > 0 &&
-				(Array.isArray(convertedInputs[0]) ||
-					typeof convertedInputs[0] === "object")
-			) {
-				// For void return types, check the first parameter's type, not returnType
-				const firstParam = problem.parameters?.[0];
-				if (firstParam && problem.returnType === "void") {
-					// Convert based on first parameter type (TreeNode/ListNode/_Node need conversion)
-					actual = convertOutput(convertedInputs[0], firstParam.type);
-				} else {
-					// For non-void return types, use returnType
-					actual = convertOutput(
-						convertedInputs[0],
-						problem.returnType
-					);
-				}
-			}
-		}
-		// Priority 2: Direct execution (no type conversion needed)
-		else {
-			// Direct execution with timeout protection
-			actual = await Promise.race([
-				new Promise<any>((resolve, reject) => {
-					try {
-						const result = executeDirectly(
-							userFunction,
-							clonedInput
-						);
-						// Handle both sync and async results
-						if (result instanceof Promise) {
-							result.then(resolve).catch(reject);
-						} else {
-							resolve(result);
-						}
-					} catch (error) {
-						reject(error);
-					}
-				}),
-				new Promise<never>((_, reject) => {
-					setTimeout(() => {
-						reject(
-							new Error(
-								`Test case ${caseNumber} timed out after ${timeoutMs}ms`
-							)
-						);
-					}, timeoutMs);
-				}),
-			]);
-		}
-
-		// Ensure output is converted if returnType is set (double-check for safety)
-		if (
-			problem?.returnType &&
-			!Array.isArray(actual) &&
-			typeof actual === "object" &&
-			actual !== null
-		) {
-			// If returnType is ListNode/TreeNode but result is still an object, try converting again
-			if (
-				problem.returnType === "ListNode" ||
-				problem.returnType === "TreeNode"
-			) {
-				const reconverted = convertOutput(actual, problem.returnType);
-				if (Array.isArray(reconverted)) {
-					actual = reconverted;
-				}
-			}
-		}
-
-		// Use judge system if configured, otherwise fall back to auto-detection
-		const judgeConfig = problem?.judge;
-		const outputOrderMatters = problem?.outputOrderMatters ?? true;
-
-		let judgeResult: {
-			pass: boolean;
-			actual: any;
-			expected: any;
-			debug?: any;
-		};
-
-		// If judge config exists, use it
-		if (judgeConfig) {
-			// Get the runtime arguments that were actually used (and modified) by the function
-			let runtimeArgs: any[];
-			if (convertedInputsUsed !== null) {
-				// Use the converted inputs that were actually passed to the function
-				// These have been modified in-place by the function
-				runtimeArgs = convertedInputsUsed;
-			} else {
-				// No type conversion - use clonedInput directly (already modified in-place)
-				runtimeArgs = clonedInput;
-			}
-
-			judgeResult = executeJudge(
-				judgeConfig,
-				runtimeArgs,
-				actual,
-				testCase,
-				outputOrderMatters
-			);
-		} else {
-			// Fallback: Auto-detect pattern (backward compatibility)
-			const roundedExpected = roundTo5Decimals(testCase.output);
-			const isCountAndArrayPattern =
-				typeof actual === "number" &&
-				Array.isArray(roundedExpected) &&
-				clonedInput.length > 0 &&
-				Array.isArray(clonedInput[0]);
-
-			if (isCountAndArrayPattern) {
-				// Auto-detect: mutating-array-with-k pattern
-				const k = actual;
-				const expectedLength = roundedExpected.length;
-				const modifiedArray = clonedInput[0];
-				const firstKElements = modifiedArray.slice(0, k);
-
-				const returnValueMatches = k === expectedLength;
-				const arrayMatches = deepEqual(
-					roundTo5Decimals(firstKElements),
-					roundedExpected,
-					outputOrderMatters
-				);
-
-				judgeResult = {
-					pass: returnValueMatches && arrayMatches,
-					actual: {
-						returnValue: k,
-						array: roundTo5Decimals(firstKElements),
-					},
-					expected: {
-						returnValue: expectedLength,
-						array: roundedExpected,
-					},
-				};
-			} else {
-				// Normal comparison: just check return value
-				actual = roundTo5Decimals(actual);
-				judgeResult = {
-					pass: deepEqual(
-						actual,
-						roundedExpected,
-						outputOrderMatters
-					),
-					actual,
-					expected: roundedExpected,
-				};
-			}
-		}
-
-		const runtime = Date.now() - startTime;
-
-		return {
-			case: caseNumber,
-			passed: judgeResult.pass,
-			input: roundedInput,
-			expected: judgeResult.expected,
-			actual: judgeResult.actual,
-			runtime,
-		};
-	} catch (error) {
-		const runtime = Date.now() - startTime;
-
-		// Round expected even in error case
-		const roundedExpected = roundTo5Decimals(testCase.output);
-
-		// Format expected based on judge config or auto-detection
-		let finalExpected = roundedExpected;
-		if (problem?.judge?.kind === "mutating-array-with-k") {
-			if (Array.isArray(roundedExpected)) {
-				finalExpected = {
-					returnValue: roundedExpected.length,
-					array: roundedExpected,
-				};
-			}
-		} else if (!problem?.judge) {
-			// Auto-detect for backward compatibility
-			const isCountAndArrayPattern =
-				Array.isArray(roundedExpected) &&
-				clonedInput.length > 0 &&
-				Array.isArray(clonedInput[0]);
-
-			if (isCountAndArrayPattern) {
-				finalExpected = {
-					returnValue: roundedExpected.length,
-					array: roundedExpected,
-				};
-			}
-		}
-
-		return {
-			case: caseNumber,
-			passed: false,
-			input: roundedInput,
-			expected: finalExpected,
-			error: error instanceof Error ? error.message : String(error),
-			runtime,
-		};
-	}
-}
-
-/**
- * Execute test case using new centralized type conversion system
- * Uses parameters and returnType to convert inputs/outputs automatically
- */
-function executeWithTypeConverters(
-	userFunction: (...args: any[]) => any,
-	testCase: { input: any[]; output: any },
-	problem: AlgoProblemDetail,
-	userCode?: string
-): any {
-	try {
-		// Convert inputs based on parameter types
-		const convertedInputs = testCase.input.map((value, index) => {
-			const param = problem.parameters?.[index];
-			if (param) {
-				return convertInput(value, param.type);
-			}
-			return value; // No type info, use as-is
-		});
-
-		// Call user function with converted inputs
-		const result = userFunction(...convertedInputs);
-
-		// Check if val is itself a ListNode (indicates incorrect wrapping)
-		if (
-			result &&
-			typeof result === "object" &&
-			"val" in result &&
-			result.val !== null &&
-			result.val !== undefined &&
-			typeof result.val === "object" &&
-			"val" in result.val &&
-			(problem.returnType === "ListNode" ||
-				problem.returnType === "TreeNode")
-		) {
-			const functionName =
-				problem.functionName || getMainFunctionName(problem);
-			// console.error(
-			// 	`[TypeConverter] CRITICAL: Function "${functionName}" returned ListNode where val is a ListNode!`,
-			// 	`This indicates incorrect wrapping. The function likely does: return new ListNode(head) instead of: return head`
-			// );
-		}
-
-		// Convert output based on return type
-		if (problem.returnType) {
-			const converted = convertOutput(result, problem.returnType);
-
-			// Safety check: if returnType is ListNode/TreeNode, ensure we return an array
-			if (
-				(problem.returnType === "ListNode" ||
-					problem.returnType === "TreeNode") &&
-				!Array.isArray(converted)
-			) {
-				// console.error(
-				// 	`[TypeConverter] CRITICAL: Expected array for ${problem.returnType} but got:`,
-				// 	typeof converted
-				// );
-			}
-			return converted;
-		}
-
-		// Handle in-place modifications (function returns undefined/null but modifies first arg)
-		if (
-			(result === undefined || result === null) &&
-			convertedInputs.length > 0 &&
-			(Array.isArray(convertedInputs[0]) ||
-				typeof convertedInputs[0] === "object")
-		) {
-			// For void return types, check the first parameter's type, not returnType
-			const firstParam = problem.parameters?.[0];
-			if (firstParam && problem.returnType === "void") {
-				// Convert based on first parameter type (TreeNode/ListNode/_Node need conversion)
-				return convertOutput(convertedInputs[0], firstParam.type);
-			} else {
-				// For non-void return types, use returnType
-				return convertOutput(convertedInputs[0], problem.returnType);
-			}
-		}
-
-		return result;
-	} catch (error) {
-		// console.error("Error executing with type converters:", error);
-		throw error;
-	}
-}
-
-/**
- * Execute test case directly (for problems without type conversion)
- */
-function executeDirectly(
-	userFunction: (...args: any[]) => any,
-	clonedInput: any[]
-): any {
-	// Call the user's function with the cloned input
-	const returnValue = userFunction(...clonedInput);
-
-	// Determine what to return:
-	// - If function returns undefined/null AND the first argument is an array/object,
-	//   it likely modifies in-place. Return the modified first argument (not all parameters).
-	// - Otherwise, return the return value
-	const firstArg = clonedInput.length > 0 ? clonedInput[0] : null;
-	const isFirstArgArrayOrObject =
-		firstArg !== null &&
-		firstArg !== undefined &&
-		(Array.isArray(firstArg) || typeof firstArg === "object");
-
-	if (
-		(returnValue === undefined || returnValue === null) &&
-		isFirstArgArrayOrObject
-	) {
-		// Likely in-place modification: return the modified first argument only
-		// This handles both single-parameter and multi-parameter functions
-		// (e.g., merge(nums1, m, nums2, n) modifies nums1, so return nums1)
-		return clonedInput[0];
-	} else {
-		// Normal return value
-		return returnValue;
-	}
-}
+// Removed: runSingleTest, executeWithTypeConverters, executeDirectly
+// These functions are no longer needed - execution happens in iframe via CodeExecutor
 
 /**
  * Normalize arrays for order-independent comparison

@@ -6,100 +6,103 @@
 
 #### 1. Async execution and execution timeout ⚠️ HIGH PRIORITY
 
-**Status**: ✅ **COMPLETED** - Timeout and Web Worker implementation added
+**Status**: ✅ **COMPLETED** - Timeout implemented using sandboxed iframe execution
 **Dependencies**: None
 **Effort**: Medium
 **Details**:
 
--   ✅ Added 10-second timeout to `algoTestExecutor.ts` (configurable)
--   ✅ Added per-test timeout protection
--   ✅ **Web Worker implementation** - Can terminate infinite loops by killing the worker
--   ✅ Falls back to direct execution for server-side or if worker unavailable
--   ✅ Proper cleanup of timeouts and workers
--   ✅ Error handling for timeout scenarios
+-   ✅ Added 10-second timeout to `algoTestExecutor.ts` (configurable via `timeoutMs` parameter)
+-   ✅ Timeout implemented in `CodeExecutor` using `setTimeout` - resolves promise after timeout
+-   ✅ Cancellation message sent to iframe when timeout occurs
+-   ✅ Algorithm test execution script checks for cancellation between test cases
+-   ✅ Proper cleanup of timeouts and error handling for timeout scenarios
+-   ✅ Works with sandboxed iframe execution (no freezing, async execution)
+-   ✅ Timeout prevents infinite loops from blocking the UI
 
 **Files modified**:
 
--   ✅ `src/lib/execution/algoTestExecutor.ts` - Added timeout and Web Worker support
--   ✅ `public/algo-test-worker.js` - Web Worker that can be terminated (kills infinite loops)
+-   ✅ `src/lib/execution/algoTestExecutor.ts` - Added cancellation handling and timeout checks
+-   ✅ `src/lib/execution/codeExecutor.ts` - Enhanced timeout mechanism with cancellation messages
+-   ✅ `src/features/algorithms/hooks/useAlgoProblemExecution.ts` - Passes timeout to executor
 
-**Note**: The Web Worker uses a simplified execution model. For full feature parity (type converters, judges, etc.), the worker would need to bundle all dependencies. Current implementation prevents freezing but may not handle all edge cases perfectly.
+**Note**: Timeout is enforced at the CodeExecutor level, which sends cancellation messages to the sandboxed iframe. The algorithm test execution script checks for cancellation between test cases and stops execution when cancelled. This prevents infinite loops from freezing the page while maintaining full feature parity with type converters, judges, etc.
 
 ---
 
 #### 2. Submission history (like leetcode) 📊
 
-**Status**: Database model exists (`AlgoProblemSubmission`), but UI/functionality may be incomplete
+**Status**: ✅ **COMPLETED** - Full submission history UI implemented with tabbed interface
 **Dependencies**: None (can work in parallel with #1)
 **Effort**: Medium-High
 **Details**:
 
--   Verify submission saving is working on code execution
--   Create UI to display submission history (similar to LeetCode)
--   Show: timestamp, code, passed/failed, runtime, test results
--   Add filtering/sorting (by date, status, problem)
--   Display in algorithm workspace or separate page
+-   ✅ Submission saving verified and working on code execution
+-   ✅ Created tabbed UI in ProblemStatementChat panel (Description, Submissions tabs)
+-   ✅ Submissions tab displays: status (Accepted/Wrong Answer), language, runtime, date
+-   ✅ Submission detail tab shows: code in read-only editor, test cases passed, runtime, metadata
+-   ✅ Clicking a submission opens detail view in new "Submission" tab with close button
+-   ✅ Submissions list updates automatically when code is run (no refresh needed)
+-   ✅ Copy to clipboard and copy to editor functionality in submission detail view
+-   ✅ Server action `getSubmissionHistory` fetches last 50 submissions per problem
 
-**Files to check/modify**:
+**Files modified/created**:
 
--   `prisma/schema.prisma` (model exists)
--   `src/features/algorithms/components/AlgorithmWorkspace.tsx`
--   Create: `src/features/algorithms/components/SubmissionHistory.tsx`
--   Server action to fetch submissions
+-   ✅ `src/features/algorithms/components/ProblemStatementChat.tsx` - Converted to tabbed interface
+-   ✅ `src/features/algorithms/components/DescriptionTab.tsx` - Extracted description content
+-   ✅ `src/features/algorithms/components/SubmissionsTab.tsx` - New component for submissions list
+-   ✅ `src/features/algorithms/components/SubmissionDetailTab.tsx` - New component for submission details
+-   ✅ `src/features/algorithms/components/AlgorithmWorkspace.tsx` - Added submission handler registration
+-   ✅ `src/features/algorithms/components/WorkspaceLayout.tsx` - Pass submission handler through
+-   ✅ `src/features/algorithms/hooks/useAlgoProblemExecution.ts` - Added callback to notify on new submission
+-   ✅ `src/lib/actions/algoProgress.ts` - `getSubmissionHistory` server action (already existed)
+
+---
+
+#### 10. Finalize algorithm lesson system 🎓
+
+**Status**: Not implemented
+**Dependencies**: Core infrastructure (#1, #2) should be done first
+**Effort**: Medium-High
+**Details**:
+
+-   Complete related lessons data fetching for TopicsDropdown and StuckPopup
+-   Add related problems/lessons sections for SEO on lesson and problem pages
+-   Create lesson content for core algorithm topics (hashmaps, arrays, trees, etc.)
+-   Polish UI/UX inconsistencies and edge cases
+-   Verify analytics tracking works for all user actions
+-   Ensure proper AI Chat integration
+
+**Reference**:
+
+-   `.cursor/algo-problems-outline.md` - Implementation status and remaining tasks
+-   `src/features/algorithms/data/index.ts` - Existing data fetching functions
+-   `src/lib/actions/algoProgress.ts` - Progress tracking actions
 
 ---
 
 ### Phase 2: User Experience Enhancements (Week 2-3)
 
-#### 3. Add red/green glow to test results panel ✨
-
-**Status**: Not implemented
-**Dependencies**: None
-**Effort**: Low
-**Details**:
-
--   Similar to `/learn` workspace editor glow
--   Green glow when all tests pass
--   Red glow when tests fail
--   Use existing CSS classes: `button-glow-green`, `button-glow-red` or create new ones
--   Apply to `TestResultsDisplay` or `TestCasesPanel` component
-
-**Files to modify**:
-
--   `src/features/algorithms/components/TestResultsDisplay.tsx`
--   `src/features/algorithms/components/TestCasesPanel.tsx`
--   `src/app/globals.css` (if new classes needed)
--   `src/features/algorithms/hooks/useAlgoProblemExecution.ts` (to track pass/fail state)
-
-**Reference**:
-
--   `src/components/workspace/Console/components/console.tsx` (has `console-glow`)
--   `src/app/globals.css` (has `button-glow-red` and `button-glow-green`)
-
----
-
 #### 4. Add sound effects like /learn workspace 🔊
 
-**Status**: Sound manager exists, just needs integration
+**Status**: ✅ **COMPLETED** - Sound effects integrated into algorithm workspace
 **Dependencies**: None
 **Effort**: Low
 **Details**:
 
--   Use existing `soundManager.ts` (`playSuccessSound()`, `playErrorSound()`)
--   Call on test execution completion
--   Play success sound when all tests pass
--   Play error sound when tests fail
--   Respect user mute preferences
+-   ✅ Integrated existing `soundManager.ts` (`playSuccessSound()`, `playErrorSound()`)
+-   ✅ Sound effects called on test execution completion
+-   ✅ Success sound plays when all tests pass
+-   ✅ Error sound plays when any tests fail
+-   ✅ Respects user mute preferences (handled by soundManager)
 
-**Files to modify**:
+**Files modified**:
 
--   `src/features/algorithms/hooks/useAlgoProblemExecution.ts`
--   `src/features/algorithms/components/AlgorithmWorkspace.tsx`
+-   ✅ `src/features/algorithms/hooks/useAlgoProblemExecution.ts` - Added sound effect calls after test results are set
 
 **Reference**:
 
--   `src/lib/soundManager.ts` (already implemented)
--   `src/features/Workspace/hooks/useLessonStreaming.ts` (line 326, 153)
+-   ✅ `src/lib/soundManager.ts` (already implemented)
+-   ✅ `src/features/Workspace/hooks/useLessonStreaming.ts` (reference implementation)
 
 ---
 
@@ -253,7 +256,7 @@
 
 1. **Async execution and execution timeout** - Foundation, affects all execution
 2. **Submission history** - Core feature, can work in parallel with #1
-3. **Red/green glow** - Quick UX win, low effort
+3. **Finalize algorithm lesson system** - Complete core system before UX enhancements
 4. **Sound effects** - Quick UX win, low effort
 5. **AI Chat suggestions** - UX enhancement, medium effort
 6. **Feedback button** - Quick feature, good for user input
@@ -263,7 +266,8 @@
 
 ## Notes
 
--   Items 3-6 can be done in parallel as they're independent
--   Analytics (#7) benefits from having submission history (#2) in place
--   Daily limits (#8) should define what premium gets you before building Stripe (#9)
+-   Algorithm lesson system (#10) should be finalized early as it's foundational
+-   Items 4-7 can be done in parallel as they're independent
+-   Analytics (#8) benefits from having submission history (#2) in place
+-   Daily limits (#9) should define what premium gets you before building Stripe (#10)
 -   Consider MVP scope: Some items might be simplified for initial launch

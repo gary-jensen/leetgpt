@@ -12,15 +12,18 @@ import {
 import { useProgress } from "@/contexts/ProgressContext";
 import { LessonModal } from "./LessonModal";
 import { AlgoLesson } from "@/types/algorithm-types";
+import { trackAlgoRelatedLessonClicked } from "@/lib/analytics";
 
 interface TopicsDropdownProps {
 	topics: string[];
 	relatedLessons: AlgoLesson[];
+	problemId?: string;
 }
 
 export function TopicsDropdown({
 	topics,
 	relatedLessons,
+	problemId,
 }: TopicsDropdownProps) {
 	const [isOpen, setIsOpen] = useState(false);
 	const progress = useProgress();
@@ -89,7 +92,17 @@ export function TopicsDropdown({
 														<Check className="w-4 h-4 text-green-600" />
 													)}
 												</div>
-												<LessonModal lesson={lesson}>
+												<LessonModal
+													lesson={lesson}
+													onOpen={() => {
+														if (problemId) {
+															trackAlgoRelatedLessonClicked(
+																problemId,
+																lesson.id
+															);
+														}
+													}}
+												>
 													<Button
 														size="sm"
 														variant="outline"

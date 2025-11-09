@@ -10,6 +10,7 @@ import {
 	AlgoProblemDetail,
 	AlgoLesson,
 	AlgoProblemMeta,
+	AlgoProblemSubmission,
 } from "@/types/algorithm-types";
 import { TestResult } from "./TestResultsDisplay";
 import { useProcessedStatement } from "../hooks/useProcessedStatement";
@@ -40,6 +41,9 @@ interface WorkspaceLayoutProps {
 	streamingMessageId: string | null;
 	relatedLessons: AlgoLesson[];
 	problemsMeta: AlgoProblemMeta[];
+	onNewSubmission?: (
+		handler: (submission: AlgoProblemSubmission) => void
+	) => void;
 }
 
 export function WorkspaceLayout({
@@ -61,6 +65,7 @@ export function WorkspaceLayout({
 	streamingMessageId,
 	relatedLessons,
 	problemsMeta,
+	onNewSubmission,
 }: WorkspaceLayoutProps) {
 	const processedStatement = useProcessedStatement(problem);
 	const { activeTestTab, setActiveTestTab, testCasesPanelRef } = useTestTab(
@@ -101,6 +106,8 @@ export function WorkspaceLayout({
 							streamingMessageId={streamingMessageId}
 							relatedLessons={relatedLessons}
 							defaultSize={is2xl ? 33.33 : 50}
+							onCopyToEditor={setCode}
+							onNewSubmission={onNewSubmission}
 						/>
 
 						<ResizableHandle className="w-3 bg-transparent hover:bg-blue-800/60 rounded-md" />

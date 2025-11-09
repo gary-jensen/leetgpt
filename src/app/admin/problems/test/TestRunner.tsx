@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { CodeExecutor } from "@/lib/execution/codeExecutor";
 import {
 	Table,
 	TableBody,
@@ -12,11 +13,11 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import {
-	testAllProblems,
-	testSingleProblem,
 	TestProblemResult,
+	getAllProblemsFormatted,
 } from "@/lib/actions/adminTestActions";
 import { formatFailedTestCases } from "@/lib/execution/adminTestUtils";
+import { executeAlgoTests } from "@/lib/execution/algoTestExecutor";
 import { AlgoProblemDetail } from "@/types/algorithm-types";
 import { AlgoTestResult } from "@/lib/execution/algoTestExecutor";
 import { FixDialog } from "./FixDialog";
@@ -38,18 +39,189 @@ export function TestRunner() {
 	} | null>(null);
 	const [batchFixDialogOpen, setBatchFixDialogOpen] = useState(false);
 
+	// Create hidden iframe for CodeExecutor
+	const iframeRef = useRef<HTMLIFrameElement | null>(null);
+	const codeExecutorRef = useRef<CodeExecutor | null>(null);
+
+	// Initialize CodeExecutor when iframe becomes available
+	useEffect(() => {
+		const checkAndInit = () => {
+			if (iframeRef.current && !codeExecutorRef.current) {
+				codeExecutorRef.current = new CodeExecutor();
+				codeExecutorRef.current.setIframe(iframeRef.current);
+			} else if (iframeRef.current && codeExecutorRef.current) {
+				// Update iframe reference if it changed
+				codeExecutorRef.current.setIframe(iframeRef.current);
+			}
+		};
+
+		// Check immediately
+		checkAndInit();
+
+		// Also check periodically in case iframe mounts later
+		const interval = setInterval(checkAndInit, 100);
+
+		// Clean up after a reasonable time (5 seconds should be enough)
+		const timeout = setTimeout(() => {
+			clearInterval(interval);
+		}, 5000);
+
+		return () => {
+			clearInterval(interval);
+			clearTimeout(timeout);
+			// Cleanup on unmount
+			if (codeExecutorRef.current) {
+				codeExecutorRef.current.cleanup();
+				codeExecutorRef.current = null;
+			}
+		};
+	}, []);
+
 	const handleRunTests = async () => {
+		if (!codeExecutorRef.current) {
+			alert("CodeExecutor not ready. Please wait a moment and try again.");
+			return;
+		}
+
 		setIsRunning(true);
 		setResults(null);
 		setSummary(null);
 
 		try {
-			const result = await testAllProblems();
-			setResults(result.results);
+			// Fetch problems from server (just data, no execution)
+			const problems = await getAllProblemsFormatted();
+
+			// Run tests client-side using CodeExecutor
+			const testResults: TestProblemResult[] = [];
+			let passedCount = 0;
+			let failedCount = 0;
+
+			for (const problem of problems) {
+				const languages = [];
+
+				for (const language of problem.languages) {
+					const passingCode = problem.passingCode[language];
+					const secondaryPassingCode = problem.secondaryPassingCode?.[language];
+
+					// Test primary code
+					let primaryResult = {
+						language,
+						passed: false,
+						error: undefined as string | undefined,
+						failedTestCasesCount: 0,
+						failedTestCases: [] as any[],
+					};
+
+					if (passingCode) {
+						try {
+							const testResult = await executeAlgoTests(
+								problem,
+								passingCode,
+								language,
+								10000,
+								codeExecutorRef.current
+							);
+
+							if (testResult.status === "error") {
+								primaryResult.error = testResult.message || "Unknown error";
+							} else {
+								const failedTestCases = testResult.results.filter(
+									(r) => !r.passed
+								);
+								primaryResult.passed = failedTestCases.length === 0;
+								primaryResult.failedTestCasesCount = failedTestCases.length;
+								primaryResult.failedTestCases = failedTestCases.map((tc) => ({
+									case: tc.case,
+									input: tc.input,
+									expected: tc.expected,
+									actual: tc.actual,
+									error: tc.error,
+								}));
+							}
+						} catch (error) {
+							primaryResult.error =
+								error instanceof Error ? error.message : "Unknown error";
+						}
+					} else {
+						primaryResult.error = `No passingCode found for language: ${language}`;
+					}
+
+					// Test secondary code
+					let secondaryValidation = undefined;
+					if (secondaryPassingCode) {
+						try {
+							const testResult = await executeAlgoTests(
+								problem,
+								secondaryPassingCode,
+								language,
+								10000,
+								codeExecutorRef.current
+							);
+
+							if (testResult.status === "error") {
+								secondaryValidation = {
+									passed: false,
+									error: testResult.message || "Unknown error",
+									failedTestCasesCount: 0,
+									failedTestCases: [],
+								};
+							} else {
+								const failedTestCases = testResult.results.filter(
+									(r) => !r.passed
+								);
+								secondaryValidation = {
+									passed: failedTestCases.length === 0,
+									error:
+										failedTestCases.length === 0
+											? undefined
+											: `Secondary code failed ${failedTestCases.length} test cases`,
+									failedTestCasesCount: failedTestCases.length,
+									failedTestCases: failedTestCases.map((tc) => ({
+										case: tc.case,
+										input: tc.input,
+										expected: tc.expected,
+										actual: tc.actual,
+										error: tc.error,
+									})),
+								};
+							}
+						} catch (error) {
+							secondaryValidation = {
+								passed: false,
+								error:
+									error instanceof Error ? error.message : "Unknown error",
+								failedTestCasesCount: 0,
+								failedTestCases: [],
+							};
+						}
+					}
+
+					languages.push({
+						...primaryResult,
+						secondaryValidation,
+					});
+				}
+
+				const allLanguagesPassed = languages.every((lang) => lang.passed);
+				if (allLanguagesPassed) {
+					passedCount++;
+				} else {
+					failedCount++;
+				}
+
+				testResults.push({
+					problemId: problem.id,
+					problemTitle: problem.title,
+					problemSlug: problem.slug,
+					languages,
+				});
+			}
+
+			setResults(testResults);
 			setSummary({
-				totalProblems: result.totalProblems,
-				passedProblems: result.passedProblems,
-				failedProblems: result.failedProblems,
+				totalProblems: problems.length,
+				passedProblems: passedCount,
+				failedProblems: failedCount,
 			});
 		} catch (error) {
 			console.error("Error running tests:", error);
@@ -142,24 +314,143 @@ export function TestRunner() {
 		setFixDialogOpen(true);
 	};
 
-	const handleFixed = (problemIds?: string | string[]) => {
+	const handleFixed = async (problemIds?: string | string[]) => {
 		// If problem IDs are provided, test just those problems in the background
-		if (problemIds && results) {
+		if (problemIds && results && codeExecutorRef.current) {
 			const ids = Array.isArray(problemIds) ? problemIds : [problemIds];
 
-			// Test all specified problems in parallel (don't await - run in background)
-			Promise.all(ids.map((id) => testSingleProblem(id))).then(
-				(updatedResults) => {
-					// Update results state and summary together when testing completes
+			// Fetch problem data for the specified IDs
+			try {
+				const allProblems = await getAllProblemsFormatted();
+				const problemsToTest = allProblems.filter((p) => ids.includes(p.id));
+
+				// Test each problem client-side (run in background, don't await)
+				Promise.all(
+					problemsToTest.map(async (problem) => {
+						const languages = [];
+
+						for (const language of problem.languages) {
+							const passingCode = problem.passingCode[language];
+							const secondaryPassingCode =
+								problem.secondaryPassingCode?.[language];
+
+							// Test primary code
+							let primaryResult = {
+								language,
+								passed: false,
+								error: undefined as string | undefined,
+								failedTestCasesCount: 0,
+								failedTestCases: [] as any[],
+							};
+
+							if (passingCode) {
+								try {
+									const testResult = await executeAlgoTests(
+										problem,
+										passingCode,
+										language,
+										10000,
+										codeExecutorRef.current!
+									);
+
+									if (testResult.status === "error") {
+										primaryResult.error =
+											testResult.message || "Unknown error";
+									} else {
+										const failedTestCases = testResult.results.filter(
+											(r) => !r.passed
+										);
+										primaryResult.passed = failedTestCases.length === 0;
+										primaryResult.failedTestCasesCount =
+											failedTestCases.length;
+										primaryResult.failedTestCases = failedTestCases.map(
+											(tc) => ({
+												case: tc.case,
+												input: tc.input,
+												expected: tc.expected,
+												actual: tc.actual,
+												error: tc.error,
+											})
+										);
+									}
+								} catch (error) {
+									primaryResult.error =
+										error instanceof Error ? error.message : "Unknown error";
+								}
+							}
+
+							// Test secondary code
+							let secondaryValidation = undefined;
+							if (secondaryPassingCode) {
+								try {
+									const testResult = await executeAlgoTests(
+										problem,
+										secondaryPassingCode,
+										language,
+										10000,
+										codeExecutorRef.current!
+									);
+
+									if (testResult.status === "error") {
+										secondaryValidation = {
+											passed: false,
+											error: testResult.message || "Unknown error",
+											failedTestCasesCount: 0,
+											failedTestCases: [],
+										};
+									} else {
+										const failedTestCases = testResult.results.filter(
+											(r) => !r.passed
+										);
+										secondaryValidation = {
+											passed: failedTestCases.length === 0,
+											error:
+												failedTestCases.length === 0
+													? undefined
+													: `Secondary code failed ${failedTestCases.length} test cases`,
+											failedTestCasesCount: failedTestCases.length,
+											failedTestCases: failedTestCases.map((tc) => ({
+												case: tc.case,
+												input: tc.input,
+												expected: tc.expected,
+												actual: tc.actual,
+												error: tc.error,
+											})),
+										};
+									}
+								} catch (error) {
+									secondaryValidation = {
+										passed: false,
+										error:
+											error instanceof Error
+												? error.message
+												: "Unknown error",
+										failedTestCasesCount: 0,
+										failedTestCases: [],
+									};
+								}
+							}
+
+							languages.push({
+								...primaryResult,
+								secondaryValidation,
+							});
+						}
+
+						return {
+							problemId: problem.id,
+							problemTitle: problem.title,
+							problemSlug: problem.slug,
+							languages,
+						};
+					})
+				).then((updatedResults) => {
+					// Update results state
 					setResults((prevResults) => {
 						if (!prevResults) return null;
 
 						const resultMap = new Map(
-							updatedResults
-								.filter(
-									(r): r is TestProblemResult => r !== null
-								)
-								.map((r) => [r.problemId, r])
+							updatedResults.map((r) => [r.problemId, r])
 						);
 
 						const newResults = prevResults.map(
@@ -175,17 +466,17 @@ export function TestRunner() {
 							setSummary({
 								...summary,
 								passedProblems,
-								failedProblems:
-									newResults.length - passedProblems,
+								failedProblems: newResults.length - passedProblems,
 							});
 						}
 
 						return newResults;
 					});
-				}
-			);
+				});
+			} catch (error) {
+				console.error("Error testing fixed problems:", error);
+			}
 		}
-		// If no problemIds provided, don't refresh (removed auto-refresh of all tests)
 	};
 
 	const getFailedProblems = (): Array<{
@@ -558,6 +849,20 @@ export function TestRunner() {
 				onOpenChange={setBatchFixDialogOpen}
 				failedProblems={getFailedProblems()}
 				onFixed={handleFixed}
+			/>
+
+			{/* Hidden iframe for CodeExecutor */}
+			<iframe
+				ref={iframeRef}
+				style={{
+					position: "absolute",
+					width: "1px",
+					height: "1px",
+					border: "none",
+					pointerEvents: "none",
+					opacity: 0,
+				}}
+				title="CodeExecutor iframe"
 			/>
 		</div>
 	);

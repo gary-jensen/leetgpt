@@ -1,4 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import {
+	trackAlgoTestTabSwitched,
+	trackAlgoTestCaseSelected,
+} from "@/lib/analytics";
 import { AlgoProblemDetail } from "@/types/algorithm-types";
 import { TestResult } from "./TestResultsDisplay";
 import { getTestStatus, getOverallStatus } from "../utils/testStatusUtils";
@@ -14,6 +18,10 @@ import {
 	Circle as CircleIcon,
 	XIcon,
 	CheckIcon,
+	ScanTextIcon,
+	SquareCheckIcon,
+	TerminalIcon,
+	Scale3DIcon,
 } from "lucide-react";
 
 interface TestCasesPanelProps {
@@ -31,18 +39,36 @@ export function TestCasesPanel({
 }: TestCasesPanelProps) {
 	const [selectedTestIndex, setSelectedTestIndex] = useState(0);
 	const [processedInputs, setProcessedInputs] = useState<string[]>([]);
+	const firstSelectionRef = useRef(true);
+
+	// Wrapper for setSelectedTestIndex with tracking
+	const handleTestIndexChange = (index: number) => {
+		const isFirstSelection = firstSelectionRef.current;
+		if (testResults.length > 0 && index < testResults.length) {
+			const testStatus = testResults[index]?.passed ? "passed" : "failed";
+			trackAlgoTestCaseSelected(
+				problem.id,
+				index,
+				testStatus,
+				isFirstSelection
+			);
+			firstSelectionRef.current = false;
+		}
+		setSelectedTestIndex(index);
+	};
 
 	// Auto-select first failed case when switching to results tab
 	useEffect(() => {
 		if (activeTestTab === "results" && testResults.length > 0) {
+			firstSelectionRef.current = true; // Reset for new tab switch
 			const firstFailedIndex = testResults.findIndex(
 				(result) => !result.passed
 			);
 			if (firstFailedIndex !== -1) {
-				setSelectedTestIndex(firstFailedIndex);
+				handleTestIndexChange(firstFailedIndex);
 			} else {
 				// All passed, select first case
-				setSelectedTestIndex(0);
+				handleTestIndexChange(0);
 			}
 		}
 	}, [activeTestTab, testResults]);
@@ -72,30 +98,63 @@ export function TestCasesPanel({
 			<div className="flex items-center justify-between p-3 py-1.5 border-b border-border">
 				<div className="flex gap-4">
 					<button
-						onClick={() => setActiveTestTab("examples")}
-						className={`px-2 py-1 rounded-md hover:bg-white/10 hover:cursor-pointer ${
+						onClick={() => {
+							if (activeTestTab !== "examples") {
+								trackAlgoTestTabSwitched(
+									problem.id,
+									activeTestTab,
+									"examples",
+									testResults.length > 0
+								);
+							}
+							setActiveTestTab("examples");
+						}}
+						className={`text-sm flex items-center gap-1.5 px-1.5 py-1 rounded-md hover:bg-white/10 hover:cursor-pointer ${
 							activeTestTab !== "examples" &&
 							"text-muted-foreground"
 						}`}
 					>
+						<Scale3DIcon className="h-4 w-4 text-[#007bff]" />
 						Constraints
 					</button>
 					<button
-						onClick={() => setActiveTestTab("testcase")}
-						className={`px-2 py-1 rounded-md hover:bg-white/10 hover:cursor-pointer ${
+						onClick={() => {
+							if (activeTestTab !== "testcase") {
+								trackAlgoTestTabSwitched(
+									problem.id,
+									activeTestTab,
+									"testcase",
+									testResults.length > 0
+								);
+							}
+							setActiveTestTab("testcase");
+						}}
+						className={`text-sm flex items-center gap-1.5 px-1.5 py-1 rounded-md hover:bg-white/10 hover:cursor-pointer ${
 							activeTestTab !== "testcase" &&
 							"text-muted-foreground"
 						}`}
 					>
+						<SquareCheckIcon className="h-4 w-4 text-green-600" />
 						Test Case
 					</button>
 					<button
-						onClick={() => setActiveTestTab("results")}
-						className={`px-2 py-1 rounded-md hover:bg-white/10 hover:cursor-pointer ${
+						onClick={() => {
+							if (activeTestTab !== "results") {
+								trackAlgoTestTabSwitched(
+									problem.id,
+									activeTestTab,
+									"results",
+									testResults.length > 0
+								);
+							}
+							setActiveTestTab("results");
+						}}
+						className={`text-sm flex items-center gap-1.5 px-1.5 py-1 rounded-md hover:bg-white/10 hover:cursor-pointer ${
 							activeTestTab !== "results" &&
 							"text-muted-foreground"
 						}`}
 					>
+						<TerminalIcon className="h-4 w-4 text-green-600" />
 						Test Results
 					</button>
 				</div>
@@ -109,7 +168,7 @@ export function TestCasesPanel({
 					<TestCaseTab
 						problem={problem}
 						selectedTestIndex={selectedTestIndex}
-						setSelectedTestIndex={setSelectedTestIndex}
+						setSelectedTestIndex={handleTestIndexChange}
 						processedInputs={processedInputs}
 					/>
 				) : (
@@ -117,7 +176,7 @@ export function TestCasesPanel({
 						problem={problem}
 						testResults={testResults}
 						selectedTestIndex={selectedTestIndex}
-						setSelectedTestIndex={setSelectedTestIndex}
+						setSelectedTestIndex={handleTestIndexChange}
 						processedInputs={processedInputs}
 					/>
 				)}

@@ -3,7 +3,12 @@
 import { ResizablePanel } from "@/components/ui/resizable";
 import { AlgoProblemDetail, AlgoLesson } from "@/types/algorithm-types";
 import { ChatMarkdownDisplay } from "@/components/workspace/Chat/components/ChatMarkdownDisplay";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import {
+	trackAlgoTabSwitched,
+	trackAlgoSubmissionsTabViewed,
+	trackAlgoTopicsDialogOpened,
+} from "@/lib/analytics";
 import { processMarkdown } from "@/components/MarkdownEditor/markdown-processor";
 import ThinkingAnimation from "@/components/workspace/Chat/components/ThinkingAnimation";
 import { SubmissionMessage } from "./SubmissionMessage";
@@ -21,11 +26,22 @@ import {
 	Plus,
 	Mic,
 	ArrowUp,
+	CodeXmlIcon,
+	ScanTextIcon,
+	FlaskConicalIcon,
+	HistoryIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import "@/components/workspace/Chat/components/ChatMarkdownDisplay.css";
 import "./ProblemStatement.css";
 import { Button } from "@/components/ui/button";
+import { useSession } from "next-auth/react";
+import { SubmissionsTab } from "./SubmissionsTab";
+import { DescriptionTab } from "./DescriptionTab";
+import { SubmissionDetailTab } from "./SubmissionDetailTab";
+import { getSubmissionHistory } from "@/lib/actions/algoProgress";
+import { AlgoProblemSubmission } from "@/types/algorithm-types";
+import { X } from "lucide-react";
 
 interface ProblemStatementChatProps {
 	problem: AlgoProblemDetail;
@@ -36,6 +52,10 @@ interface ProblemStatementChatProps {
 	streamingMessageId?: string | null;
 	relatedLessons?: AlgoLesson[];
 	defaultSize?: number; // Default panel size (for 2 or 3 column layouts)
+	onCopyToEditor?: (code: string) => void;
+	onNewSubmission?: (
+		handler: (submission: AlgoProblemSubmission) => void
+	) => void;
 }
 
 export function ProblemStatementChat({
@@ -47,9 +67,16 @@ export function ProblemStatementChat({
 	streamingMessageId = null,
 	relatedLessons = [],
 	defaultSize = 50,
+	onCopyToEditor,
+	onNewSubmission,
 }: ProblemStatementChatProps) {
 	const [inputValue, setInputValue] = useState("");
 	const [isTopicsDialogOpen, setIsTopicsDialogOpen] = useState(false);
+	const [activeTab, setActiveTab] = useState<
+		"description" | "submissions" | "submission"
+	>("description");
+	const [selectedSubmission, setSelectedSubmission] =
+		useState<AlgoProblemSubmission | null>(null);
 	const [
 		processedExamplesAndConstraints,
 		setProcessedExamplesAndConstraints,
@@ -60,9 +87,13 @@ export function ProblemStatementChat({
 	const [needsExpandCollapse, setNeedsExpandCollapse] = useState(false);
 	const [isExpandedBeforeMessages, setIsExpandedBeforeMessages] =
 		useState(true);
-	const messagesEndRef = useRef<HTMLDivElement>(null);
-	const chatContainerRef = useRef<HTMLDivElement>(null);
-	const problemStatementContentRef = useRef<HTMLDivElement>(null);
+	const [submissions, setSubmissions] = useState<AlgoProblemSubmission[]>([]);
+	const [submissionsLoading, setSubmissionsLoading] = useState(false);
+	const [submissionsFetched, setSubmissionsFetched] = useState(false);
+	const { data: session, status } = useSession();
+	const messagesEndRef = useRef<HTMLDivElement | null>(null);
+	const chatContainerRef = useRef<HTMLDivElement | null>(null);
+	const problemStatementContentRef = useRef<HTMLDivElement | null>(null);
 	const hasUserMessagesRef = useRef(false);
 	const isInitialStickyRenderRef = useRef(false);
 	const hasInitializedExpandedStateRef = useRef(false);
@@ -256,6 +287,69 @@ export function ProblemStatementChat({
 		}
 	}, [hasUserMessages, isExpandedBeforeMessages, needsExpandCollapse]);
 
+	// Fetch submissions on page load and when problem changes
+	useEffect(() => {
+		if (!session?.user?.id || !problem.id) {
+			setSubmissions([]);
+			setSubmissionsFetched(false);
+			setSubmissionsLoading(false);
+			return;
+		}
+
+		const fetchSubmissions = async () => {
+			try {
+				setSubmissionsLoading(true);
+				const data = await getSubmissionHistory(
+					session.user.id,
+					problem.id
+				);
+				setSubmissions(data);
+				setSubmissionsFetched(true);
+			} catch (error) {
+				console.error("Error fetching submission history:", error);
+				setSubmissions([]);
+				setSubmissionsFetched(true); // Mark as fetched even on error to prevent retries
+			} finally {
+				setSubmissionsLoading(false);
+			}
+		};
+
+		// Reset and fetch when problem changes
+		setSubmissions([]);
+		setSubmissionsFetched(false);
+		setSelectedSubmission(null); // Reset selected submission when problem changes
+		// setActiveTab("description"); // Reset to description tab
+		fetchSubmissions();
+	}, [session?.user?.id, problem.id]);
+
+	// Handle new submissions from parent
+	// Parent will call onNewSubmission(submission) when a new submission is created
+	// We update our local state when this happens
+	const handleNewSubmission = useCallback(
+		(submission: AlgoProblemSubmission) => {
+			if (submission.problemId === problem.id) {
+				setSubmissions((prev) => [submission, ...prev]);
+			}
+		},
+		[problem.id]
+	);
+
+	// Store the handler in a ref so parent can access it
+	const submissionHandlerRef = useRef(handleNewSubmission);
+	useEffect(() => {
+		submissionHandlerRef.current = handleNewSubmission;
+	}, [handleNewSubmission]);
+
+	// Expose handler to parent via callback prop
+	// Parent will call this callback to register the handler, then call the handler when submission is created
+	useEffect(() => {
+		if (onNewSubmission) {
+			// Parent passes a function that we call with our handler
+			// Parent stores our handler and calls it when submission is created
+			onNewSubmission(submissionHandlerRef.current);
+		}
+	}, [onNewSubmission]);
+
 	return (
 		<ResizablePanel
 			defaultSize={defaultSize}
@@ -265,36 +359,115 @@ export function ProblemStatementChat({
 		>
 			<div className="bg-background flex flex-col rounded-2xl border-[#2f2f2f] border-1 overflow-hidden h-full">
 				{/* Header */}
-				<div className="flex items-center justify-between p-4 pb-2 border-b border-border flex-shrink-0">
-					<h2 className="text-2xl font-bold flex items-center gap-4">
-						{problem.order}. {problem.title}
-						<span
-							className={cn(
-								"text-sm bg-white/15 px-1.5 py-0.5 rounded-sm font-normal font-dm-sans",
-								problem.difficulty === "easy"
-									? "text-emerald-400"
-									: problem.difficulty === "medium"
-									? " text-yellow-400"
-									: " text-red-500"
-							)}
+				<div className="flex items-center justify-between p-3 py-1.5 border-b border-border">
+					<div className="flex gap-4">
+						<button
+							onClick={() => {
+								if (activeTab !== "description") {
+									trackAlgoTabSwitched(
+										problem.id,
+										activeTab,
+										"description"
+									);
+								}
+								setActiveTab("description");
+							}}
+							className={`text-sm px-1.5 py-1 rounded-md hover:bg-white/10 hover:cursor-pointer flex items-center gap-1.5 ${
+								activeTab !== "description" &&
+								"text-muted-foreground"
+							}`}
 						>
-							{problem.difficulty}
-						</span>
-					</h2>
-					<Button
-						variant="outline"
-						size="sm"
-						onClick={() => setIsTopicsDialogOpen(true)}
-						className="flex items-center gap-2 font-normal text-[13px]"
-					>
-						<TagIcon className="scale-80" />
-						Topics
-					</Button>
+							<ScanTextIcon className="h-4 w-4 text-[#007bff]" />
+							Description
+						</button>
+
+						{session?.user?.id && (
+							<button
+								onClick={() => {
+									if (activeTab !== "submissions") {
+										trackAlgoTabSwitched(
+											problem.id,
+											activeTab,
+											"submissions"
+										);
+										// Track submissions tab viewed
+										trackAlgoSubmissionsTabViewed(
+											problem.id,
+											submissions.length
+										);
+									}
+									setActiveTab("submissions");
+								}}
+								className={`text-sm px-1.5 py-1 rounded-md hover:bg-white/10 hover:cursor-pointer flex items-center gap-1.5 ${
+									activeTab !== "submissions" &&
+									"text-muted-foreground"
+								}`}
+							>
+								<FlaskConicalIcon className="h-4 w-4 text-[#007bff]" />
+								Submissions
+							</button>
+						)}
+
+						{selectedSubmission && (
+							<div
+								className={cn(
+									"flex justify-center items-center gap-1 px-1.5 py-1 rounded-md hover:bg-white/10 group",
+									activeTab === "submission" && "bg-white/10"
+								)}
+							>
+								<button
+									onClick={() => {
+										if (activeTab !== "submission") {
+											trackAlgoTabSwitched(
+												problem.id,
+												activeTab,
+												"submission"
+											);
+										}
+										setActiveTab("submission");
+									}}
+									className={`text-sm flex items-center gap-1.5 ${
+										activeTab === "submission"
+											? "text-white"
+											: "text-muted-foreground"
+									}`}
+								>
+									<HistoryIcon className="h-4 w-4 text-[#007bff]" />{" "}
+									Submission
+								</button>
+								<button
+									onClick={() => {
+										setSelectedSubmission(null);
+										// Switch back to submissions tab when closing
+										if (activeTab === "submission") {
+											setActiveTab("submissions");
+										}
+									}}
+									className={cn(
+										"hover:bg-white/10 rounded p-0.5 pb-0.25 transition-colors hover:text-white text-muted-foreground",
+										activeTab === "submission" &&
+											"text-white"
+									)}
+									aria-label="Close submission"
+								>
+									<X className="w-3.5 h-3.5" />
+								</button>
+							</div>
+						)}
+					</div>
 				</div>
 				{/* Topics Dialog */}
 				<Dialog
 					open={isTopicsDialogOpen}
-					onOpenChange={setIsTopicsDialogOpen}
+					onOpenChange={(open) => {
+						setIsTopicsDialogOpen(open);
+						if (open) {
+							trackAlgoTopicsDialogOpened(
+								problem.id,
+								problem.topics.length
+							);
+						}
+					}}
 				>
 					<DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
 						<DialogTitle>Topics & Related Lessons</DialogTitle>
@@ -316,274 +489,88 @@ export function ProblemStatementChat({
 							<TopicsDropdown
 								topics={problem.topics}
 								relatedLessons={relatedLessons}
+								problemId={problem.id}
 							/>
 						</div>
 					</DialogContent>
 				</Dialog>
-				{/* Messages Container */}
-				<div
-					ref={chatContainerRef}
-					className={cn(
-						"flex-1 pb-2 space-y-2 relative pft-[calc(30vh+12px)] h-full max-h-full flex flex-col overflow-auto"
-						// isStickyExpanded
-						// 	? "overflow-y-hidden"
-						// 	: "overflow-y-auto"
-					)}
-					style={{
-						scrollbarWidth: "thin",
-						scrollbarColor: "#9f9f9f #2C2C2C",
-					}}
-				>
-					{/* Problem Statement - Sticky only after user messages */}
-					{problemStatementMessage && (
-						<div
-							className={cn(
-								hasUserMessages
-									? "static top-0 bottom-[-10px] z-10 bg-background mb-2 border-b-4 border-border flex flex-col overflow-y-auto"
-									: needsExpandCollapse
-									? "mb-2 border-b-4 border-border flex flex-col overflow-y-auto"
-									: "mb-2"
-							)}
-							style={{
-								boxShadow:
-									hasUserMessages || needsExpandCollapse
-										? "0 4px 12px 0px rgba(0, 0, 0, 0.15)"
-										: "none",
-								maxHeight: hasUserMessages
-									? isStickyExpanded
-										? "100vh"
-										: "30vh"
-									: needsExpandCollapse &&
-									  !isExpandedBeforeMessages
-									? "30vh"
-									: "none",
-								transition: isInitialStickyRenderRef.current
-									? "none"
-									: shouldAnimate
-									? "max-height 0.8s ease"
-									: hasUserMessages
-									? "max-height 0.8s ease"
-									: needsExpandCollapse
-									? "max-height 0.8s ease"
-									: "none",
-								paddingTop: "12px",
-								// paddingBottom: hasUserMessages ? "4px" : "0px",
-							}}
-						>
-							{/* Scrollable content area */}
-							<div className="flex-1 ">
-								<div className="space-y-1 px-3">
-									<div className="chat-markdown-display algo-problem">
-										<div
-											ref={problemStatementContentRef}
-											className="markdown-content"
-											dangerouslySetInnerHTML={{
-												__html:
-													problemStatementMessage.content ||
-													processedStatement,
-											}}
-										/>
-									</div>
-								</div>
-							</div>
-
-							<div className="sticky bottom-1 right-2 flex justify-end px-3 pt-2 pb-1 flex-shrink-0">
-								{/* Expand/Collapse Button - show when content exceeds 30vh (before or after user messages) */}
-								{needsExpandCollapse && (
-									<button
-										onClick={() => {
-											if (hasUserMessages) {
-												setIsStickyExpanded(
-													!isStickyExpanded
-												);
-											} else {
-												userHasInteractedWithExpandRef.current =
-													true;
-												setIsExpandedBeforeMessages(
-													!isExpandedBeforeMessages
-												);
-											}
-										}}
-										className="flex items-center gap-1 text-xs opacity-80 hover:opacity-100 bg-[#3f3f3f]  px-2 py-1 rounded-sm cursor-pointer"
-										aria-label={
-											(
-												hasUserMessages
-													? isStickyExpanded
-													: isExpandedBeforeMessages
-											)
-												? "Collapse problem statement"
-												: "Expand problem statement"
-										}
-									>
-										{(
-											hasUserMessages
-												? isStickyExpanded
-												: isExpandedBeforeMessages
-										) ? (
-											<>
-												<ChevronUp className="w-3 h-3" />
-												Collapse
-											</>
-										) : (
-											<>
-												<ChevronDown className="w-3 h-3" />
-												Expand
-											</>
-										)}
-									</button>
-								)}
-							</div>
-						</div>
-					)}
-					<div className="flex-1 flex flex-col overflow-y-auto space-y-4">
-						{/* Examples & Constraints (scrollable) */}
-						{examplesConstraintsMessage && (
-							<div className="space-y-1 px-3">
-								<div className="chat-markdown-display algo-problem">
-									<div
-										className="markdown-content"
-										dangerouslySetInnerHTML={{
-											__html: examplesConstraintsMessage.content,
-										}}
-									/>
-								</div>
-							</div>
-						)}
-						{/* Fallback to processed examples/constraints if not in messages */}
-						{!examplesConstraintsMessage &&
-							processedExamplesAndConstraints && (
-								<div className="space-y-1 px-3">
-									<div className="chat-markdown-display algo-problem">
-										<div
-											className="markdown-content"
-											dangerouslySetInnerHTML={{
-												__html: processedExamplesAndConstraints,
-											}}
-										/>
-									</div>
-								</div>
-							)}
-
-						{/* Regular Chat Messages */}
-						{displayMessages.map((message, index) => {
-							// Submission messages - card-style
-							if (
-								message.type === "submission" &&
-								message.submissionData
-							) {
-								return (
-									<div key={message.id || index}>
-										<SubmissionMessage
-											submissionData={
-												message.submissionData
-											}
-										/>
-									</div>
-								);
+				{/* Tab Content */}
+				<div className="flex-1 flex flex-col overflow-hidden">
+					{activeTab === "description" ? (
+						<DescriptionTab
+							problem={problem}
+							processedStatement={processedStatement}
+							chatMessages={chatMessages}
+							onSendMessage={onSendMessage}
+							isThinking={isThinking}
+							streamingMessageId={streamingMessageId}
+							relatedLessons={relatedLessons}
+							processedExamplesAndConstraints={
+								processedExamplesAndConstraints
 							}
-
-							// User messages - right-aligned with gray background
-							if (message.role === "user") {
-								return (
-									<div
-										key={message.id || index}
-										className="space-y-1 flex justify-end px-3"
-									>
-										<div className="bg-white/15 rounded-lg px-3 py-2 max-w-[80%]">
-											<div className="text-base leading-[1.75]">
-												<div className="whitespace-pre-wrap">
-													{message.content}
-												</div>
-											</div>
-										</div>
-									</div>
-								);
+							examplesConstraintsMessage={chatMessages.find(
+								(msg) => msg.id === "examples-constraints"
+							)}
+							problemStatementMessage={chatMessages.find(
+								(msg) => msg.id === "problem-statement"
+							)}
+							displayMessages={chatMessages.filter(
+								(msg) =>
+									msg.id !== "problem-statement" &&
+									msg.id !== "examples-constraints"
+							)}
+							hasUserMessages={
+								chatMessages.filter(
+									(msg) =>
+										msg.id !== "problem-statement" &&
+										msg.id !== "examples-constraints"
+								).length > 0
 							}
-
-							// Assistant messages - markdown display (left-aligned)
-							const isStreaming =
-								message.id === streamingMessageId;
-							return (
-								<div
-									key={message.id || index}
-									className="space-y-1 px-3"
-								>
-									<ChatMarkdownDisplay
-										className="algo-problem"
-										content={message.content}
-										isStreaming={isStreaming}
-										enableTypingAnimation={false}
-										isLastMessage={
-											index + 1 === displayMessages.length
-										}
-										messagesEndRef={
-											index + 1 === displayMessages.length
-												? messagesEndRef
-												: undefined
-										}
-									/>
-								</div>
-							);
-						})}
-
-						{/* Thinking animation */}
-						{isThinking && (
-							<div className="space-y-1 px-3">
-								<div className="text-base leading-[1.75]">
-									<div className="whitespace-pre-wrap">
-										<ThinkingAnimation />
-									</div>
-								</div>
-							</div>
-						)}
-
-						<div ref={messagesEndRef} />
-					</div>
-				</div>
-
-				{/* Input - ChatGPT Style */}
-				<div className="bofrder-t border-border p-2 pt-1 pb-3 bg-background">
-					<div className="relative flex items-center bg-[#3f3f3f] rounded-[24px] px-4 py-3 border border-[#505050]/50 shadow-sm">
-						{/* Plus Icon - Left */}
-						{/* <button
-							type="button"
-							className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-white/10 transition-colors flex-shrink-0"
-							aria-label="Attach file"
-						>
-							<Plus className="w-5 h-5 text-white/70" />
-						</button> */}
-
-						{/* Text Input */}
-						<input
-							type="text"
-							value={inputValue}
-							onChange={(e) => setInputValue(e.target.value)}
-							onKeyPress={handleKeyPress}
-							placeholder="Ask anything"
-							disabled={isThinking}
-							className="flex-1 bg-transparent text-white placeholder:text-white/50 px-3 py-1 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed text-base"
+							messagesEndRef={messagesEndRef}
+							chatContainerRef={chatContainerRef}
+							problemStatementContentRef={
+								problemStatementContentRef
+							}
+							isStickyExpanded={isStickyExpanded}
+							setIsStickyExpanded={setIsStickyExpanded}
+							shouldAnimate={shouldAnimate}
+							needsExpandCollapse={needsExpandCollapse}
+							isExpandedBeforeMessages={isExpandedBeforeMessages}
+							setIsExpandedBeforeMessages={
+								setIsExpandedBeforeMessages
+							}
+							inputValue={inputValue}
+							setInputValue={setInputValue}
+							handleKeyPress={handleKeyPress}
+							handleSend={handleSend}
+							setIsTopicsDialogOpen={setIsTopicsDialogOpen}
+							hasUserMessagesRef={hasUserMessagesRef}
+							isInitialStickyRenderRef={isInitialStickyRenderRef}
+							hasInitializedExpandedStateRef={
+								hasInitializedExpandedStateRef
+							}
+							userHasInteractedWithExpandRef={
+								userHasInteractedWithExpandRef
+							}
 						/>
-
-						{/* Microphone Icon */}
-						{/* <button
-							type="button"
-							className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-white/10 transition-colors flex-shrink-0"
-							aria-label="Voice input"
-						>
-							<Mic className="w-5 h-5 text-white/70" />
-						</button> */}
-
-						{/* Send Button - Circular with Arrow */}
-						<button
-							type="button"
-							onClick={handleSend}
-							disabled={!inputValue.trim() || isThinking}
-							className="flex items-center justify-center w-8 h-8 rounded-full bg-white hover:bg-white/90 disabled:bg-white/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex-shrink-0 ml-2"
-							aria-label="Send message"
-						>
-							<ArrowUp className="w-4 h-4 text-black" />
-						</button>
-					</div>
+					) : activeTab === "submission" && selectedSubmission ? (
+						<SubmissionDetailTab
+							submission={selectedSubmission}
+							onCopyToEditor={onCopyToEditor}
+						/>
+					) : (
+						<SubmissionsTab
+							problemId={problem.id}
+							userId={session?.user?.id || ""}
+							userLoading={status === "loading"}
+							submissions={submissions}
+							isLoading={submissionsLoading}
+							onSubmissionClick={(submission) => {
+								setSelectedSubmission(submission);
+								setActiveTab("submission");
+							}}
+						/>
+					)}
 				</div>
 			</div>
 		</ResizablePanel>

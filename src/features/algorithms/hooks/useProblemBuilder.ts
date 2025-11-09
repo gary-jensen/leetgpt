@@ -15,6 +15,7 @@ import {
 // } from "@/lib/actions/adminProblemGenerationActions";
 import { executeGeneratorFunctionClient } from "@/lib/utils/testCaseGeneratorExecutor";
 import { executeAlgoTests } from "@/lib/execution/algoTestExecutor";
+import { CodeExecutor } from "@/lib/execution/codeExecutor";
 import { saveProblemToDatabase } from "@/lib/actions/adminProblemBuilderActions";
 import { AlgoProblemDetail } from "@/types/algorithm-types";
 import { TestCase } from "@/types/algorithm-types";
@@ -39,7 +40,11 @@ interface ProblemGenerationData {
 	order?: number;
 }
 
-export function useProblemBuilder(builderId: string, problemName: string) {
+export function useProblemBuilder(
+	builderId: string,
+	problemName: string,
+	codeExecutor?: CodeExecutor
+) {
 	const [state, setState] = useState<BuilderState>(() => ({
 		builderId,
 		problemName,
@@ -58,6 +63,12 @@ export function useProblemBuilder(builderId: string, problemName: string) {
 	const problemDataRef = useRef<ProblemGenerationData | null>(null);
 	const testCasesRef = useRef<TestCase[]>([]);
 	const lastFailureErrorRef = useRef<string | undefined>(undefined);
+	const codeExecutorRef = useRef<CodeExecutor | undefined>(codeExecutor);
+
+	// Update codeExecutor ref when prop changes
+	useEffect(() => {
+		codeExecutorRef.current = codeExecutor;
+	}, [codeExecutor]);
 
 	const updateState = useCallback((updates: Partial<BuilderState>) => {
 		setState((prev) => {
@@ -387,7 +398,8 @@ export function useProblemBuilder(builderId: string, problemName: string) {
 						tempProblem,
 						problemData.passingCode.javascript,
 						"javascript",
-						() => isCancelled()
+						10000, // timeoutMs
+						codeExecutorRef.current // Use provided CodeExecutor
 					);
 
 					if (

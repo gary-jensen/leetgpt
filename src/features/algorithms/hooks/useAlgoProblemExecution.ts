@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import useConsole from "@/hooks/workspace/useConsole";
 import { TestResult } from "../components/TestResultsDisplay";
 import { AlgoProblemDetail } from "@/types/algorithm-types";
 import { executeAlgoTests } from "@/lib/execution/algoTestExecutor";
+import { CodeExecutor } from "@/lib/execution/codeExecutor";
 import { useSession } from "next-auth/react";
 import { useProgress } from "@/contexts/ProgressContext";
 import {
@@ -12,14 +13,35 @@ import {
 	markProblemCompleted,
 	updateAlgoProblemProgress,
 } from "@/lib/actions/algoProgress";
-import { trackAlgoProblemRun } from "@/lib/analytics";
+import {
+	trackAlgoProblemRun,
+	trackAlgoCodeReset,
+	trackAlgoSolutionViewed,
+} from "@/lib/analytics";
+import { AlgoProblemSubmission } from "@/types/algorithm-types";
+import { playSuccessSound, playErrorSound } from "@/lib/soundManager";
 
-export function useAlgoProblemExecution(problem: AlgoProblemDetail | null) {
+export function useAlgoProblemExecution(
+	problem: AlgoProblemDetail | null,
+	onSubmissionCreated?: (submission: AlgoProblemSubmission) => void
+) {
 	const [testResults, setTestResults] = useState<TestResult[]>([]);
 	const [isExecuting, setIsExecuting] = useState(false);
 	const [code, setCode] = useState(problem?.startingCode?.javascript || "");
 	const { data: session } = useSession();
 	const progress = useProgress();
+	const runCountRef = useRef(0);
+	const problemStartTimeRef = useRef<number | null>(null);
+	const initialCodeRef = useRef<string>("");
+
+	// Initialize problem start time and initial code
+	useEffect(() => {
+		if (problem) {
+			problemStartTimeRef.current = Date.now();
+			initialCodeRef.current = problem.startingCode.javascript || "";
+			runCountRef.current = 0;
+		}
+	}, [problem]);
 
 	// Mock lesson for useConsole compatibility
 	const mockLesson = problem
@@ -102,9 +124,82 @@ export function useAlgoProblemExecution(problem: AlgoProblemDetail | null) {
 		addSystemMessage
 	);
 
+	// Create CodeExecutor instance for algorithm test execution
+	const codeExecutorRef = useRef<CodeExecutor | null>(null);
+
+	// Initialize CodeExecutor when iframe becomes available
+	useEffect(() => {
+		const checkAndInit = () => {
+			if (iframeRef.current && !codeExecutorRef.current) {
+				codeExecutorRef.current = new CodeExecutor();
+				codeExecutorRef.current.setIframe(iframeRef.current);
+			} else if (iframeRef.current && codeExecutorRef.current) {
+				// Update iframe reference if it changed
+				codeExecutorRef.current.setIframe(iframeRef.current);
+			}
+		};
+
+		// Check immediately
+		checkAndInit();
+
+		// Also check periodically in case iframe mounts later
+		const interval = setInterval(checkAndInit, 100);
+
+		// Clean up after a reasonable time (5 seconds should be enough)
+		const timeout = setTimeout(() => {
+			clearInterval(interval);
+		}, 5000);
+
+		return () => {
+			clearInterval(interval);
+			clearTimeout(timeout);
+			// Cleanup on unmount
+			if (codeExecutorRef.current) {
+				codeExecutorRef.current.cleanup();
+				codeExecutorRef.current = null;
+			}
+		};
+	}, []);
+
 	const executeCode = useCallback(async () => {
 		if (!problem || !code.trim()) {
 			setTestResults([]);
+			return;
+		}
+
+		// Ensure CodeExecutor is initialized with iframe
+		if (!codeExecutorRef.current) {
+			if (iframeRef.current) {
+				codeExecutorRef.current = new CodeExecutor();
+				codeExecutorRef.current.setIframe(iframeRef.current);
+			} else {
+				// Iframe not available, show error
+				setTestResults([
+					{
+						case: 1,
+						passed: false,
+						input: problem.tests[0]?.input || [],
+						expected: problem.tests[0]?.output,
+						error: "Code executor not ready. Please wait a moment and try again.",
+					},
+				]);
+				return;
+			}
+		} else if (iframeRef.current) {
+			// Ensure iframe is set (in case it changed)
+			codeExecutorRef.current.setIframe(iframeRef.current);
+		}
+
+		if (!codeExecutorRef.current) {
+			setTestResults([
+				{
+					case: 1,
+					passed: false,
+					input: problem.tests[0]?.input || [],
+					expected: problem.tests[0]?.output,
+					error: "Code executor not ready. Please wait a moment and try again.",
+				},
+			]);
 			return;
 		}
 
@@ -113,7 +208,13 @@ export function useAlgoProblemExecution(problem: AlgoProblemDetail | null) {
 
 		try {
 			// Execute tests using the new algorithm test executor
-			const result = await executeAlgoTests(problem, code, "javascript");
+			const result = await executeAlgoTests(
+				problem,
+				code,
+				"javascript",
+				10000,
+				codeExecutorRef.current
+			);
 
 			if (result.status === "error") {
 				setTestResults([
@@ -141,14 +242,24 @@ export function useAlgoProblemExecution(problem: AlgoProblemDetail | null) {
 
 				setTestResults(formattedResults);
 
+				// Determine if all tests passed
+				const passed = formattedResults.every((r) => r.passed);
+				const testsPassed = formattedResults.filter(
+					(r) => r.passed
+				).length;
+
+				// Play sound effects based on test results
+				if (formattedResults.length > 0) {
+					if (passed) {
+						playSuccessSound();
+					} else {
+						playErrorSound();
+					}
+				}
+
 				// Create submission if user is authenticated
 				if (session?.user?.id && problem) {
 					try {
-						const passed = formattedResults.every((r) => r.passed);
-						const testsPassed = formattedResults.filter(
-							(r) => r.passed
-						).length;
-
 						// Mark as completed on first successful run
 						if (passed && session?.user?.id) {
 							// Optimistically update local state immediately
@@ -184,7 +295,7 @@ export function useAlgoProblemExecution(problem: AlgoProblemDetail | null) {
 							}
 						}
 
-						await createSubmission(
+						const submission = await createSubmission(
 							session.user.id,
 							problem.id,
 							"javascript",
@@ -194,13 +305,25 @@ export function useAlgoProblemExecution(problem: AlgoProblemDetail | null) {
 							testsPassed,
 							problem.tests.length
 						);
-						// Track run event
+						// Notify parent about new submission
+						if (onSubmissionCreated) {
+							onSubmissionCreated(submission);
+						}
+						// Track run event with enhanced metadata
+						runCountRef.current += 1;
+						const timeSinceStart = problemStartTimeRef.current
+							? Date.now() - problemStartTimeRef.current
+							: undefined;
 						trackAlgoProblemRun(
 							problem.id,
 							problem.title,
 							testsPassed,
 							problem.tests.length,
-							result.runMs || 0
+							result.runMs || 0,
+							code.length,
+							runCountRef.current,
+							timeSinceStart,
+							runCountRef.current === 1
 						);
 					} catch (error) {
 						// console.error("Error creating submission:", error);
@@ -229,14 +352,30 @@ export function useAlgoProblemExecution(problem: AlgoProblemDetail | null) {
 
 	const resetCode = useCallback(() => {
 		if (!problem) return;
+		const hadModifications = code !== initialCodeRef.current;
+		const timeSinceStart = problemStartTimeRef.current
+			? Date.now() - problemStartTimeRef.current
+			: undefined;
 		setCode(problem.startingCode.javascript || "");
 		setTestResults([]);
-	}, [problem]);
+		trackAlgoCodeReset(problem.id, timeSinceStart, hadModifications);
+	}, [problem, code]);
 
 	const showSolution = useCallback(() => {
 		if (!problem) return;
+		const timeSinceStart = problemStartTimeRef.current
+			? Date.now() - problemStartTimeRef.current
+			: undefined;
+		const hadSubmissions = runCountRef.current > 0;
 		setCode(problem.passingCode.javascript || "");
 		setTestResults([]);
+		trackAlgoSolutionViewed(
+			problem.id,
+			problem.title,
+			runCountRef.current,
+			timeSinceStart,
+			hadSubmissions
+		);
 	}, [problem]);
 
 	const allTestsPassed =

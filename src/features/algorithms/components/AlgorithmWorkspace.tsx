@@ -7,14 +7,25 @@ import { TestResult } from "./TestResultsDisplay";
 import { useAlgoProblemExecution } from "../hooks/useAlgoProblemExecution";
 import { streamAlgoCoachMessage } from "../services/algoCoachStream";
 import { Button } from "@/components/ui/button";
-import { AlgoProblemDetail, AlgoLesson } from "@/types/algorithm-types";
+import {
+	AlgoProblemDetail,
+	AlgoLesson,
+	AlgoProblemSubmission,
+} from "@/types/algorithm-types";
 import { useProgress } from "@/contexts/ProgressContext";
 import { useSession } from "next-auth/react";
 import { updateAlgoProblemProgress } from "@/lib/actions/algoProgress";
 import {
 	trackAlgoProblemViewed,
 	trackAlgoHintRequested,
+	trackAlgoProblemStarted,
+	trackAlgoProblemSwitched,
+	trackAlgoProblemCompleted,
+	trackAlgoChatMessageSent,
+	trackAlgoChatMessageReceived,
+	trackAlgoChatError,
 } from "@/lib/analytics";
+import { useProblemTimeTracking } from "../hooks/useProblemTimeTracking";
 import { toast } from "sonner";
 import { TopicsDropdown } from "./TopicsDropdown";
 
@@ -42,6 +53,15 @@ export function AlgorithmWorkspace({
 	const submissionCounterRef = useRef(0);
 	const { data: session } = useSession();
 	const progress = useProgress();
+	const addSubmissionHandlerRef = useRef<
+		((submission: AlgoProblemSubmission) => void) | null
+	>(null);
+	const problemStartedRef = useRef(false);
+	const previousProblemIdRef = useRef<string | null>(null);
+	const problemViewTimeRef = useRef<number | null>(null);
+	const problemCompletedTrackedRef = useRef(false);
+	const submissionCountRef = useRef(0);
+	const firstSubmissionTimeRef = useRef<number | null>(null);
 
 	// Keep ref in sync with state
 	useEffect(() => {
@@ -60,7 +80,12 @@ export function AlgorithmWorkspace({
 		buttonVariant,
 		buttonDisabled,
 		allTestsPassed,
-	} = useAlgoProblemExecution(problem);
+	} = useAlgoProblemExecution(problem, (submission) => {
+		// Call the handler registered by ProblemStatementChat
+		if (addSubmissionHandlerRef.current) {
+			addSubmissionHandlerRef.current(submission);
+		}
+	});
 
 	// Create new chat session on mount and initialize with problem statement
 	useEffect(() => {
@@ -113,6 +138,34 @@ export function AlgorithmWorkspace({
 					(sum, r) => sum + (r.runtime || 0),
 					0
 				);
+
+				// Track submission count
+				submissionCountRef.current += 1;
+				if (!firstSubmissionTimeRef.current) {
+					firstSubmissionTimeRef.current = Date.now();
+				}
+
+				// Track problem completion (first time all tests pass)
+				if (
+					allPassed &&
+					!problemCompletedTrackedRef.current &&
+					problemViewTimeRef.current
+				) {
+					problemCompletedTrackedRef.current = true;
+					const totalTime = Date.now() - problemViewTimeRef.current;
+					const firstSubmissionTime = firstSubmissionTimeRef.current
+						? Date.now() - firstSubmissionTimeRef.current
+						: undefined;
+					trackAlgoProblemCompleted(
+						problem.id,
+						problem.title,
+						problem.difficulty,
+						submissionCountRef.current,
+						totalTime,
+						submissionCountRef.current,
+						firstSubmissionTime
+					);
+				}
 
 				// Debug: log test results to verify errors are present
 				const hasErrors = testResults.some((r) => r.error);
@@ -173,10 +226,65 @@ export function AlgorithmWorkspace({
 		}
 	}, [session, progress, problem.id, setCode]);
 
-	// Track problem viewed
+	// Track problem viewed and switched
 	useEffect(() => {
-		trackAlgoProblemViewed(problem.id, problem.title, problem.difficulty);
-	}, [problem.id, problem.title, problem.difficulty]);
+		const isFirstView = previousProblemIdRef.current === null;
+		const isProblemSwitch =
+			previousProblemIdRef.current !== null &&
+			previousProblemIdRef.current !== problem.id;
+
+		// Track problem switch
+		if (isProblemSwitch && previousProblemIdRef.current) {
+			// Time spent calculation would need to be tracked separately
+			trackAlgoProblemSwitched(previousProblemIdRef.current, problem.id);
+		}
+
+		// Track problem viewed
+		trackAlgoProblemViewed(
+			problem.id,
+			problem.title,
+			problem.difficulty,
+			problem.topics,
+			isFirstView
+		);
+
+		// Reset tracking state for new problem
+		problemStartedRef.current = false;
+		problemViewTimeRef.current = Date.now();
+		previousProblemIdRef.current = problem.id;
+		problemCompletedTrackedRef.current = false;
+		submissionCountRef.current = 0;
+		firstSubmissionTimeRef.current = null;
+	}, [problem.id, problem.title, problem.difficulty, problem.topics]);
+
+	// Track problem started (first interaction)
+	const trackProblemStarted = () => {
+		if (!problemStartedRef.current) {
+			problemStartedRef.current = true;
+			const timeSinceView = problemViewTimeRef.current
+				? Date.now() - problemViewTimeRef.current
+				: undefined;
+			trackAlgoProblemStarted(
+				problem.id,
+				problem.title,
+				problem.difficulty,
+				timeSinceView
+			);
+		}
+	};
+
+	// Use time tracking hook
+	const { activeTime, totalTime, endSession } = useProblemTimeTracking({
+		problemId: problem.id,
+		isActive: true,
+		completionStatus: allTestsPassed
+			? "completed"
+			: testResults.length > 0
+			? "in_progress"
+			: "not_started",
+		submissionCount: chatMessages.filter((msg) => msg.type === "submission")
+			.length,
+	});
 
 	// Keyboard shortcuts
 	useEffect(() => {
@@ -206,8 +314,20 @@ export function AlgorithmWorkspace({
 	}, [executeCode, buttonDisabled, isExecuting]);
 
 	const handleHint = async () => {
+		trackProblemStarted(); // Track if this is first interaction
+		const timeSinceStart = problemViewTimeRef.current
+			? Date.now() - problemViewTimeRef.current
+			: undefined;
+		const hasSubmissions =
+			chatMessages.filter((msg) => msg.type === "submission").length > 0;
+		trackAlgoHintRequested(
+			problem.id,
+			problem.title,
+			undefined, // hintNumber - could be enhanced later
+			timeSinceStart,
+			hasSubmissions
+		);
 		setIsThinking(true);
-		trackAlgoHintRequested(problem.id, problem.title);
 
 		// Add user message indicating hint was requested
 		const userHintMessage = {
@@ -465,12 +585,28 @@ export function AlgorithmWorkspace({
 	const handleSendMessage = async (message: string) => {
 		if (!message.trim()) return;
 
+		trackProblemStarted(); // Track if this is first interaction
+
 		const userMessage = {
 			id: Date.now().toString(),
 			role: "user" as const,
 			content: message,
 			timestamp: new Date(),
 		};
+
+		// Track message sent
+		const userMessages = chatMessages.filter((msg) => msg.role === "user");
+		const isFirstMessage = userMessages.length === 0;
+		const timeSinceStart = problemViewTimeRef.current
+			? Date.now() - problemViewTimeRef.current
+			: undefined;
+		trackAlgoChatMessageSent(
+			problem.id,
+			message.length,
+			undefined, // messageType - could be enhanced later
+			isFirstMessage,
+			timeSinceStart
+		);
 
 		setChatMessages((prev) => [...prev, userMessage]);
 		setIsThinking(true);
@@ -488,6 +624,7 @@ export function AlgorithmWorkspace({
 		setStreamingMessageId(aiMessageId);
 
 		let fullContent = "";
+		const responseStartTime = Date.now();
 
 		try {
 			// Stream AI response
@@ -521,12 +658,29 @@ export function AlgorithmWorkspace({
 
 					if (data.done) {
 						setStreamingMessageId(null);
+						// Track message received
+						const responseTime = Date.now() - responseStartTime;
+						trackAlgoChatMessageReceived(
+							problem.id,
+							responseTime,
+							fullContent.length
+						);
 					}
 				},
 				(error) => {
 					// console.error("Error streaming AI response:", error);
 					setStreamingMessageId(null);
 					setIsThinking(false);
+					// Track chat error
+					const errorMessage =
+						error instanceof Error
+							? error.message
+							: "Unknown error";
+					trackAlgoChatError(
+						problem.id,
+						"stream_error",
+						errorMessage
+					);
 					// Update message with error
 					setChatMessages((prev) =>
 						prev.map((msg) =>
@@ -609,17 +763,23 @@ export function AlgorithmWorkspace({
 			setIsThinking(false);
 
 			let errorContent = "Failed to get AI response. Please try again.";
+			let errorType = "unknown";
 			if (error instanceof Error) {
 				if (error.message.includes("Rate limit")) {
 					errorContent = error.message;
+					errorType = "rate_limit";
 					toast.error(error.message);
 				} else if (error.message.includes("Authentication required")) {
 					errorContent = "Please sign in to use AI chat";
+					errorType = "auth_required";
 					toast.error("Please sign in to use AI chat");
 				} else {
+					errorType = "api_error";
 					toast.error("Failed to get AI response. Please try again.");
 				}
 			}
+			// Track chat error
+			trackAlgoChatError(problem.id, errorType, errorContent);
 
 			const errorMessage = {
 				id: (Date.now() + 1).toString(),
@@ -654,6 +814,9 @@ export function AlgorithmWorkspace({
 				streamingMessageId={streamingMessageId}
 				relatedLessons={relatedLessons}
 				problemsMeta={problemsMeta}
+				onNewSubmission={(handler) => {
+					addSubmissionHandlerRef.current = handler;
+				}}
 			/>
 		</>
 	);

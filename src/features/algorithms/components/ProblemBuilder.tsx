@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ProblemBuilderForm } from "./ProblemBuilderForm";
 import { ProblemBuilderCard } from "./ProblemBuilderCard";
 import { useProblemBuilder } from "../hooks/useProblemBuilder";
+import { CodeExecutor } from "@/lib/execution/codeExecutor";
 import { generateUUID } from "@/lib/cryptoUtils";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, XCircle, Clock, Loader2 } from "lucide-react";
@@ -212,9 +213,48 @@ function BuilderCardWrapper({
 	status: QueueItem["status"];
 	onStateChange: (builderId: string, phase: string, error?: string) => void;
 }) {
+	// Create hidden iframe for CodeExecutor
+	const iframeRef = useRef<HTMLIFrameElement | null>(null);
+	const codeExecutorRef = useRef<CodeExecutor | null>(null);
+
+	// Initialize CodeExecutor when iframe becomes available
+	useEffect(() => {
+		const checkAndInit = () => {
+			if (iframeRef.current && !codeExecutorRef.current) {
+				codeExecutorRef.current = new CodeExecutor();
+				codeExecutorRef.current.setIframe(iframeRef.current);
+			} else if (iframeRef.current && codeExecutorRef.current) {
+				// Update iframe reference if it changed
+				codeExecutorRef.current.setIframe(iframeRef.current);
+			}
+		};
+
+		// Check immediately
+		checkAndInit();
+
+		// Also check periodically in case iframe mounts later
+		const interval = setInterval(checkAndInit, 100);
+
+		// Clean up after a reasonable time (5 seconds should be enough)
+		const timeout = setTimeout(() => {
+			clearInterval(interval);
+		}, 5000);
+
+		return () => {
+			clearInterval(interval);
+			clearTimeout(timeout);
+			// Cleanup on unmount
+			if (codeExecutorRef.current) {
+				codeExecutorRef.current.cleanup();
+				codeExecutorRef.current = null;
+			}
+		};
+	}, []);
+
 	const { state, cancel, finishManually } = useProblemBuilder(
 		builderId,
-		problemName
+		problemName,
+		codeExecutorRef.current || undefined
 	);
 
 	// Update parent when state changes
@@ -224,10 +264,25 @@ function BuilderCardWrapper({
 	}, [state.phase, state.error, builderId, onStateChange]);
 
 	return (
+		<>
+			{/* Hidden iframe for CodeExecutor */}
+			<iframe
+				ref={iframeRef}
+				style={{
+					position: "absolute",
+					width: "1px",
+					height: "1px",
+					border: "none",
+					pointerEvents: "none",
+					opacity: 0,
+				}}
+				title="CodeExecutor iframe"
+			/>
 		<ProblemBuilderCard
 			state={state}
 			onCancel={cancel}
 			onFinishManually={finishManually}
 		/>
+		</>
 	);
 }

@@ -208,7 +208,8 @@ export async function getAlgoProblem(
 		};
 		const inference = inferParameterTypes(tempProblem);
 		parameters = inference.parameters;
-		returnType = returnType || inference.returnType;
+		returnType = returnType || inference.returnType || "void";
+		console.log("returnType", returnType);
 	}
 
 	return {
@@ -231,7 +232,7 @@ export async function getAlgoProblem(
 		},
 		tests: dbProblem.tests as { input: any[]; output: any }[],
 		parameters: parameters || [], // Will be inferred if missing (backward compatibility)
-		returnType: returnType,
+		returnType: returnType || "void",
 		functionName: (dbProblem as any).functionName || undefined,
 		startingCode: dbProblem.startingCode as {
 			[key: string]: string;
@@ -360,7 +361,7 @@ export async function getAlgoProblemBySlug(
 		};
 		const inference = inferParameterTypes(tempProblem);
 		parameters = inference.parameters;
-		returnType = returnType || inference.returnType;
+		returnType = returnType || inference.returnType || "void";
 	}
 
 	return {
@@ -383,7 +384,7 @@ export async function getAlgoProblemBySlug(
 		},
 		tests: dbProblem.tests as { input: any[]; output: any }[],
 		parameters: parameters || [], // Will be inferred if missing (backward compatibility)
-		returnType: returnType,
+		returnType: returnType || "void",
 		functionName: (dbProblem as any).functionName || undefined,
 		startingCode: dbProblem.startingCode as {
 			[key: string]: string;

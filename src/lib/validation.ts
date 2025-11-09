@@ -16,6 +16,11 @@ export const ALLOWED_EVENT_CATEGORIES = [
 	"Auth",
 	"Demo",
 	"Landing",
+	"AlgoProblem",
+	"AlgoChat",
+	"AlgoSubmission",
+	"AlgoNavigation",
+	"AlgoLesson",
 ] as const;
 
 export const ALLOWED_EVENT_ACTIONS = new Map([
@@ -27,6 +32,60 @@ export const ALLOWED_EVENT_ACTIONS = new Map([
 	["Auth", ["auth_signin", "auth_signout"]],
 	["Demo", ["demo_submit_correct", "demo_submit_incorrect", "demo_complete"]],
 	["Landing", ["page_view", "section_view", "cta_click"]],
+	[
+		"AlgoProblem",
+		[
+			"algo_problem_viewed",
+			"algo_problem_started",
+			"algo_problem_switched",
+			"algo_problem_completed",
+			"algo_problem_run",
+			"algo_problem_time_tracked",
+			"algo_problem_session_end",
+			"algo_code_reset",
+			"algo_solution_viewed",
+			"algo_hint_requested",
+			"algo_problem_list_viewed",
+			"algo_problem_clicked",
+		],
+	],
+	[
+		"AlgoChat",
+		[
+			"algo_chat_message_sent",
+			"algo_chat_message_received",
+			"algo_chat_suggestion_clicked",
+			"algo_chat_error",
+		],
+	],
+	[
+		"AlgoSubmission",
+		[
+			"algo_submissions_tab_viewed",
+			"algo_submission_viewed",
+			"algo_submission_copied_to_clipboard",
+			"algo_submission_copied_to_editor",
+		],
+	],
+	[
+		"AlgoNavigation",
+		[
+			"algo_tab_switched",
+			"algo_test_tab_switched",
+			"algo_test_case_selected",
+			"algo_topics_dialog_opened",
+			"algo_topic_clicked",
+			"algo_related_lesson_clicked",
+		],
+	],
+	[
+		"AlgoLesson",
+		[
+			"algo_lesson_viewed",
+			"algo_lesson_completed",
+			"algo_related_lesson_clicked",
+		],
+	],
 ]);
 
 // String length limits

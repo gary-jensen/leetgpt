@@ -278,17 +278,85 @@ export const trackLandingCTAClick = (ctaLocation: string) => {
 export const trackAlgoProblemViewed = (
 	problemId: string,
 	problemTitle: string,
-	difficulty: string
+	difficulty: string,
+	topics?: string[],
+	isFirstView?: boolean
 ) => {
 	trackEvent(
 		"AlgoProblem",
-		"problem_viewed",
+		"algo_problem_viewed",
 		`${problemId} - ${problemTitle}`,
 		undefined,
 		{
 			problemId,
 			problemTitle,
 			difficulty,
+			topics,
+			isFirstView,
+		}
+	);
+};
+
+export const trackAlgoProblemStarted = (
+	problemId: string,
+	problemTitle: string,
+	difficulty: string,
+	timeSinceView?: number
+) => {
+	trackEvent(
+		"AlgoProblem",
+		"algo_problem_started",
+		`${problemId} - ${problemTitle}`,
+		undefined,
+		{
+			problemId,
+			problemTitle,
+			difficulty,
+			timeSinceView,
+		}
+	);
+};
+
+export const trackAlgoProblemSwitched = (
+	fromProblemId: string,
+	toProblemId: string,
+	timeSpentOnPrevious?: number
+) => {
+	trackEvent(
+		"AlgoProblem",
+		"algo_problem_switched",
+		`${fromProblemId} -> ${toProblemId}`,
+		undefined,
+		{
+			fromProblemId,
+			toProblemId,
+			timeSpentOnPrevious,
+		}
+	);
+};
+
+export const trackAlgoProblemCompleted = (
+	problemId: string,
+	problemTitle: string,
+	difficulty: string,
+	totalAttempts: number,
+	totalTime: number,
+	totalSubmissions: number,
+	firstSubmissionTime?: number
+) => {
+	trackEvent(
+		"AlgoProblem",
+		"algo_problem_completed",
+		`${problemId} - ${problemTitle}`,
+		totalAttempts,
+		{
+			problemId,
+			problemTitle,
+			difficulty,
+			totalAttempts,
+			totalTime,
+			totalSubmissions,
+			firstSubmissionTime,
 		}
 	);
 };
@@ -298,11 +366,15 @@ export const trackAlgoProblemRun = (
 	problemTitle: string,
 	testsPassed: number,
 	testsTotal: number,
-	runtime: number
+	runtime: number,
+	codeLength?: number,
+	attemptNumber?: number,
+	timeSinceStart?: number,
+	isFirstRun?: boolean
 ) => {
 	trackEvent(
 		"AlgoProblem",
-		"problem_run",
+		"algo_problem_run",
 		`${problemId} - ${problemTitle}`,
 		testsPassed,
 		{
@@ -312,22 +384,378 @@ export const trackAlgoProblemRun = (
 			testsTotal,
 			runtime,
 			passRate: testsPassed / testsTotal,
+			codeLength,
+			attemptNumber,
+			timeSinceStart,
+			isFirstRun,
+		}
+	);
+};
+
+export const trackAlgoProblemTimeTracked = (
+	problemId: string,
+	activeTime: number,
+	totalTime: number,
+	isPageVisible: boolean
+) => {
+	trackEvent(
+		"AlgoProblem",
+		"algo_problem_time_tracked",
+		problemId,
+		activeTime,
+		{
+			problemId,
+			activeTime,
+			totalTime,
+			isPageVisible,
+		}
+	);
+};
+
+export const trackAlgoProblemSessionEnd = (
+	problemId: string,
+	totalTime: number,
+	activeTime: number,
+	submissionCount: number,
+	completionStatus: "completed" | "in_progress" | "not_started"
+) => {
+	trackEvent(
+		"AlgoProblem",
+		"algo_problem_session_end",
+		problemId,
+		activeTime,
+		{
+			problemId,
+			totalTime,
+			activeTime,
+			submissionCount,
+			completionStatus,
+		}
+	);
+};
+
+export const trackAlgoCodeReset = (
+	problemId: string,
+	timeSinceStart?: number,
+	hadModifications?: boolean
+) => {
+	trackEvent("AlgoProblem", "algo_code_reset", problemId, undefined, {
+		problemId,
+		timeSinceStart,
+		hadModifications,
+	});
+};
+
+export const trackAlgoSolutionViewed = (
+	problemId: string,
+	problemTitle: string,
+	attemptNumber?: number,
+	timeSinceStart?: number,
+	hadSubmissions?: boolean
+) => {
+	trackEvent(
+		"AlgoProblem",
+		"algo_solution_viewed",
+		`${problemId} - ${problemTitle}`,
+		undefined,
+		{
+			problemId,
+			problemTitle,
+			attemptNumber,
+			timeSinceStart,
+			hadSubmissions,
 		}
 	);
 };
 
 export const trackAlgoHintRequested = (
 	problemId: string,
-	problemTitle: string
+	problemTitle: string,
+	hintNumber?: number,
+	timeSinceStart?: number,
+	hasSubmissions?: boolean
 ) => {
 	trackEvent(
 		"AlgoProblem",
-		"hint_requested",
+		"algo_hint_requested",
 		`${problemId} - ${problemTitle}`,
 		undefined,
 		{
 			problemId,
 			problemTitle,
+			hintNumber,
+			timeSinceStart,
+			hasSubmissions,
+		}
+	);
+};
+
+export const trackAlgoProblemListViewed = (
+	totalProblems: number,
+	filteredCount?: number
+) => {
+	trackEvent(
+		"AlgoProblem",
+		"algo_problem_list_viewed",
+		undefined,
+		totalProblems,
+		{
+			totalProblems,
+			filteredCount,
+		}
+	);
+};
+
+export const trackAlgoProblemClicked = (
+	problemId: string,
+	problemTitle: string,
+	difficulty: string,
+	positionInList?: number,
+	hasProgress?: boolean
+) => {
+	trackEvent(
+		"AlgoProblem",
+		"algo_problem_clicked",
+		`${problemId} - ${problemTitle}`,
+		undefined,
+		{
+			problemId,
+			problemTitle,
+			difficulty,
+			positionInList,
+			hasProgress,
+		}
+	);
+};
+
+// Algorithm Chat tracking
+export const trackAlgoChatMessageSent = (
+	problemId: string,
+	messageLength: number,
+	messageType?: "question" | "hint_request" | "error_help",
+	isFirstMessage?: boolean,
+	timeSinceStart?: number
+) => {
+	trackEvent("AlgoChat", "algo_chat_message_sent", problemId, messageLength, {
+		problemId,
+		messageLength,
+		messageType,
+		isFirstMessage,
+		timeSinceStart,
+	});
+};
+
+export const trackAlgoChatMessageReceived = (
+	problemId: string,
+	responseTime: number,
+	messageLength?: number,
+	messageType?: string
+) => {
+	trackEvent(
+		"AlgoChat",
+		"algo_chat_message_received",
+		problemId,
+		responseTime,
+		{
+			problemId,
+			responseTime,
+			messageLength,
+			messageType,
+		}
+	);
+};
+
+export const trackAlgoChatSuggestionClicked = (
+	problemId: string,
+	suggestionText: string
+) => {
+	trackEvent(
+		"AlgoChat",
+		"algo_chat_suggestion_clicked",
+		problemId,
+		undefined,
+		{
+			problemId,
+			suggestionText,
+		}
+	);
+};
+
+export const trackAlgoChatError = (
+	problemId: string,
+	errorType: string,
+	errorMessage?: string
+) => {
+	trackEvent("AlgoChat", "algo_chat_error", problemId, undefined, {
+		problemId,
+		errorType,
+		errorMessage,
+	});
+};
+
+// Algorithm Submission tracking
+export const trackAlgoSubmissionsTabViewed = (
+	problemId: string,
+	submissionCount: number
+) => {
+	trackEvent(
+		"AlgoSubmission",
+		"algo_submissions_tab_viewed",
+		problemId,
+		submissionCount,
+		{
+			problemId,
+			submissionCount,
+		}
+	);
+};
+
+export const trackAlgoSubmissionViewed = (
+	problemId: string,
+	submissionId: string,
+	submissionStatus: "passed" | "failed",
+	submissionDate: Date,
+	isOwnSubmission: boolean
+) => {
+	trackEvent(
+		"AlgoSubmission",
+		"algo_submission_viewed",
+		`${problemId} - ${submissionId}`,
+		undefined,
+		{
+			problemId,
+			submissionId,
+			submissionStatus,
+			submissionDate: submissionDate.toISOString(),
+			isOwnSubmission,
+		}
+	);
+};
+
+export const trackAlgoSubmissionCopiedToClipboard = (
+	problemId: string,
+	submissionId: string,
+	submissionStatus: "passed" | "failed"
+) => {
+	trackEvent(
+		"AlgoSubmission",
+		"algo_submission_copied_to_clipboard",
+		`${problemId} - ${submissionId}`,
+		undefined,
+		{
+			problemId,
+			submissionId,
+			submissionStatus,
+		}
+	);
+};
+
+export const trackAlgoSubmissionCopiedToEditor = (
+	problemId: string,
+	submissionId: string,
+	submissionStatus: "passed" | "failed"
+) => {
+	trackEvent(
+		"AlgoSubmission",
+		"algo_submission_copied_to_editor",
+		`${problemId} - ${submissionId}`,
+		undefined,
+		{
+			problemId,
+			submissionId,
+			submissionStatus,
+		}
+	);
+};
+
+// Algorithm Navigation tracking
+export const trackAlgoTabSwitched = (
+	problemId: string,
+	fromTab: "description" | "submissions" | "submission",
+	toTab: "description" | "submissions" | "submission"
+) => {
+	trackEvent("AlgoNavigation", "algo_tab_switched", problemId, undefined, {
+		problemId,
+		fromTab,
+		toTab,
+	});
+};
+
+export const trackAlgoTestTabSwitched = (
+	problemId: string,
+	fromTab: "examples" | "testcase" | "results",
+	toTab: "examples" | "testcase" | "results",
+	hasTestResults: boolean
+) => {
+	trackEvent(
+		"AlgoNavigation",
+		"algo_test_tab_switched",
+		problemId,
+		undefined,
+		{
+			problemId,
+			fromTab,
+			toTab,
+			hasTestResults,
+		}
+	);
+};
+
+export const trackAlgoTestCaseSelected = (
+	problemId: string,
+	testIndex: number,
+	testStatus: "passed" | "failed",
+	isFirstSelection: boolean
+) => {
+	trackEvent(
+		"AlgoNavigation",
+		"algo_test_case_selected",
+		problemId,
+		testIndex,
+		{
+			problemId,
+			testIndex,
+			testStatus,
+			isFirstSelection,
+		}
+	);
+};
+
+export const trackAlgoTopicsDialogOpened = (
+	problemId: string,
+	topicCount: number
+) => {
+	trackEvent(
+		"AlgoNavigation",
+		"algo_topics_dialog_opened",
+		problemId,
+		topicCount,
+		{
+			problemId,
+			topicCount,
+		}
+	);
+};
+
+export const trackAlgoTopicClicked = (problemId: string, topicName: string) => {
+	trackEvent("AlgoNavigation", "algo_topic_clicked", problemId, undefined, {
+		problemId,
+		topicName,
+	});
+};
+
+export const trackAlgoRelatedLessonClicked = (
+	problemId: string,
+	lessonId: string
+) => {
+	trackEvent(
+		"AlgoNavigation",
+		"algo_related_lesson_clicked",
+		problemId,
+		undefined,
+		{
+			problemId,
+			lessonId,
 		}
 	);
 };
@@ -335,32 +763,38 @@ export const trackAlgoHintRequested = (
 // Algorithm Lesson tracking
 export const trackAlgoLessonViewed = (
 	lessonId: string,
-	lessonTitle: string
+	lessonTitle: string,
+	relatedProblemIds?: string[]
 ) => {
 	trackEvent(
 		"AlgoLesson",
-		"lesson_viewed",
+		"algo_lesson_viewed",
 		`${lessonId} - ${lessonTitle}`,
 		undefined,
 		{
 			lessonId,
 			lessonTitle,
+			relatedProblemIds,
 		}
 	);
 };
 
 export const trackAlgoLessonCompleted = (
 	lessonId: string,
-	lessonTitle: string
+	lessonTitle: string,
+	timeSpent?: number,
+	relatedProblemIds?: string[]
 ) => {
 	trackEvent(
 		"AlgoLesson",
-		"lesson_completed",
+		"algo_lesson_completed",
 		`${lessonId} - ${lessonTitle}`,
-		undefined,
+		timeSpent,
 		{
 			lessonId,
 			lessonTitle,
+			timeSpent,
+			relatedProblemIds,
 		}
 	);
 };

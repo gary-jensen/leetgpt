@@ -25,7 +25,9 @@ export class CodeExecutor {
 
 	async executeCode(
 		code: string,
-		runTests: boolean = false
+		runTests: boolean = false,
+		customExecutionScript?: string,
+		timeoutMs: number = 5000
 	): Promise<ExecutionResult> {
 		if (!this.iframe) {
 			throw new Error("No iframe available for code execution");
@@ -38,16 +40,25 @@ export class CodeExecutor {
 			const timeout = setTimeout(() => {
 				// Send cancellation message to iframe
 				if (this.iframe && this.iframe.contentWindow) {
-					this.iframe.contentWindow.postMessage(
-						{
-							type: "cancel-execution",
-							messageId: messageId,
-						},
-						"*"
-					);
+					try {
+						this.iframe.contentWindow.postMessage(
+							{
+								type: "cancel-execution",
+								messageId: messageId,
+							},
+							window.location.origin
+						);
+					} catch (e) {
+						// If postMessage fails (e.g., iframe is in a bad state), continue anyway
+						console.warn(
+							"Failed to send cancellation message to iframe:",
+							e
+						);
+					}
 				}
 
 				// Wait a moment for the iframe to respond with cancellation message
+				// But always resolve after timeout, even if iframe doesn't respond
 				setTimeout(() => {
 					const pending = this.pendingExecutions.get(messageId);
 					if (pending) {
@@ -57,7 +68,7 @@ export class CodeExecutor {
 						pending.resolve({
 							success: false,
 							cancelled: true,
-							logs: [], // Logs will be captured from iframe
+							logs: ["Execution timed out"], // Add timeout message
 							result: {},
 							tracked: {
 								variables: {},
@@ -67,7 +78,7 @@ export class CodeExecutor {
 						});
 					}
 				}, 200); // Give iframe 200ms to display message and respond
-			}, 5000);
+			}, timeoutMs);
 
 			// Store the promise resolvers
 			this.pendingExecutions.set(messageId, { resolve, reject, timeout });
@@ -130,10 +141,11 @@ export class CodeExecutor {
 
 			// Create iframe content with the transformed code and detected functions
 			const iframeContent = this.createIframeContent(
-				transformedCode,
+				customExecutionScript || transformedCode,
 				messageId,
 				runTests,
-				detectedFunctionNames
+				detectedFunctionNames,
+				!!customExecutionScript
 			);
 			if (this.iframe) {
 				this.iframe.srcdoc = iframeContent;
@@ -142,6 +154,22 @@ export class CodeExecutor {
 	}
 
 	private handleMessage(event: MessageEvent) {
+		// Validate origin for security
+		// For srcdoc iframes, event.origin is "null" (string), so we need to allow that
+		// but still validate it's from our own iframe
+		const isValidOrigin =
+			event.origin === window.location.origin ||
+			event.origin === "null" || // srcdoc iframes
+			event.origin === null; // Some browsers use null instead of "null"
+
+		if (!isValidOrigin) {
+			console.log("CodeExecutor: Message rejected - invalid origin", {
+				eventOrigin: event.origin,
+				windowOrigin: window.location.origin,
+			});
+			return;
+		}
+
 		if (!event.data || typeof event.data !== "object") {
 			return;
 		}
@@ -154,8 +182,21 @@ export class CodeExecutor {
 
 		const pending = this.pendingExecutions.get(messageId);
 		if (!pending) {
+			console.log(
+				"CodeExecutor: Message received but no pending execution found",
+				{
+					messageId,
+					type,
+					pendingIds: Array.from(this.pendingExecutions.keys()),
+				}
+			);
 			return;
 		}
+
+		console.log("CodeExecutor: Message received and matched", {
+			messageId,
+			type,
+		});
 
 		// Clear timeout and remove from pending
 		clearTimeout(pending.timeout);
@@ -192,13 +233,61 @@ export class CodeExecutor {
 		code: string,
 		messageId: string,
 		runTests: boolean,
-		detectedFunctionNames: string[] = []
+		detectedFunctionNames: string[] = [],
+		isCustomScript: boolean = false
 	): string {
+		// Get the parent origin for postMessage (srcdoc iframes have null origin)
+		const parentOrigin = window.location.origin;
+		// Build execution code based on mode
+		let executionCode: string;
+		if (isCustomScript) {
+			// Custom script mode - execute directly
+			// The code already contains the full execution script with messageId placeholder
+			// We just need to replace the messageId placeholder with the actual messageId
+			const scriptWithMessageId = code.replace(
+				/__MESSAGE_ID_PLACEHOLDER__/g,
+				messageId
+			);
+			// Unescape backticks (they were escaped for template literal insertion)
+			const unescapedScript = scriptWithMessageId.replace(/\\`/g, "`");
+			executionCode = `// Custom execution script provided - execute directly
+                ${unescapedScript}`;
+		} else {
+			// Normal mode - use Babel-transformed code
+			const escapedCode = code.replace(/`/g, "\\`");
+			const functionNamesJson = JSON.stringify(detectedFunctionNames);
+			executionCode = `// Code is already transformed by Babel in the main thread
+                let codeToExecute = \`${escapedCode}\`;
+                
+                // Add code to make functions globally available after they're declared
+                const passedFunctionNames = ${functionNamesJson};
+                const allFunctionNames = [...new Set(passedFunctionNames)];
+                
+                const globalAssignments = allFunctionNames.map(name => 
+                  \`try { if (typeof \${name} !== 'undefined') { window.\${name} = \${name}; } } catch(e) {}\`
+                ).join(' ');
+                
+                codeToExecute += '; ' + globalAssignments;
+                
+                // Execute the transformed code in an async context
+                try {
+                  await eval(\`(async () => { \${codeToExecute} })()\`);
+                } catch (executionError) {
+                  if (cancelled) {
+                    console.log('Code execution was cancelled due to timeout');
+                  } else {
+                    throw executionError;
+                  }
+                }`;
+		}
+
 		// Enhanced execution with basic variable tracking
 		const wrappedCode = `
       <body style="overflow:hidden; margin: 4px;">
         <div id="log" style="font-family: monospace; white-space: pre-wrap; overflow-y: auto; max-height: 100vh; color: white; font-size:15px;"></div>
         <script>
+          // Parent origin for postMessage (srcdoc iframes have null origin)
+          const PARENT_ORIGIN = ${JSON.stringify(parentOrigin)};
           const logs = [];
           const coloredLogs = []; // Track logs with color information
           const variables = {};
@@ -316,50 +405,17 @@ export class CodeExecutor {
             }
           });
           
+          // Block network access for security
+          delete window.fetch;
+          delete window.XMLHttpRequest;
+          delete window.WebSocket;
+          if (window.navigator && window.navigator.sendBeacon) {
+            delete window.navigator.sendBeacon;
+          }
+          
           async function executeUserCode() {
             try {
-              // Prevent sessionStorage access errors
-              try {
-                if (typeof Storage !== 'undefined') {
-                  // Test sessionStorage access
-                  sessionStorage.getItem('test');
-                }
-              } catch (e) {
-                // Ignore sessionStorage errors - they're not critical for our execution
-              }
-              
-              // Code is already transformed by Babel in the main thread
-              let codeToExecute = \`${code.replace(/`/g, "\\`")}\`;
-              
-              // Add code to make functions globally available after they're declared
-              // Use the detected function names passed from the main thread
-              const passedFunctionNames = ${JSON.stringify(
-					detectedFunctionNames
-				)};
-              
-              // Use only the detected function names from regex parsing
-              const allFunctionNames = [...new Set(passedFunctionNames)];
-              
-              const globalAssignments = allFunctionNames.map(name => 
-                \`try { if (typeof \${name} !== 'undefined') { window.\${name} = \${name}; } } catch(e) {}\`
-              ).join(' ');
-              
-              codeToExecute += '; ' + globalAssignments;
-              
-              
-              // Execute the transformed code in an async context
-              try {
-                await eval(\`(async () => { \${codeToExecute} })()\`);
-              } catch (executionError) {
-                // Check if this is a cancellation due to timeout
-                if (cancelled) {
-                  // Don't throw the error, just log it and continue with cleanup
-                  console.log('Code execution was cancelled due to timeout');
-                } else {
-                  // Re-throw other execution errors
-                  throw executionError;
-                }
-              }
+              ${executionCode}
               
               // Capture any functions that were declared
               // We'll rely on the window scanning below to find all user-defined functions
@@ -429,14 +485,10 @@ export class CodeExecutor {
                 __bs_calls: __bs.calls
               };
               
-              // Send results back to parent
-              window.parent.postMessage(messageData, '*');
+              // Send results back to parent (use parent origin since srcdoc has null origin)
+              window.parent.postMessage(messageData, PARENT_ORIGIN);
             } catch (error) {
-              // Check if this is a sessionStorage error (non-critical)
-              const errorMessage = error.message || String(error);
-              const isSessionStorageError = errorMessage.includes('sessionStorage') || errorMessage.includes('sandboxed');
-              
-              // Clean variables object for error cases too
+              // Clean variables object for error cases
               const errorCleanVariables = {};
               for (const name in variables) {
                 if (typeof variables[name] !== 'function') {
@@ -456,40 +508,21 @@ export class CodeExecutor {
                 }
               }
               
-              if (isSessionStorageError) {
-                // For sessionStorage errors, still send success with tracked data
-                window.parent.postMessage({
-                  messageId: '${messageId}',
-                  type: 'execution-complete',
-                  result: errorCleanVariables,
-                  logs: logs,
-                  tracked: { 
-                    variables: errorCleanVariables,
-                    variableTrace: variableTrace,
-                    functions: errorSerializableFunctions,
-                    functionCalls: functionCalls
-                  },
+              // Send error result back to parent (use parent origin since srcdoc has null origin)
+              window.parent.postMessage({
+                messageId: '${messageId}',
+                type: 'execution-complete',
+                error: error.message,
+                logs: logs,
+                tracked: { 
+                  variables: errorCleanVariables,
+                  variableTrace: variableTrace,
+                  functions: errorSerializableFunctions,
+                  functionCalls: functionCalls
+                },
                   __bs_tracked: __bs.tracked,
                   __bs_calls: __bs.calls
-                }, '*');
-              } else {
-                // For other errors, send error but still include tracked data
-                console.error(error.message);
-                window.parent.postMessage({
-                  messageId: '${messageId}',
-                  type: 'execution-complete',
-                  error: error.message,
-                  logs: logs,
-                  tracked: { 
-                    variables: errorCleanVariables,
-                    variableTrace: variableTrace,
-                    functions: errorSerializableFunctions,
-                    functionCalls: functionCalls
-                  },
-                  __bs_tracked: __bs.tracked,
-                  __bs_calls: __bs.calls
-                }, '*');
-              }
+                }, PARENT_ORIGIN);
             }
           }
           

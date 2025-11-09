@@ -87,7 +87,7 @@ const Editor = ({
 						{workspaceType === "algo" ? (
 							<div className="flex items-center justify-between p-3 py-1.5 border-b border-border">
 								<div className="flex gap-4">
-									<button className="px-2 py-1 rounded-md hover:bg-white/10 hover:cursor-pointer flex items-center gap-1.5">
+									<button className="text-sm px-1.5 py-1 rounded-md hover:bg-white/10 hover:cursor-pointer flex items-center gap-1.5">
 										<CodeXmlIcon className="h-4 w-4 text-green-600" />
 										Code
 									</button>
@@ -147,7 +147,8 @@ const Editor = ({
 							</div>
 						)}
 					</div>
-					{showConsole && (
+					{/* Always render Console/iframe for CodeExecutor, but hide visually when showConsole is false */}
+					{showConsole ? (
 						<Console
 							iframeRef={iframeRef}
 							handleRunClick={handleRunClick}
@@ -156,6 +157,28 @@ const Editor = ({
 							onShowSolution={onShowSolution}
 							showSolutionDisabled={buttonDisabled}
 						/>
+					) : (
+						/* Hidden iframe for CodeExecutor when console is not shown */
+						<div
+							style={{
+								position: "absolute",
+								width: 0,
+								height: 0,
+								overflow: "hidden",
+								pointerEvents: "none",
+							}}
+						>
+							<iframe
+								ref={iframeRef}
+								sandbox="allow-scripts allow-modals"
+								style={{
+									width: "1px",
+									height: "1px",
+									background: "transparent",
+									border: "none",
+								}}
+							/>
+						</div>
 					)}
 				</div>
 			</div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { AlgoProblemMeta } from "@/types/algorithm-types";
 import { getDifficultyColor } from "../utils/difficultyUtils";
 import { useAlgoFilters } from "../hooks/useAlgoFilters";
@@ -30,6 +30,10 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useProgress } from "@/contexts/ProgressContext";
+import {
+	trackAlgoProblemListViewed,
+	trackAlgoProblemClicked,
+} from "@/lib/analytics";
 
 interface ProblemsListProps {
 	problems: AlgoProblemMeta[];
@@ -110,6 +114,12 @@ export function ProblemsList({ problems, allTopics }: ProblemsListProps) {
 		filters.selectedDifficulties,
 		filters.sortBy,
 	]);
+
+	// Track problem list viewed
+	useEffect(() => {
+		trackAlgoProblemListViewed(problems.length, filteredProblems.length);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 
 	return (
 		<div className="min-h-screefn p-0 bg-background rounded-2xl border-[#2f2f2f] border-1">
@@ -410,6 +420,15 @@ function ProblemRow({
 	return (
 		<Link
 			href={`/algorithms/problems/${problem.slug}`}
+			onClick={() => {
+				trackAlgoProblemClicked(
+					problem.id,
+					problem.title,
+					problem.difficulty,
+					index,
+					isCompleted
+				);
+			}}
 			className="border-t border-border hover:bg-white/5 w-full text-sm group px-4 py-3 flex justify-between items-center min-h-14"
 		>
 			<div className="truncate pr-4 flex items-center gap-6">

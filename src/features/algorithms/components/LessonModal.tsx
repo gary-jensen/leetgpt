@@ -12,7 +12,10 @@ import { Button } from "@/components/ui/button";
 import { updateAlgoLessonProgress } from "@/lib/actions/algoProgress";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { trackAlgoLessonCompleted } from "@/lib/analytics";
+import {
+	trackAlgoLessonCompleted,
+	trackAlgoRelatedLessonClicked,
+} from "@/lib/analytics";
 import { useProgress } from "@/contexts/ProgressContext";
 import { processMarkdown } from "@/components/MarkdownEditor/markdown-processor";
 import "@/components/workspace/Chat/components/ChatMarkdownDisplay.css";
@@ -27,9 +30,10 @@ interface LessonModalProps {
 		bodyMd: string;
 	};
 	children: React.ReactNode;
+	onOpen?: () => void;
 }
 
-export function LessonModal({ lesson, children }: LessonModalProps) {
+export function LessonModal({ lesson, children, onOpen }: LessonModalProps) {
 	const [open, setOpen] = useState(false);
 	const [isMarkingComplete, setIsMarkingComplete] = useState(false);
 	const [processedHtml, setProcessedHtml] = useState<string>("");
@@ -99,7 +103,14 @@ export function LessonModal({ lesson, children }: LessonModalProps) {
 
 	return (
 		<>
-			<div onClick={() => setOpen(true)}>{children}</div>
+			<div
+				onClick={() => {
+					setOpen(true);
+					onOpen?.();
+				}}
+			>
+				{children}
+			</div>
 			<Dialog open={open} onOpenChange={setOpen}>
 				<DialogContent className="!max-w-5xl max-h-[90vh] overflow-y-auto">
 					<DialogTitle>{lesson.title}</DialogTitle>

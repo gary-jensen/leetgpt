@@ -20,6 +20,7 @@ import AuthButton from "@/components/AuthButton";
 import { useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useProgress } from "@/contexts/ProgressContext";
+import { trackAlgoProblemSwitched } from "@/lib/analytics";
 import { getDifficultyColor } from "../utils/difficultyUtils";
 import { useAlgoFilters } from "../hooks/useAlgoFilters";
 import type { FilterSortBy } from "../utils/filterStorage";
@@ -145,7 +146,17 @@ export function WorkspaceNavbar({ problemsMeta }: WorkspaceNavbarProps) {
 
 	const goToIndex = (idx: number) => {
 		if (idx < 0 || idx >= filteredList.length) return;
-		router.push(`/algorithms/problems/${filteredList[idx].slug}`);
+		const targetProblem = filteredList[idx];
+		// Track problem switch if we have a current problem
+		if (currentSlug) {
+			const currentProblem = problemsMeta.find(
+				(p) => p.slug === currentSlug
+			);
+			if (currentProblem) {
+				trackAlgoProblemSwitched(currentProblem.id, targetProblem.id);
+			}
+		}
+		router.push(`/algorithms/problems/${targetProblem.slug}`);
 	};
 
 	const goPrev = () => {
