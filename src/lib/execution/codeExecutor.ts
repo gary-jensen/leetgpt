@@ -163,10 +163,6 @@ export class CodeExecutor {
 			event.origin === null; // Some browsers use null instead of "null"
 
 		if (!isValidOrigin) {
-			console.log("CodeExecutor: Message rejected - invalid origin", {
-				eventOrigin: event.origin,
-				windowOrigin: window.location.origin,
-			});
 			return;
 		}
 
@@ -182,21 +178,8 @@ export class CodeExecutor {
 
 		const pending = this.pendingExecutions.get(messageId);
 		if (!pending) {
-			console.log(
-				"CodeExecutor: Message received but no pending execution found",
-				{
-					messageId,
-					type,
-					pendingIds: Array.from(this.pendingExecutions.keys()),
-				}
-			);
 			return;
 		}
-
-		console.log("CodeExecutor: Message received and matched", {
-			messageId,
-			type,
-		});
 
 		// Clear timeout and remove from pending
 		clearTimeout(pending.timeout);
@@ -274,7 +257,7 @@ export class CodeExecutor {
                   await eval(\`(async () => { \${codeToExecute} })()\`);
                 } catch (executionError) {
                   if (cancelled) {
-                    console.log('Code execution was cancelled due to timeout');
+                    // Execution was cancelled, don't throw
                   } else {
                     throw executionError;
                   }

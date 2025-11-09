@@ -151,6 +151,7 @@ export function WorkspaceLayout({
 										testResults={testResults}
 										activeTestTab={activeTestTab}
 										setActiveTestTab={setActiveTestTab}
+										isExecuting={isExecuting}
 									/>
 								</ResizablePanel>
 							</>

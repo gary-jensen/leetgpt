@@ -327,6 +327,7 @@ export function EditorPanel({
 							testResults={testResults}
 							activeTestTab={activeTestTab}
 							setActiveTestTab={setActiveTestTab}
+							isExecuting={isExecuting}
 						/>
 					</div>
 				</ResizablePanel>

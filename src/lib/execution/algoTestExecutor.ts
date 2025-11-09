@@ -76,7 +76,6 @@ async function executeAlgoTestsWithCodeExecutor(
 			timeoutMs
 		);
 	} catch (error) {
-		console.error("CodeExecutor execution threw error:", error);
 		return {
 			status: "error",
 			results: [],
@@ -86,8 +85,6 @@ async function executeAlgoTestsWithCodeExecutor(
 
 	// Parse result from CodeExecutor format to AlgoExecutionResult format
 	if (executionResult.error) {
-		console.error("Execution result has error:", executionResult.error);
-		console.error("Execution logs:", executionResult.logs);
 		return {
 			status: "error",
 			results: [],
@@ -112,19 +109,10 @@ async function executeAlgoTestsWithCodeExecutor(
 
 	// Check if we have the expected structure
 	if (!resultData || !resultData.results) {
-		// Log for debugging
-		console.error("Unexpected result structure:", {
-			executionResult,
-			result: executionResult.result,
-			success: executionResult.success,
-			cancelled: executionResult.cancelled,
-			logs: executionResult.logs,
-		});
-
 		// Try to extract from logs or other fields
 		const errorMessage =
 			executionResult.logs?.join("\n") ||
-			"Execution completed but result structure was unexpected. Check console for details.";
+			"Execution completed but result structure was unexpected.";
 
 		return {
 			status: "error",
@@ -751,18 +739,15 @@ function generateAlgoTestExecutionScript(
 		window.addEventListener('message', (event) => {
 			if (event.data && event.data.type === 'cancel-execution' && event.data.messageId === '__MESSAGE_ID_PLACEHOLDER__') {
 				cancelled = true;
-				console.log('Algorithm test execution cancelled due to timeout');
 			}
 		});
 		
 		// Main execution
 		(async function() {
 			try {
-				console.log('Algorithm test execution starting...');
 				const problem = ${problemData};
 				const results = [];
 				const startTime = Date.now();
-				console.log('Problem loaded, tests count:', problem.tests.length);
 				
 				// Check for cancellation before starting
 				if (cancelled) {
@@ -805,14 +790,10 @@ function generateAlgoTestExecutionScript(
 					throw new Error('Function ' + functionName + ' not found. Available functions: ' + (available || 'none'));
 				}
 				
-				console.log('Function found:', functionName);
-				console.log('Starting test execution, total tests:', problem.tests.length);
-				
 				// Run all test cases
 				for (let i = 0; i < problem.tests.length; i++) {
 					// Check for cancellation before each test
 					if (cancelled) {
-						console.log('Execution cancelled, stopping test execution');
 						break;
 					}
 					
@@ -830,47 +811,14 @@ function generateAlgoTestExecutionScript(
 							convertedInputs.push(convertInputValue(clonedInput[j], paramType));
 						}
 						
-						// Debug: Log inputs for first test case
-						if (i === 0) {
-							console.log('First test case - Original input:', JSON.stringify(clonedInput));
-							console.log('First test case - Converted inputs:', convertedInputs.map(x => ({value: x, type: typeof x, stringified: JSON.stringify(x)})));
-							console.log('First test case - Calling function with:', convertedInputs[0], 'type:', typeof convertedInputs[0]);
-							// Test the regex directly
-							const testInput = convertedInputs[0];
-							if (typeof testInput === 'string') {
-								const trimmed = testInput.trim();
-								// Test with the exact regex from the user's code
-								const regex1 = /^[+-]?\d*(\.\d+)?([eE][+-]?\d+)?$/;
-								// Test with a corrected regex that requires at least one digit
-								const regex2 = /^[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?$/;
-								// Test with a simpler pattern
-								const regex3 = /^[+-]?\d+([eE][+-]?\d+)?$/;
-								console.log('First test case - Testing regex directly:');
-								console.log('  Input:', JSON.stringify(testInput));
-								console.log('  Trimmed:', JSON.stringify(trimmed));
-								console.log('  Input length:', trimmed.length);
-								console.log('  Input char codes:', Array.from(trimmed).map(c => c.charCodeAt(0)));
-								console.log('  Regex1 (original) test result:', regex1.test(trimmed));
-								console.log('  Regex1 (original) match:', trimmed.match(regex1));
-								console.log('  Regex2 (corrected) test result:', regex2.test(trimmed));
-								console.log('  Regex3 (simple) test result:', regex3.test(trimmed));
-								// Test if the regex itself is the issue
-								console.log('  Direct test: /^[+-]?\\d*(\.\\d+)?([eE][+-]?\\d+)?$/.test("42"):', /^[+-]?\d*(\.\d+)?([eE][+-]?\d+)?$/.test("42"));
-							}
-						}
-						
 						// Execute function
 						const result = userFunction(...convertedInputs);
-						if (i === 0) {
-							console.log('First test case - Function executed, result:', result, 'type:', typeof result);
-						}
 						
 						// Convert output
 						// Always convert the result first (convertOutputValue handles null/undefined correctly)
 						// Default returnType to "void" if not defined
 						const returnType = problem.returnType || 'void';
 						let actual = convertOutputValue(result, returnType);
-						console.log('After convertOutputValue, actual:', actual, 'type:', typeof actual, 'isBoolean:', typeof actual === 'boolean');
 						
 						// Only use in-place modification for void return types or mutating-array-with-k judge
 						// For other return types (like ListNode), trust the return value even if it's null
@@ -921,7 +869,6 @@ function generateAlgoTestExecutionScript(
 				
 				// Check if execution was cancelled
 				if (cancelled) {
-					console.log('Execution was cancelled, sending timeout result');
 					const msgId = '__MESSAGE_ID_PLACEHOLDER__';
 					window.parent.postMessage({
 						type: 'execution-complete',
@@ -939,13 +886,9 @@ function generateAlgoTestExecutionScript(
 					return;
 				}
 				
-				console.log('All tests completed, total runtime:', totalRuntime, 'ms');
-				console.log('Results:', results);
-				
 				// Send results back to parent (messageId will be replaced by CodeExecutor)
 				// Use PARENT_ORIGIN constant (set by CodeExecutor) since srcdoc iframes have null origin
 				const msgId = '__MESSAGE_ID_PLACEHOLDER__';
-				console.log('Sending results to parent, messageId:', msgId);
 				window.parent.postMessage({
 					type: 'execution-complete',
 					messageId: msgId,
@@ -963,7 +906,6 @@ function generateAlgoTestExecutionScript(
 				const msgId = '__MESSAGE_ID_PLACEHOLDER__';
 				const errorMessage = error instanceof Error ? error.message : String(error);
 				const errorStack = error instanceof Error ? error.stack : '';
-				console.error('Algorithm test execution error:', errorMessage, errorStack);
 				// Use PARENT_ORIGIN constant (set by CodeExecutor) since srcdoc iframes have null origin
 				window.parent.postMessage({
 					type: 'execution-complete',

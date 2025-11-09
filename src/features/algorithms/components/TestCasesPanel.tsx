@@ -22,6 +22,7 @@ import {
 	SquareCheckIcon,
 	TerminalIcon,
 	Scale3DIcon,
+	Clock,
 } from "lucide-react";
 
 interface TestCasesPanelProps {
@@ -29,6 +30,7 @@ interface TestCasesPanelProps {
 	testResults: TestResult[];
 	activeTestTab: "examples" | "testcase" | "results";
 	setActiveTestTab: (tab: "examples" | "testcase" | "results") => void;
+	isExecuting?: boolean;
 }
 
 export function TestCasesPanel({
@@ -36,6 +38,7 @@ export function TestCasesPanel({
 	testResults,
 	activeTestTab,
 	setActiveTestTab,
+	isExecuting = false,
 }: TestCasesPanelProps) {
 	const [selectedTestIndex, setSelectedTestIndex] = useState(0);
 	const [processedInputs, setProcessedInputs] = useState<string[]>([]);
@@ -178,6 +181,7 @@ export function TestCasesPanel({
 						selectedTestIndex={selectedTestIndex}
 						setSelectedTestIndex={handleTestIndexChange}
 						processedInputs={processedInputs}
+						isExecuting={isExecuting}
 					/>
 				)}
 			</div>
@@ -349,6 +353,7 @@ interface TestResultsTabProps {
 	selectedTestIndex: number;
 	setSelectedTestIndex: (index: number) => void;
 	processedInputs: string[];
+	isExecuting?: boolean;
 }
 
 function TestResultsTab({
@@ -357,9 +362,20 @@ function TestResultsTab({
 	selectedTestIndex,
 	setSelectedTestIndex,
 	processedInputs,
+	isExecuting = false,
 }: TestResultsTabProps) {
 	const status = getOverallStatus(testResults);
 	if (status === "pending") {
+		if (isExecuting) {
+			return (
+				<div className="flex-1 flex flex-col items-center justify-center h-full mb-16">
+					<div className="flex items-center gap-2 text-muted-foreground">
+						<Clock className="w-5 h-5 animate-spin text-primary" />
+						<span>Running tests...</span>
+					</div>
+				</div>
+			);
+		}
 		return (
 			<div className="flex-1 flex flex-col items-center justify-center h-full mb-16">
 				You must run your code first.
