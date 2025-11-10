@@ -20,10 +20,8 @@ import { EditorPanel } from "./EditorPanel";
 import { TestCasesPanel } from "./TestCasesPanel";
 import { useTestTab } from "../hooks/useTestTab";
 import { useEffect, useState } from "react";
-import { Session } from "next-auth";
 
 interface WorkspaceLayoutProps {
-	session: Session | null;
 	problem: AlgoProblemDetail;
 	code: string;
 	setCode: (code: string) => void;
@@ -49,7 +47,6 @@ interface WorkspaceLayoutProps {
 }
 
 export function WorkspaceLayout({
-	session,
 	problem,
 	code,
 	setCode,
@@ -90,7 +87,7 @@ export function WorkspaceLayout({
 
 	return (
 		<div className="w-screen h-screen max-h-screen flex flex-col bg-background-4 overflow-hidden">
-			<WorkspaceNavbar problemsMeta={problemsMeta} session={session} />
+			<WorkspaceNavbar problemsMeta={problemsMeta} />
 
 			{/* Main Content */}
 			<div className="flex-1 flex items-center justify-center overflow-hidden pb-6">
@@ -138,7 +135,6 @@ export function WorkspaceLayout({
 							testCasesPanelRef={
 								is2xl ? undefined : testCasesPanelRef
 							}
-							session={session}
 						/>
 
 						{/* Right Panel - Test Cases (only visible at 2xl+) */}
