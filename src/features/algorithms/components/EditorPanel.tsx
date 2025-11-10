@@ -81,8 +81,8 @@ export function EditorPanel({
 	const testCasesPanelRef =
 		propTestCasesPanelRef ?? hookResult.testCasesPanelRef;
 
-	const session = useSession();
-	const isAdmin = session?.data?.user?.role === "ADMIN";
+	const { data: session, status } = useSession();
+	const isAdmin = session?.user?.role === "ADMIN";
 	const [resetDialogOpen, setResetDialogOpen] = useState(false);
 
 	const buttonVariant =
@@ -133,7 +133,8 @@ export function EditorPanel({
 								</div>
 								{/* Action Buttons Toolbar */}
 								<div className="w-full h-[64px] px-3 bg-background-2 items-center gap-2 border-t border-border flex">
-									{session?.data?.user?.id ? (
+									{status === "loading" ||
+									session?.user?.id ? (
 										<>
 											<Button
 												onClick={onRun}
@@ -225,10 +226,12 @@ export function EditorPanel({
 											)}
 										</>
 									) : (
-										<div className="w-full flex items-center justify-center text-muted-foreground text-sm">
-											You need to log in / sign up to run
-											code
-										</div>
+										status === "unauthenticated" && (
+											<div className="w-full flex items-center justify-center text-muted-foreground text-sm">
+												You need to log in / sign up to
+												run code
+											</div>
+										)
 									)}
 								</div>
 							</div>
@@ -281,7 +284,8 @@ export function EditorPanel({
 								</div>
 								{/* Action Buttons Toolbar */}
 								<div className="w-full h-[64px] px-3 bg-background-2 items-center gap-2 border-t border-border flex">
-									{session?.data?.user?.id ? (
+									{status === "loading" ||
+									session?.user?.id ? (
 										<>
 											<Button
 												onClick={onRun}
@@ -358,7 +362,7 @@ export function EditorPanel({
 													className="p-2"
 													size="icon"
 												>
-													<MessageSquare className="w-4 h-4" />
+													<MessageCircleQuestionIcon className="w-4 h-4" />
 												</Button>
 											</FeedbackDialog>
 											{isAdmin && (
@@ -373,10 +377,12 @@ export function EditorPanel({
 											)}
 										</>
 									) : (
-										<div className="w-full flex items-center justify-center text-muted-foreground text-sm">
-											You need to log in / sign up to run
-											code
-										</div>
+										status === "unauthenticated" && (
+											<div className="w-full flex items-center justify-center text-muted-foreground text-sm">
+												You need to log in / sign up to
+												run code
+											</div>
+										)
 									)}
 								</div>
 							</div>

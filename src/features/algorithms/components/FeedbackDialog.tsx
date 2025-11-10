@@ -46,7 +46,7 @@ export function FeedbackDialog({
 	const [selectedIssues, setSelectedIssues] = useState<string[]>([]);
 	const [additionalFeedback, setAdditionalFeedback] = useState("");
 	const [isSubmitting, setIsSubmitting] = useState(false);
-	const { data: session } = useSession();
+	const { data: session, status } = useSession();
 
 	const handleIssueToggle = (issue: string) => {
 		setSelectedIssues((prev) =>
@@ -101,7 +101,7 @@ export function FeedbackDialog({
 		setOpen(newOpen);
 	};
 
-	if (!session?.user?.id) {
+	if (!session?.user?.id && status !== "loading") {
 		// Don't show feedback option if not logged in
 		return null;
 	}
