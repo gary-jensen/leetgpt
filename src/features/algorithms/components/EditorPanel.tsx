@@ -10,17 +10,7 @@ import { TestResult } from "./TestResultsDisplay";
 import { TestCasesPanel } from "./TestCasesPanel";
 import { AlgoProblemDetail } from "@/types/algorithm-types";
 import { Button } from "@/components/ui/button";
-import {
-	RotateCcw,
-	Lightbulb,
-	MessageSquare,
-	MessageCircleQuestionIcon,
-} from "lucide-react";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { RotateCcw, Lightbulb, MessageCircleQuestionIcon } from "lucide-react";
 import { useTestTab } from "../hooks/useTestTab";
 import { useSession } from "next-auth/react";
 import type { ImperativePanelHandle } from "react-resizable-panels";
@@ -37,6 +27,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
 import { FeedbackDialog } from "./FeedbackDialog";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface EditorPanelProps {
 	code: string;
@@ -99,6 +94,146 @@ export function EditorPanel({
 		setResetDialogOpen(false);
 	};
 
+	// Reusable Editor component
+	const editorComponent = (
+		<Editor
+			code={code}
+			setCode={setCode}
+			iframeRef={iframeRef}
+			handleRun={onRun}
+			isExecuting={isExecuting}
+			isThinking={isThinking}
+			isInitialized={true}
+			hasJustPassed={
+				testResults.length > 0 && testResults.every((r) => r.passed)
+			}
+			onShowSolution={onShowSolution}
+			showConsole={false}
+			disableBorder={true}
+			hideActionButtons={true}
+			workspaceType="algo"
+		/>
+	);
+
+	// Reusable Action Buttons Toolbar
+	const actionButtonsToolbar = (
+		<div className="w-full h-[64px] px-3 bg-background-2 items-center justify-between gap-2 border-t border-border flex">
+			{status === "loading" || session?.user?.id ? (
+				<>
+					<Button
+						onClick={onRun}
+						variant={buttonVariant}
+						disabled={buttonDisabled}
+					>
+						{isExecuting ? "Running..." : "Run"}
+					</Button>
+					{/* <Button
+						onClick={onHint}
+						variant="outline"
+						disabled={buttonDisabled}
+						className="flex items-center gap-2"
+					>
+						<Lightbulb className="w-4 h-4" />
+						Hint
+					</Button> */}
+					<div className="flex items-center gap-2">
+						{isAdmin && (
+							<Button
+								onClick={onShowSolution}
+								variant="outline"
+								disabled={buttonDisabled}
+								className="text-orange-600 border-orange-200 hover:bg-orange-50"
+							>
+								Show Solution
+							</Button>
+						)}
+						<AlertDialog
+							open={resetDialogOpen}
+							onOpenChange={setResetDialogOpen}
+						>
+							<AlertDialogTrigger asChild>
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<Button
+											variant="outline"
+											disabled={buttonDisabled}
+											className="flex items-center gap-2"
+										>
+											<RotateCcw className="w-4 h-4" />
+										</Button>
+									</TooltipTrigger>
+									<TooltipContent>
+										<p>Reset</p>
+									</TooltipContent>
+								</Tooltip>
+							</AlertDialogTrigger>
+							<AlertDialogContent>
+								<AlertDialogHeader>
+									<AlertDialogTitle>
+										Reset Code Editor
+									</AlertDialogTitle>
+									<AlertDialogDescription>
+										Are you sure you want to reset the code
+										editor? This will clear all your current
+										code and cannot be undone.
+									</AlertDialogDescription>
+								</AlertDialogHeader>
+								<AlertDialogFooter>
+									<AlertDialogCancel variant="ghost">
+										Cancel
+									</AlertDialogCancel>
+									<AlertDialogAction
+										onClick={handleReset}
+										variant="destructive"
+									>
+										Reset
+									</AlertDialogAction>
+								</AlertDialogFooter>
+							</AlertDialogContent>
+						</AlertDialog>
+						<FeedbackDialog
+							problemId={problem.id}
+							problemTitle={problem.title}
+						>
+							<Button
+								variant="outline"
+								disabled={buttonDisabled}
+								className="p-2"
+								size="icon"
+							>
+								<MessageCircleQuestionIcon className="w-4 h-4" />
+							</Button>
+						</FeedbackDialog>
+					</div>
+				</>
+			) : (
+				status === "unauthenticated" && (
+					<div className="w-full flex items-center justify-center text-muted-foreground text-sm">
+						You need to log in / sign up to run code
+					</div>
+				)
+			)}
+		</div>
+	);
+
+	// Reusable editor content wrapper
+	const editorContent = (backgroundClass: string) => (
+		<div className="border-1 rounded-2xl overflow-hidden gap-2 h-full">
+			<div className="h-full flex rounfded-2xl overflow-hidden bforder-1">
+				<div
+					className={`flex-3 h-full ${backgroundClass} flex flex-col`}
+				>
+					<div className="w-full h-full flex flex-col p-0">
+						<div className="min-h-[60vh] md:min-h-0 flex flex-1 flex-col overflow-hidden">
+							{editorComponent}
+						</div>
+						{actionButtonsToolbar}
+					</div>
+				</div>
+			</div>
+		</div>
+	);
+
 	// If hiding test cases panel, just show editor
 	if (hideTestCasesPanel) {
 		return (
@@ -107,137 +242,7 @@ export function EditorPanel({
 				minSize={10}
 				className="flex flex-col overflow-hidden"
 			>
-				<div className="border-1 rounded-2xl overflow-hidden gap-2 h-full">
-					<div className="h-full flex rounfded-2xl overflow-hidden bforder-1">
-						<div className="flex-3 h-full bg-background-2 flex flex-col">
-							<div className="w-full h-full flex flex-col p-0">
-								<div className="min-h-[60vh] md:min-h-0 flex flex-1 flex-col overflow-hidden">
-									<Editor
-										code={code}
-										setCode={setCode}
-										iframeRef={iframeRef}
-										handleRun={onRun}
-										isExecuting={isExecuting}
-										isThinking={isThinking}
-										isInitialized={true}
-										hasJustPassed={
-											testResults.length > 0 &&
-											testResults.every((r) => r.passed)
-										}
-										onShowSolution={onShowSolution}
-										showConsole={false}
-										disableBorder={true}
-										hideActionButtons={true}
-										workspaceType="algo"
-									/>
-								</div>
-								{/* Action Buttons Toolbar */}
-								<div className="w-full h-[64px] px-3 bg-background-2 items-center gap-2 border-t border-border flex">
-									{status === "loading" ||
-									session?.user?.id ? (
-										<>
-											<Button
-												onClick={onRun}
-												variant={buttonVariant}
-												disabled={buttonDisabled}
-											>
-												{isExecuting
-													? "Running..."
-													: "Run"}
-											</Button>
-											<Button
-												onClick={onHint}
-												variant="outline"
-												disabled={buttonDisabled}
-												className="flex items-center gap-2"
-											>
-												<Lightbulb className="w-4 h-4" />
-												Hint
-											</Button>
-											<AlertDialog
-												open={resetDialogOpen}
-												onOpenChange={
-													setResetDialogOpen
-												}
-											>
-												<AlertDialogTrigger asChild>
-													<Button
-														variant="outline"
-														disabled={
-															buttonDisabled
-														}
-														className="flex items-center gap-2"
-													>
-														<RotateCcw className="w-4 h-4" />
-														Reset
-													</Button>
-												</AlertDialogTrigger>
-												<AlertDialogContent>
-													<AlertDialogHeader>
-														<AlertDialogTitle>
-															Reset Code Editor
-														</AlertDialogTitle>
-														<AlertDialogDescription>
-															Are you sure you
-															want to reset the
-															code editor? This
-															will clear all your
-															current code and
-															cannot be undone.
-														</AlertDialogDescription>
-													</AlertDialogHeader>
-													<AlertDialogFooter>
-														<AlertDialogCancel variant="ghost">
-															Cancel
-														</AlertDialogCancel>
-														<AlertDialogAction
-															onClick={
-																handleReset
-															}
-															variant="destructive"
-														>
-															Reset
-														</AlertDialogAction>
-													</AlertDialogFooter>
-												</AlertDialogContent>
-											</AlertDialog>
-											<FeedbackDialog
-												problemId={problem.id}
-												problemTitle={problem.title}
-											>
-												<Button
-													variant="outline"
-													disabled={buttonDisabled}
-													className="p-2"
-													size="icon"
-												>
-													<MessageCircleQuestionIcon className="w-4 h-4" />
-												</Button>
-											</FeedbackDialog>
-											{isAdmin && (
-												<Button
-													onClick={onShowSolution}
-													variant="outline"
-													disabled={buttonDisabled}
-													className="text-orange-600 border-orange-200 hover:bg-orange-50"
-												>
-													Show Solution
-												</Button>
-											)}
-										</>
-									) : (
-										status === "unauthenticated" && (
-											<div className="w-full flex items-center justify-center text-muted-foreground text-sm">
-												You need to log in / sign up to
-												run code
-											</div>
-										)
-									)}
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
+				{editorContent("bg-background-2")}
 			</ResizablePanel>
 		);
 	}
@@ -259,138 +264,10 @@ export function EditorPanel({
 					maxSize={95}
 					className="border-1 rounded-2xl overflow-hidden gap-2"
 				>
-					<div className="h-full flex rounfded-2xl overflow-hidden bforder-1">
-						<div className="flex-3 h-full bg-background flex flex-col">
-							<div className="w-full h-full flex flex-col p-0">
-								<div className="min-h-[60vh] md:min-h-0 flex flex-1 flex-col overflow-hidden">
-									<Editor
-										code={code}
-										setCode={setCode}
-										iframeRef={iframeRef}
-										handleRun={onRun}
-										isExecuting={isExecuting}
-										isThinking={isThinking}
-										isInitialized={true}
-										hasJustPassed={
-											testResults.length > 0 &&
-											testResults.every((r) => r.passed)
-										}
-										onShowSolution={onShowSolution}
-										showConsole={false}
-										disableBorder={true}
-										hideActionButtons={true}
-										workspaceType="algo"
-									/>
-								</div>
-								{/* Action Buttons Toolbar */}
-								<div className="w-full h-[64px] px-3 bg-background-2 items-center gap-2 border-t border-border flex">
-									{status === "loading" ||
-									session?.user?.id ? (
-										<>
-											<Button
-												onClick={onRun}
-												variant={buttonVariant}
-												disabled={buttonDisabled}
-											>
-												{isExecuting
-													? "Running..."
-													: "Run"}
-											</Button>
-											<Button
-												onClick={onHint}
-												variant="outline"
-												disabled={buttonDisabled}
-												className="flex items-center gap-2"
-											>
-												<Lightbulb className="w-4 h-4" />
-												Hint
-											</Button>
-											<AlertDialog
-												open={resetDialogOpen}
-												onOpenChange={
-													setResetDialogOpen
-												}
-											>
-												<AlertDialogTrigger asChild>
-													<Button
-														variant="outline"
-														disabled={
-															buttonDisabled
-														}
-														className="flex items-center gap-2"
-													>
-														<RotateCcw className="w-4 h-4" />
-														Reset
-													</Button>
-												</AlertDialogTrigger>
-												<AlertDialogContent>
-													<AlertDialogHeader>
-														<AlertDialogTitle>
-															Reset Code Editor
-														</AlertDialogTitle>
-														<AlertDialogDescription>
-															Are you sure you
-															want to reset the
-															code editor? This
-															will clear all your
-															current code and
-															cannot be undone.
-														</AlertDialogDescription>
-													</AlertDialogHeader>
-													<AlertDialogFooter>
-														<AlertDialogCancel variant="ghost">
-															Cancel
-														</AlertDialogCancel>
-														<AlertDialogAction
-															onClick={
-																handleReset
-															}
-															variant="destructive"
-														>
-															Reset
-														</AlertDialogAction>
-													</AlertDialogFooter>
-												</AlertDialogContent>
-											</AlertDialog>
-											<FeedbackDialog
-												problemId={problem.id}
-												problemTitle={problem.title}
-											>
-												<Button
-													variant="outline"
-													disabled={buttonDisabled}
-													className="p-2"
-													size="icon"
-												>
-													<MessageCircleQuestionIcon className="w-4 h-4" />
-												</Button>
-											</FeedbackDialog>
-											{isAdmin && (
-												<Button
-													onClick={onShowSolution}
-													variant="outline"
-													disabled={buttonDisabled}
-													className="text-orange-600 border-orange-200 hover:bg-orange-50"
-												>
-													Show Solution
-												</Button>
-											)}
-										</>
-									) : (
-										status === "unauthenticated" && (
-											<div className="w-full flex items-center justify-center text-muted-foreground text-sm">
-												You need to log in / sign up to
-												run code
-											</div>
-										)
-									)}
-								</div>
-							</div>
-						</div>
-					</div>
+					{editorContent("bg-background")}
 				</ResizablePanel>
 
-				<ResizableHandle className="!h-3 bg-transparent hover:bg-blue-800/60 rounded-md" />
+				<ResizableHandle className="!h-3 bg-transparent hover:bg-blue-800/60 rounded-md 2xl:hidden" />
 
 				{/* Test Cases Panel */}
 				<ResizablePanel
@@ -399,7 +276,7 @@ export function EditorPanel({
 					maxSize={70}
 					collapsible
 					collapsedSize={5}
-					className="flex flex-col overflow-hidden"
+					className="flex flex-col overflow-hidden 2xl:hidden"
 					ref={testCasesPanelRef}
 				>
 					<div className="h-full w-full">

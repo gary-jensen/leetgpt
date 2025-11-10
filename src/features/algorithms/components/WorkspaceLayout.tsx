@@ -19,7 +19,6 @@ import { ProblemStatementChat } from "./ProblemStatementChat";
 import { EditorPanel } from "./EditorPanel";
 import { TestCasesPanel } from "./TestCasesPanel";
 import { useTestTab } from "../hooks/useTestTab";
-import { useEffect, useState } from "react";
 
 interface WorkspaceLayoutProps {
 	problem: AlgoProblemDetail;
@@ -68,22 +67,10 @@ export function WorkspaceLayout({
 	onNewSubmission,
 }: WorkspaceLayoutProps) {
 	const processedStatement = useProcessedStatement(problem);
-	const { activeTestTab, setActiveTestTab, testCasesPanelRef } = useTestTab(
+	const { activeTestTab, setActiveTestTab, testCasesPanelRef: separatePanelRef } = useTestTab(
 		testResults,
 		isExecuting
 	);
-	const [is2xl, setIs2xl] = useState(false);
-
-	// Check if screen is 2xl breakpoint (1536px)
-	useEffect(() => {
-		const checkBreakpoint = () => {
-			setIs2xl(window.innerWidth >= 1536);
-		};
-
-		checkBreakpoint();
-		window.addEventListener("resize", checkBreakpoint);
-		return () => window.removeEventListener("resize", checkBreakpoint);
-	}, []);
 
 	return (
 		<div className="w-screen h-screen max-h-screen flex flex-col bg-background-4 overflow-hidden">
@@ -105,7 +92,7 @@ export function WorkspaceLayout({
 							isThinking={isThinking}
 							streamingMessageId={streamingMessageId}
 							relatedLessons={relatedLessons}
-							defaultSize={is2xl ? 33.33 : 50}
+							defaultSize={33.33}
 							onCopyToEditor={setCode}
 							onNewSubmission={onNewSubmission}
 							code={code}
@@ -127,37 +114,29 @@ export function WorkspaceLayout({
 							iframeRef={iframeRef}
 							isThinking={isThinking}
 							problem={problem}
-							hideTestCasesPanel={is2xl}
-							activeTestTab={is2xl ? undefined : activeTestTab}
-							setActiveTestTab={
-								is2xl ? undefined : setActiveTestTab
-							}
-							testCasesPanelRef={
-								is2xl ? undefined : testCasesPanelRef
-							}
+							hideTestCasesPanel={false}
+							activeTestTab={activeTestTab}
+							setActiveTestTab={setActiveTestTab}
+							testCasesPanelRef={undefined}
 						/>
 
-						{/* Right Panel - Test Cases (only visible at 2xl+) */}
-						{is2xl && (
-							<>
-								<ResizableHandle className="w-3 bg-transparent hover:bg-blue-800/60 rounded-md" />
-								<ResizablePanel
-									defaultSize={33.33}
-									minSize={10}
-									maxSize={80}
-									className="flex flex-col overflow-hidden"
-									ref={testCasesPanelRef}
-								>
-									<TestCasesPanel
-										problem={problem}
-										testResults={testResults}
-										activeTestTab={activeTestTab}
-										setActiveTestTab={setActiveTestTab}
-										isExecuting={isExecuting}
-									/>
-								</ResizablePanel>
-							</>
-						)}
+						{/* Right Panel - Test Cases (hidden below 2xl, visible at 2xl+) */}
+						<ResizableHandle className="hidden 2xl:block w-3 bg-transparent hover:bg-blue-800/60 rounded-md" />
+						<ResizablePanel
+							defaultSize={33.33}
+							minSize={10}
+							maxSize={80}
+							className="hidden 2xl:flex flex-col overflow-hidden"
+							ref={separatePanelRef}
+						>
+							<TestCasesPanel
+								problem={problem}
+								testResults={testResults}
+								activeTestTab={activeTestTab}
+								setActiveTestTab={setActiveTestTab}
+								isExecuting={isExecuting}
+							/>
+						</ResizablePanel>
 					</ResizablePanelGroup>
 				</div>
 			</div>
