@@ -286,6 +286,12 @@ export function convertInput(value: any, paramType: string): any {
 			return value; // Already ListNode or null
 		case "TreeNode":
 			if (Array.isArray(value)) {
+				// Reject nested arrays - they indicate an error in input format
+				if (value.length > 0 && Array.isArray(value[0])) {
+					throw new Error(
+						`Invalid TreeNode input: nested array detected. Expected flat array like [1,2,3], but got [[1,2,3]]. Did you accidentally wrap the array in extra brackets?`
+					);
+				}
 				return arrayToTreeNode(value);
 			}
 			return value; // Already TreeNode or null
