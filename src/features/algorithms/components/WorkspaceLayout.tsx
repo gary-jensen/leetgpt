@@ -145,8 +145,8 @@ export function WorkspaceLayout({
 								<ResizableHandle className="w-3 bg-transparent hover:bg-blue-800/60 rounded-md" />
 								<ResizablePanel
 									defaultSize={33.33}
-									minSize={15}
-									maxSize={40}
+									minSize={10}
+									maxSize={80}
 									className="flex flex-col overflow-hidden"
 									ref={testCasesPanelRef}
 								>

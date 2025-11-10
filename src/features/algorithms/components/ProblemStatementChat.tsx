@@ -353,8 +353,8 @@ export function ProblemStatementChat({
 	return (
 		<ResizablePanel
 			defaultSize={defaultSize}
-			minSize={30}
-			maxSize={70}
+			minSize={10}
+			maxSize={80}
 			className="flex flex-col"
 		>
 			<div className="bg-background flex flex-col rounded-2xl border-[#2f2f2f] border-1 overflow-hidden h-full">

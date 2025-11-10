@@ -114,7 +114,7 @@ export function EditorPanel({
 		return (
 			<ResizablePanel
 				defaultSize={33.33}
-				minSize={20}
+				minSize={10}
 				className="flex flex-col overflow-hidden"
 			>
 				<div className="border-1 rounded-2xl overflow-hidden gap-2 h-full">
@@ -260,7 +260,7 @@ export function EditorPanel({
 	return (
 		<ResizablePanel
 			defaultSize={50}
-			minSize={30}
+			minSize={10}
 			className="flex flex-col overflow-hidden"
 		>
 			<ResizablePanelGroup
