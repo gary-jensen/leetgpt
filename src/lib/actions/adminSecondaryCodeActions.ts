@@ -6,6 +6,11 @@ import { getAlgoProblem } from "@/features/algorithms/data";
 import { executeAlgoTests } from "@/lib/execution/algoTestExecutor";
 import OpenAI from "openai";
 import { revalidatePath } from "next/cache";
+import {
+	getSecondaryCodeSystemPrompt,
+	buildSecondaryCodeUserPrompt,
+	buildSecondaryCodePrompt,
+} from "@/lib/prompts/secondaryCode";
 
 const openai = new OpenAI({
 	apiKey: process.env.OPENAI_API_KEY,
@@ -70,7 +75,8 @@ export async function generateSecondaryPassingCode(problemId: string): Promise<{
 		}
 
 		// Build prompt for AI
-		const prompt = buildSecondaryCodePrompt(problem);
+		const problemPrompt = buildSecondaryCodePrompt(problem);
+		const userPrompt = buildSecondaryCodeUserPrompt(problemPrompt);
 
 		// Call OpenAI API
 		const completion = await openai.chat.completions.create({
@@ -78,25 +84,11 @@ export async function generateSecondaryPassingCode(problemId: string): Promise<{
 			messages: [
 				{
 					role: "system",
-					content: `You are an expert at writing algorithm solutions. Generate a non-optimal but correct solution that passes all test cases. The solution should be intentionally suboptimal (e.g., O(n^2) instead of O(n), or using brute force instead of a more elegant approach).`,
+					content: getSecondaryCodeSystemPrompt(),
 				},
 				{
 					role: "user",
-					content: `${prompt}\n\nReturn JSON in this exact format:
-{
-  "javascript": "function name() { /* non-optimal but correct solution */ }"
-}
-
-CRITICAL RULES:
-- The code must be valid, executable JavaScript with NO syntax errors
-- The code must pass ALL test cases for this problem
-- The code should be intentionally non-optimal (worse time/space complexity than the optimal solution)
-- Include the full function code, not just a snippet
-- Use the exact function name and parameter names from the problem
-- Ensure all brackets, parentheses, and braces are properly closed
-- Do NOT include markdown formatting, code blocks, or comments outside the function
-- Return ONLY the JSON object, no markdown, no code blocks, no explanations outside the JSON
-- The JavaScript code must be a complete, runnable function that can be executed directly`,
+					content: userPrompt,
 				},
 			],
 			temperature: 0.3, // Lower temperature for more consistent code
@@ -230,35 +222,3 @@ export async function saveSecondaryPassingCode(
 	}
 }
 
-/**
- * Build prompt for generating secondary passing code
- */
-function buildSecondaryCodePrompt(problem: any): string {
-	let prompt = `Problem: ${problem.title}\n\n`;
-	prompt += `Problem Statement:\n${problem.statementMd}\n\n`;
-
-	if (problem.examplesAndConstraintsMd) {
-		prompt += `Examples and Constraints:\n${problem.examplesAndConstraintsMd}\n\n`;
-	}
-
-	prompt += `Optimal Solution (for reference - DO NOT use this approach):\n`;
-	prompt += `${problem.passingCode?.javascript || "N/A"}\n\n`;
-
-	prompt += `Test Cases (${problem.tests.length} total):\n`;
-	// Show first 3 test cases as examples
-	problem.tests.slice(0, 3).forEach((test: any, i: number) => {
-		prompt += `Test ${i + 1}: Input: ${JSON.stringify(
-			test.input
-		)}, Expected Output: ${JSON.stringify(test.output)}\n`;
-	});
-	prompt += `... (${problem.tests.length - 3} more test cases)\n\n`;
-
-	prompt += `Requirements:\n`;
-	prompt += `- Generate a NON-OPTIMAL but CORRECT solution\n`;
-	prompt += `- The solution should pass all test cases\n`;
-	prompt += `- Use a suboptimal approach (e.g., O(n^2) instead of O(n), brute force instead of elegant solution)\n`;
-	prompt += `- Use the function name and parameter names from the starting code\n`;
-	prompt += `- The code must be syntactically correct and runnable\n`;
-
-	return prompt;
-}

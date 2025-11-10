@@ -3,36 +3,14 @@ import OpenAI from "openai";
 import { getSession } from "@/lib/auth";
 import { checkHourlyLimit } from "@/lib/hourlyLimits";
 import { getAlgoProblem } from "@/features/algorithms/data";
+import {
+	getCoachSystemPrompt,
+	buildStreamContext,
+} from "@/lib/prompts/algoCoach";
 
 const openai = new OpenAI({
 	apiKey: process.env.OPENAI_API_KEY,
 });
-
-const COACH_SYSTEM_PROMPT = `You are a coding mentor for algorithm interview prep. Your job is to guide students without revealing the solution directly.
-
-Style Guidelines:
-- Keep responses SHORT and SWEET - aim for 2-4 sentences max
-- Use markdown formatting to make text easy to read:
-  * Use **bold** for emphasis on key concepts
-  * Use *italics* for gentle suggestions
-  * Use \`code\` backticks for technical terms
-  * Use - for bullet points in lists
-  * Use line breaks to separate ideas
-- Write in a friendly, conversational tone
-- Make complex ideas simple and digestible
-
-Rules:
-1. Give concise hints (<= 200 characters). Prefer Socratic questions over statements.
-2. Never output full code unless explicitly requested to show the solution.
-3. Use chat history to avoid repeating previous hints.
-4. When asked about optimality, describe Big-O complexity and name the pattern (without code).
-5. If tests fail, focus on the smallest failing case or likely bug location.
-6. Be concise, friendly, and constructive.
-7. Help students discover the solution through guided questioning.
-8. Always format your responses with markdown for better readability.
-
-Example good hint: "What **data structure** could help you look up values quickly? Think about *constant-time* operations."
-Example bad hint: "Use a hashmap to store nums[i] as keys and i as values"`;
 
 export async function POST(req: NextRequest) {
 	try {
@@ -120,46 +98,15 @@ export async function POST(req: NextRequest) {
 		}
 
 		// Build context based on type
-		let context = "";
-		if (problem) {
-			context = `Problem: ${problem.title}\n`;
-			context += `Statement: ${problem.statementMd}\n`;
-			context += `Topics: ${problem.topics.join(", ")}\n`;
-			context += `Difficulty: ${problem.difficulty}\n`;
-		}
-
-		if (code) {
-			context += `\nUser's current code:\n${code}\n`;
-		}
-
-		if (type === "hint" && body.failureSummary) {
-			context += `\nTest failures: ${body.failureSummary}\n`;
-		}
-
-		if (chatHistory && chatHistory.length > 0) {
-			context += `\nPrevious conversation:\n`;
-			chatHistory.forEach((msg: any) => {
-				context += `${msg.role}: ${msg.content}\n`;
-			});
-		}
-
-		if (userMessage) {
-			context += `\nUser's question: ${userMessage}\n`;
-		}
-
-		if (type === "hint") {
-			context += `\nProvide a helpful hint to guide the student without revealing the solution directly.`;
-		}
-
-		if (type === "submission" && submissionData) {
-			context += `\nTest Results: ${submissionData.testsPassed}/${submissionData.testsTotal} tests passed\n`;
-			if (submissionData.allPassed) {
-				// Will need to check optimality - for now just pass basic info
-				context += `\nThe user's solution passed all tests. Provide an encouraging response. If you can determine the complexity, mention if there's a more optimal approach without giving specific hints (only if there is a more optimal approach. Sometimes there isn't, so don't talk about optimizing it further. Make it seem like they can move on!). Keep it short (2-4 sentences max).`;
-			} else {
-				context += `\nThe user's solution failed some tests. Provide an encouraging message. Do NOT give hints unless explicitly asked. Just acknowledge their progress and encourage them to keep trying. Keep it short, 1 sentence max. End the response with "Ask me a question if you would like some help!" on a new line`;
-			}
-		}
+		const context = buildStreamContext(
+			problem,
+			type,
+			userMessage,
+			code,
+			chatHistory,
+			type === "hint" ? body.failureSummary : undefined,
+			submissionData
+		);
 
 		// Create streaming response
 		const stream = new ReadableStream({
@@ -170,7 +117,7 @@ export async function POST(req: NextRequest) {
 					const openaiStream = await openai.chat.completions.create({
 						model: "gpt-4o-mini",
 						messages: [
-							{ role: "system", content: COACH_SYSTEM_PROMPT },
+							{ role: "system", content: getCoachSystemPrompt() },
 							{ role: "user", content: context },
 						],
 						temperature: 0.7,

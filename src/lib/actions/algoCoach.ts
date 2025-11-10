@@ -10,36 +10,18 @@ import { getAlgoProblem } from "@/features/algorithms/data";
 import { getSession } from "@/lib/auth";
 import { checkHourlyLimit } from "@/lib/hourlyLimits";
 import { checkRateLimit, getRateLimitKey } from "@/lib/rateLimit";
+import {
+	getCoachSystemPrompt,
+	buildHintContext,
+	buildChatContext,
+	buildSubmissionBaseContext,
+	buildSubmissionSuccessPrompt,
+	buildSubmissionFailurePrompt,
+} from "@/lib/prompts/algoCoach";
 
 const openai = new OpenAI({
 	apiKey: process.env.OPENAI_API_KEY,
 });
-
-const COACH_SYSTEM_PROMPT = `You are a coding mentor for algorithm interview prep. Your job is to guide students without revealing the solution directly.
-
-Style Guidelines:
-- Keep responses SHORT and SWEET - aim for 2-4 sentences max
-- Use markdown formatting to make text easy to read:
-  * Use **bold** for emphasis on key concepts
-  * Use *italics* for gentle suggestions
-  * Use \`code\` backticks for technical terms
-  * Use - for bullet points in lists
-  * Use line breaks to separate ideas
-- Write in a friendly, conversational tone
-- Make complex ideas simple and digestible
-
-Rules:
-1. Give concise hints (<= 200 characters). Prefer Socratic questions over statements.
-2. Never output full code unless explicitly requested to show the solution.
-3. Use chat history to avoid repeating previous hints.
-4. When asked about optimality, describe Big-O complexity and name the pattern (without code).
-5. If tests fail, focus on the smallest failing case or likely bug location.
-6. Be concise, friendly, and constructive.
-7. Help students discover the solution through guided questioning.
-8. Always format your responses with markdown for better readability.
-
-Example good hint: "What **data structure** could help you look up values quickly? Think about *constant-time* operations."
-Example bad hint: "Use a hashmap to store nums[i] as keys and i as values"`;
 
 export async function getHint(
 	problem: AlgoProblemDetail,
@@ -86,7 +68,7 @@ export async function getHint(
 	const completion = await openai.chat.completions.create({
 		model: "gpt-4o-mini",
 		messages: [
-			{ role: "system", content: COACH_SYSTEM_PROMPT },
+			{ role: "system", content: getCoachSystemPrompt() },
 			{ role: "user", content: context },
 		],
 		temperature: 0.7,
@@ -173,34 +155,6 @@ export async function reviewOptimality(
 	};
 }
 
-function buildHintContext(
-	problem: any,
-	code?: string,
-	chatHistory?: ChatMessage[],
-	failureSummary?: string
-): string {
-	let context = `Problem: ${problem.title}\n`;
-	context += `Statement: ${problem.statementMd}\n`;
-	context += `Topics: ${problem.topics.join(", ")}\n`;
-	context += `Difficulty: ${problem.difficulty}\n`;
-
-	if (code) {
-		context += `\nUser's code:\n${code}\n`;
-	}
-
-	if (failureSummary) {
-		context += `\nTest failures: ${failureSummary}\n`;
-	}
-
-	if (chatHistory && chatHistory.length > 0) {
-		context += `\nPrevious conversation:\n`;
-		chatHistory.forEach((msg) => {
-			context += `${msg.role}: ${msg.content}\n`;
-		});
-	}
-
-	return context;
-}
 
 function generateHint(
 	problem: any,
@@ -315,34 +269,19 @@ export async function getChatResponse(
 	}
 
 	// Build context for AI
-	let context = `Problem: ${problem.title}\n`;
-	context += `Statement: ${problem.statementMd}\n`;
-	context += `Topics: ${problem.topics.join(", ")}\n`;
-	context += `Difficulty: ${problem.difficulty}\n`;
-
-	if (code) {
-		context += `\nUser's current code:\n${code}\n`;
-	}
-
-	if (testResults && testResults.length > 0) {
-		const passedCount = testResults.filter((r: any) => r.passed).length;
-		context += `\nTest results: ${passedCount}/${testResults.length} tests passing\n`;
-	}
-
-	if (chatHistory && chatHistory.length > 0) {
-		context += `\nPrevious conversation:\n`;
-		chatHistory.forEach((msg) => {
-			context += `${msg.role}: ${msg.content}\n`;
-		});
-	}
-
-	context += `\nUser's question: ${userMessage}\n`;
+	const context = buildChatContext(
+		problem,
+		userMessage,
+		code,
+		chatHistory,
+		testResults
+	);
 
 	// Call OpenAI API
 	const completion = await openai.chat.completions.create({
 		model: "gpt-4o-mini",
 		messages: [
-			{ role: "system", content: COACH_SYSTEM_PROMPT },
+			{ role: "system", content: getCoachSystemPrompt() },
 			{ role: "user", content: context },
 		],
 		temperature: 0.7,
@@ -396,22 +335,13 @@ export async function getSubmissionResponse(
 		throw new Error("Problem not found");
 	}
 
-	let context = `Problem: ${problem.title}\n`;
-	context += `Statement: ${problem.statementMd}\n`;
-	context += `Topics: ${problem.topics.join(", ")}\n`;
-	context += `Difficulty: ${problem.difficulty}\n`;
-	context += `\nTest Results: ${submissionData.testsPassed}/${submissionData.testsTotal} tests passed\n`;
-
-	if (code) {
-		context += `\nUser's code:\n${code}\n`;
-	}
-
-	if (chatHistory && chatHistory.length > 0) {
-		context += `\nPrevious conversation:\n`;
-		chatHistory.forEach((msg) => {
-			context += `${msg.role}: ${msg.content}\n`;
-		});
-	}
+	// Build base context
+	let context = buildSubmissionBaseContext(
+		problem,
+		submissionData,
+		code,
+		chatHistory
+	);
 
 	// Build prompt based on submission status
 	let userPrompt = "";
@@ -426,22 +356,25 @@ export async function getSubmissionResponse(
 					"javascript"
 				);
 				optimalityInfo = `\nOptimality Review:\n- Current Complexity: ${optimality.currentComplexity}\n- Optimal Complexity: ${optimality.suggestedComplexity}\n- Is Optimal: ${optimality.isOptimal}\n`;
-				context += optimalityInfo;
 			} catch (error) {
 				// console.error("Error reviewing optimality:", error);
 			}
 		}
 
-		userPrompt = `${context}\n\nThe user's solution passed all tests. Provide an encouraging response. If the solution is not optimal (complexity mismatch), give a gentle nudge (e.g., "Your solution runs in O(n²) time. Can you try solving it with O(n) complexity?"). Do NOT give specific suggestions or hints - just mention the complexity difference and encourage trying a more optimal approach. Keep it short (2-4 sentences max).`;
+		userPrompt = buildSubmissionSuccessPrompt(context, optimalityInfo);
 	} else {
-		userPrompt = `${context}\n\nThe user's solution failed some tests (${submissionData.testsPassed}/${submissionData.testsTotal} passed). Provide an encouraging message. Do NOT give hints unless explicitly asked. Just acknowledge their progress and encourage them to keep trying. Keep it short (2-3 sentences max).`;
+		userPrompt = buildSubmissionFailurePrompt(
+			context,
+			submissionData.testsPassed,
+			submissionData.testsTotal
+		);
 	}
 
 	// Call OpenAI API
 	const completion = await openai.chat.completions.create({
 		model: "gpt-4o-mini",
 		messages: [
-			{ role: "system", content: COACH_SYSTEM_PROMPT },
+			{ role: "system", content: getCoachSystemPrompt() },
 			{ role: "user", content: userPrompt },
 		],
 		temperature: 0.7,
