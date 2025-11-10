@@ -254,15 +254,21 @@
 
 ## Summary Order
 
+### Complete
+
 1. **Async execution and execution timeout** - Foundation, affects all execution
 2. **Submission history** - Core feature, can work in parallel with #1
+3. **Sound effects** - Quick UX win, low effort
+4. **Analytics** - Important for understanding usage, medium effort
+5. **Daily limits** - Must be done before Stripe to define premium value
+
+### Todo
+
 3. **Finalize algorithm lesson system** - Complete core system before UX enhancements
-4. **Sound effects** - Quick UX win, low effort
-5. **AI Chat suggestions** - UX enhancement, medium effort
-6. **Feedback button** - Quick feature, good for user input
-7. **Analytics** - Important for understanding usage, medium effort
-8. **Daily limits** - Must be done before Stripe to define premium value
-9. **Stripe/payment** - Final monetization step, depends on #8
+
+4. **AI Chat suggestions** - UX enhancement, medium effort
+5. **Feedback button** - Quick feature, good for user input
+6. **Stripe/payment** - Final monetization step, depends on #8
 
 ## Notes
 

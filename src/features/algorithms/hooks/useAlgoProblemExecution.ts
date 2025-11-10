@@ -170,6 +170,12 @@ export function useAlgoProblemExecution(
 			return;
 		}
 
+		// Require authentication to execute code
+		if (!session?.user?.id) {
+			toast.error("You must be logged in to run code");
+			return;
+		}
+
 		// Check rate limit for BASIC users (8 seconds between runs)
 		const userRole = session?.user?.role || "BASIC";
 		if (userRole === "BASIC" && lastExecutionTimeRef.current !== null) {

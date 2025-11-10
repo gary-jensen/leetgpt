@@ -34,6 +34,7 @@ model User {
     algoProblemProgress    AlgoProblemProgress[]
     algoLessonProgress     AlgoLessonProgress[]
     algoProblemSubmissions AlgoProblemSubmission[]
+    algoProblemFeedback    AlgoProblemFeedback[]
 }
 
 model UserProgress {
@@ -207,4 +208,17 @@ model AlgoProblemSubmission {
 
     @@index([userId, problemId])
     @@index([submittedAt])
+}
+
+model AlgoProblemFeedback {
+    id                String   @id @default(cuid())
+    userId            String?
+    problemId         String
+    issues            String[]
+    additionalFeedback String? @db.Text
+    createdAt         DateTime @default(now())
+    user              User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+    @@index([problemId])
+    @@index([createdAt])
 }

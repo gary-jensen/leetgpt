@@ -5,15 +5,16 @@ import { ChatMarkdownDisplay } from "@/components/workspace/Chat/components/Chat
 import { useRef, useEffect } from "react";
 import ThinkingAnimation from "@/components/workspace/Chat/components/ThinkingAnimation";
 import { SubmissionMessage } from "./SubmissionMessage";
-import {
-	TagIcon,
-	ChevronUp,
-	ChevronDown,
-	ArrowUp,
-} from "lucide-react";
+import { TagIcon, ChevronUp, ChevronDown, ArrowUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import "@/components/workspace/Chat/components/ChatMarkdownDisplay.css";
 import { Button } from "@/components/ui/button";
+import { useSession } from "next-auth/react";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface DescriptionTabProps {
 	problem: AlgoProblemDetail;
@@ -48,7 +49,6 @@ interface DescriptionTabProps {
 	userHasInteractedWithExpandRef: React.MutableRefObject<boolean>;
 }
 
-
 export function DescriptionTab({
 	problem,
 	processedStatement,
@@ -81,6 +81,9 @@ export function DescriptionTab({
 	hasInitializedExpandedStateRef,
 	userHasInteractedWithExpandRef,
 }: DescriptionTabProps) {
+	const { data: session } = useSession();
+	const isLoggedIn = !!session?.user?.id;
+
 	// Auto-scroll to bottom when new messages arrive (but not for initial problem statement/examples)
 	useEffect(() => {
 		// Only auto-scroll if there are actual chat messages beyond the initial ones
@@ -113,7 +116,6 @@ export function DescriptionTab({
 			}
 		});
 	}, [problemStatementMessage, processedStatement, hasUserMessages]);
-
 
 	// Trigger animation when hasUserMessages becomes true for the first time
 	useEffect(() => {
@@ -204,8 +206,7 @@ export function DescriptionTab({
 							? isStickyExpanded
 								? "100vh"
 								: "30vh"
-							: needsExpandCollapse &&
-							  !isExpandedBeforeMessages
+							: needsExpandCollapse && !isExpandedBeforeMessages
 							? "30vh"
 							: "none",
 						transition: isInitialStickyRenderRef.current
@@ -346,8 +347,7 @@ export function DescriptionTab({
 					}
 
 					// Assistant messages - markdown display (left-aligned)
-					const isStreaming =
-						message.id === streamingMessageId;
+					const isStreaming = message.id === streamingMessageId;
 					return (
 						<div
 							key={message.id || index}
@@ -395,23 +395,37 @@ export function DescriptionTab({
 						onChange={(e) => setInputValue(e.target.value)}
 						onKeyPress={handleKeyPress}
 						placeholder="Ask anything"
-						disabled={isThinking}
+						disabled={isThinking || !isLoggedIn}
 						className="flex-1 bg-transparent text-white placeholder:text-white/50 px-3 py-1 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed text-base"
 					/>
 
 					{/* Send Button - Circular with Arrow */}
-					<button
-						type="button"
-						onClick={handleSend}
-						disabled={!inputValue.trim() || isThinking}
-						className="flex items-center justify-center w-8 h-8 rounded-full bg-white hover:bg-white/90 disabled:bg-white/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex-shrink-0 ml-2"
-						aria-label="Send message"
-					>
-						<ArrowUp className="w-4 h-4 text-black" />
-					</button>
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<button
+								type="button"
+								onClick={handleSend}
+								disabled={
+									!inputValue.trim() ||
+									isThinking ||
+									!isLoggedIn
+								}
+								className="flex items-center justify-center w-8 h-8 rounded-full bg-white hover:bg-white/90 disabled:bg-white/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex-shrink-0 ml-2"
+								aria-label="Send message"
+							>
+								<ArrowUp className="w-4 h-4 text-black" />
+							</button>
+						</TooltipTrigger>
+						{!isLoggedIn && (
+							<TooltipContent>
+								<p>
+									You need to log in to use the chat feature
+								</p>
+							</TooltipContent>
+						)}
+					</Tooltip>
 				</div>
 			</div>
 		</div>
 	);
 }
-

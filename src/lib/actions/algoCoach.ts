@@ -9,6 +9,7 @@ import {
 import { getAlgoProblem } from "@/features/algorithms/data";
 import { getSession } from "@/lib/auth";
 import { checkHourlyLimit } from "@/lib/hourlyLimits";
+import { checkRateLimit, getRateLimitKey } from "@/lib/rateLimit";
 
 const openai = new OpenAI({
 	apiKey: process.env.OPENAI_API_KEY,
@@ -125,7 +126,10 @@ export async function reviewOptimality(
 	}
 
 	// Get user role (default to BASIC if not set)
-	const userRole = (session.user.role || "BASIC") as "BASIC" | "PRO" | "ADMIN";
+	const userRole = (session.user.role || "BASIC") as
+		| "BASIC"
+		| "PRO"
+		| "ADMIN";
 
 	// Check hourly limit (optimality reviews use submission limit since they're part of submission flow)
 	const limitCheck = await checkHourlyLimit(
@@ -137,13 +141,17 @@ export async function reviewOptimality(
 		const minutesRemaining = Math.ceil(
 			(limitCheck.resetTime - Date.now()) / 60000
 		);
-		let errorMessage = `You've reached your hourly limit of ${limitCheck.limit} optimality reviews. Please try again in ${minutesRemaining} minute${minutesRemaining !== 1 ? "s" : ""}.`;
-		
+		let errorMessage = `You've reached your hourly limit of ${
+			limitCheck.limit
+		} optimality reviews. Please try again in ${minutesRemaining} minute${
+			minutesRemaining !== 1 ? "s" : ""
+		}.`;
+
 		// Add upgrade suggestion for BASIC users
 		if (userRole === "BASIC") {
 			errorMessage += ` Upgrade to Pro for higher limits!`;
 		}
-		
+
 		throw new Error(errorMessage);
 	}
 

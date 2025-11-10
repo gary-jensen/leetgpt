@@ -10,7 +10,17 @@ import { TestResult } from "./TestResultsDisplay";
 import { TestCasesPanel } from "./TestCasesPanel";
 import { AlgoProblemDetail } from "@/types/algorithm-types";
 import { Button } from "@/components/ui/button";
-import { RotateCcw, Lightbulb } from "lucide-react";
+import {
+	RotateCcw,
+	Lightbulb,
+	MessageSquare,
+	MessageCircleQuestionIcon,
+} from "lucide-react";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useTestTab } from "../hooks/useTestTab";
 import { useSession } from "next-auth/react";
 import type { ImperativePanelHandle } from "react-resizable-panels";
@@ -26,6 +36,7 @@ import {
 	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
+import { FeedbackDialog } from "./FeedbackDialog";
 
 interface EditorPanelProps {
 	code: string;
@@ -122,70 +133,102 @@ export function EditorPanel({
 								</div>
 								{/* Action Buttons Toolbar */}
 								<div className="w-full h-[64px] px-3 bg-background-2 items-center gap-2 border-t border-border flex">
-									<Button
-										onClick={onRun}
-										variant={buttonVariant}
-										disabled={buttonDisabled}
-									>
-										{isExecuting ? "Running..." : "Run"}
-									</Button>
-									<Button
-										onClick={onHint}
-										variant="outline"
-										disabled={buttonDisabled}
-										className="flex items-center gap-2"
-									>
-										<Lightbulb className="w-4 h-4" />
-										Hint
-									</Button>
-									<AlertDialog
-										open={resetDialogOpen}
-										onOpenChange={setResetDialogOpen}
-									>
-										<AlertDialogTrigger asChild>
+									{session?.data?.user?.id ? (
+										<>
 											<Button
+												onClick={onRun}
+												variant={buttonVariant}
+												disabled={buttonDisabled}
+											>
+												{isExecuting
+													? "Running..."
+													: "Run"}
+											</Button>
+											<Button
+												onClick={onHint}
 												variant="outline"
 												disabled={buttonDisabled}
 												className="flex items-center gap-2"
 											>
-												<RotateCcw className="w-4 h-4" />
-												Reset
+												<Lightbulb className="w-4 h-4" />
+												Hint
 											</Button>
-										</AlertDialogTrigger>
-										<AlertDialogContent>
-											<AlertDialogHeader>
-												<AlertDialogTitle>
-													Reset Code Editor
-												</AlertDialogTitle>
-												<AlertDialogDescription>
-													Are you sure you want to
-													reset the code editor? This
-													will clear all your current
-													code and cannot be undone.
-												</AlertDialogDescription>
-											</AlertDialogHeader>
-											<AlertDialogFooter>
-												<AlertDialogCancel variant="ghost">
-													Cancel
-												</AlertDialogCancel>
-												<AlertDialogAction
-													onClick={handleReset}
-													variant="destructive"
+											<AlertDialog
+												open={resetDialogOpen}
+												onOpenChange={
+													setResetDialogOpen
+												}
+											>
+												<AlertDialogTrigger asChild>
+													<Button
+														variant="outline"
+														disabled={
+															buttonDisabled
+														}
+														className="flex items-center gap-2"
+													>
+														<RotateCcw className="w-4 h-4" />
+														Reset
+													</Button>
+												</AlertDialogTrigger>
+												<AlertDialogContent>
+													<AlertDialogHeader>
+														<AlertDialogTitle>
+															Reset Code Editor
+														</AlertDialogTitle>
+														<AlertDialogDescription>
+															Are you sure you
+															want to reset the
+															code editor? This
+															will clear all your
+															current code and
+															cannot be undone.
+														</AlertDialogDescription>
+													</AlertDialogHeader>
+													<AlertDialogFooter>
+														<AlertDialogCancel variant="ghost">
+															Cancel
+														</AlertDialogCancel>
+														<AlertDialogAction
+															onClick={
+																handleReset
+															}
+															variant="destructive"
+														>
+															Reset
+														</AlertDialogAction>
+													</AlertDialogFooter>
+												</AlertDialogContent>
+											</AlertDialog>
+											<FeedbackDialog
+												problemId={problem.id}
+												problemTitle={problem.title}
+											>
+												<Button
+													variant="outline"
+													disabled={buttonDisabled}
+													className="p-2"
+													size="icon"
 												>
-													Reset
-												</AlertDialogAction>
-											</AlertDialogFooter>
-										</AlertDialogContent>
-									</AlertDialog>
-									{isAdmin && (
-										<Button
-											onClick={onShowSolution}
-											variant="outline"
-											disabled={buttonDisabled}
-											className="text-orange-600 border-orange-200 hover:bg-orange-50"
-										>
-											Show Solution
-										</Button>
+													<MessageCircleQuestionIcon className="w-4 h-4" />
+												</Button>
+											</FeedbackDialog>
+											{isAdmin && (
+												<Button
+													onClick={onShowSolution}
+													variant="outline"
+													disabled={buttonDisabled}
+													className="text-orange-600 border-orange-200 hover:bg-orange-50"
+												>
+													Show Solution
+												</Button>
+											)}
+										</>
+									) : (
+										<div className="w-full flex items-center justify-center text-muted-foreground text-sm">
+											You need to log in / sign up to run
+											code
+										</div>
 									)}
 								</div>
 							</div>
@@ -238,70 +281,102 @@ export function EditorPanel({
 								</div>
 								{/* Action Buttons Toolbar */}
 								<div className="w-full h-[64px] px-3 bg-background-2 items-center gap-2 border-t border-border flex">
-									<Button
-										onClick={onRun}
-										variant={buttonVariant}
-										disabled={buttonDisabled}
-									>
-										{isExecuting ? "Running..." : "Run"}
-									</Button>
-									<Button
-										onClick={onHint}
-										variant="outline"
-										disabled={buttonDisabled}
-										className="flex items-center gap-2"
-									>
-										<Lightbulb className="w-4 h-4" />
-										Hint
-									</Button>
-									<AlertDialog
-										open={resetDialogOpen}
-										onOpenChange={setResetDialogOpen}
-									>
-										<AlertDialogTrigger asChild>
+									{session?.data?.user?.id ? (
+										<>
 											<Button
+												onClick={onRun}
+												variant={buttonVariant}
+												disabled={buttonDisabled}
+											>
+												{isExecuting
+													? "Running..."
+													: "Run"}
+											</Button>
+											<Button
+												onClick={onHint}
 												variant="outline"
 												disabled={buttonDisabled}
 												className="flex items-center gap-2"
 											>
-												<RotateCcw className="w-4 h-4" />
-												Reset
+												<Lightbulb className="w-4 h-4" />
+												Hint
 											</Button>
-										</AlertDialogTrigger>
-										<AlertDialogContent>
-											<AlertDialogHeader>
-												<AlertDialogTitle>
-													Reset Code Editor
-												</AlertDialogTitle>
-												<AlertDialogDescription>
-													Are you sure you want to
-													reset the code editor? This
-													will clear all your current
-													code and cannot be undone.
-												</AlertDialogDescription>
-											</AlertDialogHeader>
-											<AlertDialogFooter>
-												<AlertDialogCancel variant="ghost">
-													Cancel
-												</AlertDialogCancel>
-												<AlertDialogAction
-													onClick={handleReset}
-													variant="destructive"
+											<AlertDialog
+												open={resetDialogOpen}
+												onOpenChange={
+													setResetDialogOpen
+												}
+											>
+												<AlertDialogTrigger asChild>
+													<Button
+														variant="outline"
+														disabled={
+															buttonDisabled
+														}
+														className="flex items-center gap-2"
+													>
+														<RotateCcw className="w-4 h-4" />
+														Reset
+													</Button>
+												</AlertDialogTrigger>
+												<AlertDialogContent>
+													<AlertDialogHeader>
+														<AlertDialogTitle>
+															Reset Code Editor
+														</AlertDialogTitle>
+														<AlertDialogDescription>
+															Are you sure you
+															want to reset the
+															code editor? This
+															will clear all your
+															current code and
+															cannot be undone.
+														</AlertDialogDescription>
+													</AlertDialogHeader>
+													<AlertDialogFooter>
+														<AlertDialogCancel variant="ghost">
+															Cancel
+														</AlertDialogCancel>
+														<AlertDialogAction
+															onClick={
+																handleReset
+															}
+															variant="destructive"
+														>
+															Reset
+														</AlertDialogAction>
+													</AlertDialogFooter>
+												</AlertDialogContent>
+											</AlertDialog>
+											<FeedbackDialog
+												problemId={problem.id}
+												problemTitle={problem.title}
+											>
+												<Button
+													variant="outline"
+													disabled={buttonDisabled}
+													className="p-2"
+													size="icon"
 												>
-													Reset
-												</AlertDialogAction>
-											</AlertDialogFooter>
-										</AlertDialogContent>
-									</AlertDialog>
-									{isAdmin && (
-										<Button
-											onClick={onShowSolution}
-											variant="outline"
-											disabled={buttonDisabled}
-											className="text-orange-600 border-orange-200 hover:bg-orange-50"
-										>
-											Show Solution
-										</Button>
+													<MessageSquare className="w-4 h-4" />
+												</Button>
+											</FeedbackDialog>
+											{isAdmin && (
+												<Button
+													onClick={onShowSolution}
+													variant="outline"
+													disabled={buttonDisabled}
+													className="text-orange-600 border-orange-200 hover:bg-orange-50"
+												>
+													Show Solution
+												</Button>
+											)}
+										</>
+									) : (
+										<div className="w-full flex items-center justify-center text-muted-foreground text-sm">
+											You need to log in / sign up to run
+											code
+										</div>
 									)}
 								</div>
 							</div>
