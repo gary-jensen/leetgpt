@@ -56,6 +56,8 @@ interface ProblemStatementChatProps {
 	onNewSubmission?: (
 		handler: (submission: AlgoProblemSubmission) => void
 	) => void;
+	code?: string;
+	testResults?: any[];
 }
 
 export function ProblemStatementChat({
@@ -69,6 +71,8 @@ export function ProblemStatementChat({
 	defaultSize = 50,
 	onCopyToEditor,
 	onNewSubmission,
+	code,
+	testResults,
 }: ProblemStatementChatProps) {
 	const [inputValue, setInputValue] = useState("");
 	const [isTopicsDialogOpen, setIsTopicsDialogOpen] = useState(false);
@@ -550,6 +554,8 @@ export function ProblemStatementChat({
 							userHasInteractedWithExpandRef={
 								userHasInteractedWithExpandRef
 							}
+							code={code}
+							testResults={testResults}
 						/>
 					) : activeTab === "submission" && selectedSubmission ? (
 						<SubmissionDetailTab

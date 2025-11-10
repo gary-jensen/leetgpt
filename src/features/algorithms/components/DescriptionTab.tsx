@@ -15,6 +15,7 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ChatSuggestions } from "./ChatSuggestions";
 
 interface DescriptionTabProps {
 	problem: AlgoProblemDetail;
@@ -47,6 +48,8 @@ interface DescriptionTabProps {
 	isInitialStickyRenderRef: React.MutableRefObject<boolean>;
 	hasInitializedExpandedStateRef: React.MutableRefObject<boolean>;
 	userHasInteractedWithExpandRef: React.MutableRefObject<boolean>;
+	code?: string;
+	testResults?: any[];
 }
 
 export function DescriptionTab({
@@ -80,6 +83,8 @@ export function DescriptionTab({
 	isInitialStickyRenderRef,
 	hasInitializedExpandedStateRef,
 	userHasInteractedWithExpandRef,
+	code,
+	testResults,
 }: DescriptionTabProps) {
 	const { data: session } = useSession();
 	const isLoggedIn = !!session?.user?.id;
@@ -387,6 +392,17 @@ export function DescriptionTab({
 
 			{/* Input - ChatGPT Style */}
 			<div className="bofrder-t border-border p-2 pt-1 pb-1 bg-background">
+				{/* Chat Suggestions */}
+				<ChatSuggestions
+					problem={problem}
+					code={code}
+					testResults={testResults}
+					onSuggestionClick={(message) => {
+						onSendMessage(message);
+					}}
+					isThinking={isThinking}
+					isLoggedIn={isLoggedIn}
+				/>
 				<div className="relative flex items-center bg-[#3f3f3f] rounded-[24px] px-4 py-3 border border-[#505050]/50 shadow-sm">
 					{/* Text Input */}
 					<input

@@ -111,6 +111,8 @@ export function WorkspaceLayout({
 							defaultSize={is2xl ? 33.33 : 50}
 							onCopyToEditor={setCode}
 							onNewSubmission={onNewSubmission}
+							code={code}
+							testResults={testResults}
 						/>
 
 						<ResizableHandle className="w-3 bg-transparent hover:bg-blue-800/60 rounded-md" />
