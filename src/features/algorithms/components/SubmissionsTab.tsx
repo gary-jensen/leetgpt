@@ -90,66 +90,70 @@ export function SubmissionsTab({
 
 			{/* Table Rows */}
 			<div className="flex-1">
-				{submissions.map((submission, index) => (
-					<div
-						key={submission.id}
-						onClick={() => {
-							trackAlgoSubmissionViewed(
-								problemId,
-								submission.id,
-								submission.passed ? "passed" : "failed",
-								submission.submittedAt,
-								true // isOwnSubmission
-							);
-							onSubmissionClick?.(submission);
-						}}
-						className="border-b border-border hover:bg-white/5 transition-colors cursor-pointer"
-					>
-						<div className="grid grid-cols-[1fr_120px_120px_140px] gap-4 px-4 py-3 text-sm">
-							{/* Status */}
-							<div>
-								<span
-									className={cn(
-										"font-medium",
-										submission.passed
-											? "text-emerald-400"
-											: "text-[#ef4743]"
-									)}
-								>
-									{submission.passed
-										? "Accepted"
-										: "Wrong Answer"}
-								</span>
-							</div>
-
-							{/* Language */}
-							<div>
-								<span className="bg-white/10 px-2 py-0.5 rounded text-xs">
-									{formatLanguage(submission.language)}
-								</span>
-							</div>
-
-							{/* Runtime */}
-							<div className="flex items-center gap-1.5">
-								{submission.passed && submission.runtime ? (
-									<>
-										<Clock className="w-3.5 h-3.5 text-muted-foreground" />
-										<span>{submission.runtime} ms</span>
-									</>
-								) : (
-									<span className="text-muted-foreground">
-										N/A
+				{submissions.map((submission, index) => {
+					console.log(submission);
+					return (
+						<div
+							key={submission.id}
+							onClick={() => {
+								trackAlgoSubmissionViewed(
+									problemId,
+									submission.id,
+									submission.passed ? "passed" : "failed",
+									submission.submittedAt,
+									true // isOwnSubmission
+								);
+								onSubmissionClick?.(submission);
+							}}
+							className="border-b border-border hover:bg-white/5 transition-colors cursor-pointer"
+						>
+							<div className="grid grid-cols-[1fr_120px_120px_140px] gap-4 px-4 py-3 text-sm">
+								{/* Status */}
+								<div>
+									<span
+										className={cn(
+											"font-medium",
+											submission.passed
+												? "text-emerald-400"
+												: "text-[#ef4743]"
+										)}
+									>
+										{submission.passed
+											? "Accepted"
+											: "Wrong Answer"}
 									</span>
-								)}
-							</div>
+								</div>
 
-							{/* Date */}
-							<div className="text-muted-foreground">
-								{formatDate(submission.submittedAt)}
+								{/* Language */}
+								<div>
+									<span className="bg-white/10 px-2 py-0.5 rounded text-xs">
+										{formatLanguage(submission.language)}
+									</span>
+								</div>
+
+								{/* Runtime */}
+								<div className="flex items-center gap-1.5">
+									{submission.passed &&
+									submission.runtime != null ? (
+										<>
+											<Clock className="w-3.5 h-3.5 text-muted-foreground" />
+											<span>{submission.runtime} ms</span>
+										</>
+									) : (
+										<span className="text-muted-foreground">
+											N/A
+										</span>
+									)}
+								</div>
+
+								{/* Date */}
+								<div className="text-muted-foreground">
+									{formatDate(submission.submittedAt)}
+								</div>
 							</div>
 						</div>
-					</div>
-				))}
+					);
+				})}
 			</div>
 		</div>
 	);

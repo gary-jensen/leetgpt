@@ -127,7 +127,7 @@ export function SubmissionDetailTab({
 						<Clock className="w-4 h-4 text-muted-foreground" />
 						<span className="text-muted-foreground">Runtime:</span>
 						<span>
-							{submission.passed && submission.runtime
+							{submission.passed && submission.runtime != null
 								? `${submission.runtime} ms`
 								: "N/A"}
 						</span>
