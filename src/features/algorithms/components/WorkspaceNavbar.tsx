@@ -50,13 +50,17 @@ import {
 	TooltipContent,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { Session } from "next-auth";
 
 interface WorkspaceNavbarProps {
 	problemsMeta: AlgoProblemMeta[];
+	session: Session | null;
 }
 
-export function WorkspaceNavbar({ problemsMeta }: WorkspaceNavbarProps) {
-	const { data: session } = useSession();
+export function WorkspaceNavbar({
+	problemsMeta,
+	session,
+}: WorkspaceNavbarProps) {
 	const router = useRouter();
 	const pathname = usePathname();
 	const [drawerOpen, setDrawerOpen] = useState(false);
@@ -567,7 +571,7 @@ export function WorkspaceNavbar({ problemsMeta }: WorkspaceNavbarProps) {
 
 					{/* Right: Auth Button */}
 					<div>
-						<AuthButton />
+						<AuthButton session={session} />
 					</div>
 				</div>
 			</div>

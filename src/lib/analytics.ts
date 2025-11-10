@@ -215,8 +215,8 @@ export const trackAuthSignin = () => {
 	);
 };
 
-export const trackSignInButtonClick = () => {
-	trackEvent("Auth", "sign_in_button_click", undefined, undefined, {
+export const trackSignInButtonClick = (buttonLocation?: string) => {
+	trackEvent("Auth", "sign_in_button_click", buttonLocation, undefined, {
 		timestamp: new Date().toISOString(),
 	});
 };

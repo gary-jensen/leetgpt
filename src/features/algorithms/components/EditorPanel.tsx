@@ -22,7 +22,7 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useTestTab } from "../hooks/useTestTab";
-import { useSession } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import type { ImperativePanelHandle } from "react-resizable-panels";
 import {
 	AlertDialog,
@@ -37,6 +37,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
 import { FeedbackDialog } from "./FeedbackDialog";
+import { Session } from "next-auth";
+import { trackSignInButtonClick } from "@/lib/analytics";
 
 interface EditorPanelProps {
 	code: string;
@@ -54,6 +56,7 @@ interface EditorPanelProps {
 	activeTestTab?: "examples" | "testcase" | "results"; // Passed from parent when hideTestCasesPanel is false
 	setActiveTestTab?: (tab: "examples" | "testcase" | "results") => void; // Passed from parent when hideTestCasesPanel is false
 	testCasesPanelRef?: React.RefObject<ImperativePanelHandle | null>; // Passed from parent when hideTestCasesPanel is false
+	session: Session | null;
 }
 
 export function EditorPanel({
@@ -72,6 +75,7 @@ export function EditorPanel({
 	activeTestTab: propActiveTestTab,
 	setActiveTestTab: propSetActiveTestTab,
 	testCasesPanelRef: propTestCasesPanelRef,
+	session,
 }: EditorPanelProps) {
 	// Only use hook if we need the test cases panel and props aren't provided
 	const hookResult = useTestTab(testResults, isExecuting);
@@ -81,8 +85,8 @@ export function EditorPanel({
 	const testCasesPanelRef =
 		propTestCasesPanelRef ?? hookResult.testCasesPanelRef;
 
-	const session = useSession();
-	const isAdmin = session?.data?.user?.role === "ADMIN";
+	// const session = useSession();
+	const isAdmin = session?.user?.role === "ADMIN";
 	const [resetDialogOpen, setResetDialogOpen] = useState(false);
 
 	const buttonVariant =
@@ -97,6 +101,12 @@ export function EditorPanel({
 	const handleReset = () => {
 		onReset();
 		setResetDialogOpen(false);
+	};
+
+	const handleSignIn = async () => {
+		// Track the signin button click event
+		trackSignInButtonClick("algo-editor-footer");
+		await signIn();
 	};
 
 	// If hiding test cases panel, just show editor
@@ -133,7 +143,7 @@ export function EditorPanel({
 								</div>
 								{/* Action Buttons Toolbar */}
 								<div className="w-full h-[64px] px-3 bg-background-2 items-center gap-2 border-t border-border flex">
-									{session?.data?.user?.id ? (
+									{session?.user?.id ? (
 										<>
 											<Button
 												onClick={onRun}
@@ -203,6 +213,7 @@ export function EditorPanel({
 											<FeedbackDialog
 												problemId={problem.id}
 												problemTitle={problem.title}
+												session={session}
 											>
 												<Button
 													variant="outline"
@@ -226,8 +237,15 @@ export function EditorPanel({
 										</>
 									) : (
 										<div className="w-full flex items-center justify-center text-muted-foreground text-sm">
-											You need to log in / sign up to run
-											code
+											You need to{" "}
+											<Button
+												variant="link"
+												className="px-1 py-0"
+												onClick={handleSignIn}
+											>
+												sign in
+											</Button>{" "}
+											to run code
 										</div>
 									)}
 								</div>
@@ -281,7 +299,7 @@ export function EditorPanel({
 								</div>
 								{/* Action Buttons Toolbar */}
 								<div className="w-full h-[64px] px-3 bg-background-2 items-center gap-2 border-t border-border flex">
-									{session?.data?.user?.id ? (
+									{session?.user?.id ? (
 										<>
 											<Button
 												onClick={onRun}
@@ -351,6 +369,7 @@ export function EditorPanel({
 											<FeedbackDialog
 												problemId={problem.id}
 												problemTitle={problem.title}
+												session={session}
 											>
 												<Button
 													variant="outline"
@@ -358,7 +377,7 @@ export function EditorPanel({
 													className="p-2"
 													size="icon"
 												>
-													<MessageSquare className="w-4 h-4" />
+													<MessageCircleQuestionIcon className="w-4 h-4" />
 												</Button>
 											</FeedbackDialog>
 											{isAdmin && (
@@ -374,8 +393,15 @@ export function EditorPanel({
 										</>
 									) : (
 										<div className="w-full flex items-center justify-center text-muted-foreground text-sm">
-											You need to log in / sign up to run
-											code
+											You need to{" "}
+											<Button
+												variant="link"
+												className="px-1 py-0"
+												onClick={handleSignIn}
+											>
+												sign in
+											</Button>{" "}
+											to run code
 										</div>
 									)}
 								</div>

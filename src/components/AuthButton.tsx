@@ -18,20 +18,24 @@ import {
 import { UserIcon } from "lucide-react";
 import SoundToggle from "./SoundToggle";
 import { cn } from "@/lib/utils";
+import { Session } from "next-auth";
 
 export default function AuthButton({
 	size = "md",
+	session: serverSession,
 }: {
 	size?: "sm" | "md" | "lg";
+	session?: Session | null;
 }) {
-	const { data: session, status } = useSession();
+	const { data: clientSession, status } = useSession();
+	const session = serverSession ?? clientSession;
 
 	// Note: Sign-in tracking is handled in ProgressContext to avoid duplicates
 	// and to properly capture guest ID before migration
 
 	const handleSignIn = async () => {
 		// Track the signin button click event
-		trackSignInButtonClick();
+		trackSignInButtonClick("navbar");
 		await signIn();
 	};
 
@@ -52,6 +56,14 @@ export default function AuthButton({
 			// <Button variant="outline" disabled>
 			// 	Loading...
 			// </Button>
+		);
+	}
+
+	if (status === "unauthenticated") {
+		return (
+			<Button variant="correct" onClick={handleSignIn}>
+				Sign In
+			</Button>
 		);
 	}
 

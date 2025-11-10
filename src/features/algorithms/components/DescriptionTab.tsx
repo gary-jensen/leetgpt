@@ -386,7 +386,7 @@ export function DescriptionTab({
 			</div>
 
 			{/* Input - ChatGPT Style */}
-			<div className="bofrder-t border-border p-2 pt-1 pb-3 bg-background">
+			<div className="bofrder-t border-border p-2 pt-1 pb-1 bg-background">
 				<div className="relative flex items-center bg-[#3f3f3f] rounded-[24px] px-4 py-3 border border-[#505050]/50 shadow-sm">
 					{/* Text Input */}
 					<input

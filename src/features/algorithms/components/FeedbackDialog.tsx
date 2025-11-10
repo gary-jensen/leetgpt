@@ -21,10 +21,12 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Session } from "next-auth";
 
 interface FeedbackDialogProps {
 	problemId: string;
 	problemTitle: string;
+	session?: Session | null;
 	children: React.ReactNode;
 }
 
@@ -40,13 +42,13 @@ const ISSUE_OPTIONS = [
 export function FeedbackDialog({
 	problemId,
 	problemTitle,
+	session,
 	children,
 }: FeedbackDialogProps) {
 	const [open, setOpen] = useState(false);
 	const [selectedIssues, setSelectedIssues] = useState<string[]>([]);
 	const [additionalFeedback, setAdditionalFeedback] = useState("");
 	const [isSubmitting, setIsSubmitting] = useState(false);
-	const { data: session } = useSession();
 
 	const handleIssueToggle = (issue: string) => {
 		setSelectedIssues((prev) =>

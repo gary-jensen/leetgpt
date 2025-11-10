@@ -30,14 +30,17 @@ import { toast } from "sonner";
 import { TopicsDropdown } from "./TopicsDropdown";
 
 import { AlgoProblemMeta } from "@/types/algorithm-types";
+import { Session } from "next-auth";
 
 interface AlgorithmWorkspaceProps {
+	session: Session | null;
 	problem: AlgoProblemDetail;
 	relatedLessons: AlgoLesson[];
 	problemsMeta: AlgoProblemMeta[];
 }
 
 export function AlgorithmWorkspace({
+	session,
 	problem,
 	relatedLessons,
 	problemsMeta,
@@ -51,7 +54,7 @@ export function AlgorithmWorkspace({
 	const chatMessagesRef = useRef<any[]>([]);
 	const previousIsExecutingRef = useRef(false);
 	const submissionCounterRef = useRef(0);
-	const { data: session } = useSession();
+	// const { data: session } = useSession();
 	const progress = useProgress();
 	const addSubmissionHandlerRef = useRef<
 		((submission: AlgoProblemSubmission) => void) | null
@@ -958,6 +961,7 @@ export function AlgorithmWorkspace({
 	return (
 		<>
 			<WorkspaceLayout
+				session={session}
 				problem={problem}
 				code={code}
 				setCode={setCode}
