@@ -21,7 +21,7 @@ interface TestResultsDisplayProps {
 	isExecuting: boolean;
 	iframeRef: React.RefObject<HTMLIFrameElement | null>;
 	handleRunClick: () => void;
-	buttonVariant: "correct" | "wrong" | "run";
+	buttonVariant: "correct" | "wrong" | "submit";
 	buttonDisabled: boolean;
 	onShowSolution?: () => void;
 	showSolutionDisabled?: boolean;

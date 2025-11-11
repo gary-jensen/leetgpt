@@ -159,7 +159,7 @@ export async function updateAlgoProblemProgress(
 		| "completed"
 ): Promise<void> {
 	// Support multiple calling patterns
-	let updateData: {
+	const updateData: {
 		currentCode?: string;
 		chatHistory?: ChatSession[];
 		status?: "not_started" | "in_progress" | "completed";

@@ -118,7 +118,6 @@ export function ProblemsList({ problems, allTopics }: ProblemsListProps) {
 	// Track problem list viewed
 	useEffect(() => {
 		trackAlgoProblemListViewed(problems.length, filteredProblems.length);
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	return (

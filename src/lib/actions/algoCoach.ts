@@ -155,7 +155,6 @@ export async function reviewOptimality(
 	};
 }
 
-
 function generateHint(
 	problem: any,
 	code?: string,
@@ -336,7 +335,7 @@ export async function getSubmissionResponse(
 	}
 
 	// Build base context
-	let context = buildSubmissionBaseContext(
+	const context = buildSubmissionBaseContext(
 		problem,
 		submissionData,
 		code,

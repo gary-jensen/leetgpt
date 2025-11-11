@@ -536,11 +536,11 @@ export function useAlgoProblemExecution(
 
 	const allTestsPassed =
 		testResults.length > 0 && testResults.every((r) => r.passed);
-	const buttonVariant: "correct" | "wrong" | "run" = allTestsPassed
+	const buttonVariant: "correct" | "wrong" | "submit" = allTestsPassed
 		? "correct"
 		: isExecuting
 		? "wrong"
-		: "run";
+		: "submit";
 
 	return {
 		code,

@@ -718,7 +718,6 @@ export function useProblemBuilder(
 			}, 0);
 			return () => clearTimeout(timeoutId);
 		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [state.phase]); // Restart when phase changes to idle (including after failure)
 
 	return {

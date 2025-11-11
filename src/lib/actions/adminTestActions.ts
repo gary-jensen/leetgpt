@@ -372,7 +372,7 @@ export async function testSingleProblem(
 	let returnType = (dbProblem as any).returnType
 		? ((dbProblem as any).returnType as string)
 		: undefined;
-	let functionName = (dbProblem as any).functionName
+	const functionName = (dbProblem as any).functionName
 		? ((dbProblem as any).functionName as string)
 		: undefined;
 

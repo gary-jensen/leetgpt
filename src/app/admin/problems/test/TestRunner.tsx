@@ -79,7 +79,9 @@ export function TestRunner() {
 
 	const handleRunTests = async () => {
 		if (!codeExecutorRef.current) {
-			alert("CodeExecutor not ready. Please wait a moment and try again.");
+			alert(
+				"CodeExecutor not ready. Please wait a moment and try again."
+			);
 			return;
 		}
 
@@ -101,10 +103,11 @@ export function TestRunner() {
 
 				for (const language of problem.languages) {
 					const passingCode = problem.passingCode[language];
-					const secondaryPassingCode = problem.secondaryPassingCode?.[language];
+					const secondaryPassingCode =
+						problem.secondaryPassingCode?.[language];
 
 					// Test primary code
-					let primaryResult = {
+					const primaryResult = {
 						language,
 						passed: false,
 						error: undefined as string | undefined,
@@ -123,24 +126,29 @@ export function TestRunner() {
 							);
 
 							if (testResult.status === "error") {
-								primaryResult.error = testResult.message || "Unknown error";
+								primaryResult.error =
+									testResult.message || "Unknown error";
 							} else {
-								const failedTestCases = testResult.results.filter(
-									(r) => !r.passed
-								);
-								primaryResult.passed = failedTestCases.length === 0;
-								primaryResult.failedTestCasesCount = failedTestCases.length;
-								primaryResult.failedTestCases = failedTestCases.map((tc) => ({
-									case: tc.case,
-									input: tc.input,
-									expected: tc.expected,
-									actual: tc.actual,
-									error: tc.error,
-								}));
+								const failedTestCases =
+									testResult.results.filter((r) => !r.passed);
+								primaryResult.passed =
+									failedTestCases.length === 0;
+								primaryResult.failedTestCasesCount =
+									failedTestCases.length;
+								primaryResult.failedTestCases =
+									failedTestCases.map((tc) => ({
+										case: tc.case,
+										input: tc.input,
+										expected: tc.expected,
+										actual: tc.actual,
+										error: tc.error,
+									}));
 							}
 						} catch (error) {
 							primaryResult.error =
-								error instanceof Error ? error.message : "Unknown error";
+								error instanceof Error
+									? error.message
+									: "Unknown error";
 						}
 					} else {
 						primaryResult.error = `No passingCode found for language: ${language}`;
@@ -161,35 +169,40 @@ export function TestRunner() {
 							if (testResult.status === "error") {
 								secondaryValidation = {
 									passed: false,
-									error: testResult.message || "Unknown error",
+									error:
+										testResult.message || "Unknown error",
 									failedTestCasesCount: 0,
 									failedTestCases: [],
 								};
 							} else {
-								const failedTestCases = testResult.results.filter(
-									(r) => !r.passed
-								);
+								const failedTestCases =
+									testResult.results.filter((r) => !r.passed);
 								secondaryValidation = {
 									passed: failedTestCases.length === 0,
 									error:
 										failedTestCases.length === 0
 											? undefined
 											: `Secondary code failed ${failedTestCases.length} test cases`,
-									failedTestCasesCount: failedTestCases.length,
-									failedTestCases: failedTestCases.map((tc) => ({
-										case: tc.case,
-										input: tc.input,
-										expected: tc.expected,
-										actual: tc.actual,
-										error: tc.error,
-									})),
+									failedTestCasesCount:
+										failedTestCases.length,
+									failedTestCases: failedTestCases.map(
+										(tc) => ({
+											case: tc.case,
+											input: tc.input,
+											expected: tc.expected,
+											actual: tc.actual,
+											error: tc.error,
+										})
+									),
 								};
 							}
 						} catch (error) {
 							secondaryValidation = {
 								passed: false,
 								error:
-									error instanceof Error ? error.message : "Unknown error",
+									error instanceof Error
+										? error.message
+										: "Unknown error",
 								failedTestCasesCount: 0,
 								failedTestCases: [],
 							};
@@ -202,7 +215,9 @@ export function TestRunner() {
 					});
 				}
 
-				const allLanguagesPassed = languages.every((lang) => lang.passed);
+				const allLanguagesPassed = languages.every(
+					(lang) => lang.passed
+				);
 				if (allLanguagesPassed) {
 					passedCount++;
 				} else {
@@ -322,7 +337,9 @@ export function TestRunner() {
 			// Fetch problem data for the specified IDs
 			try {
 				const allProblems = await getAllProblemsFormatted();
-				const problemsToTest = allProblems.filter((p) => ids.includes(p.id));
+				const problemsToTest = allProblems.filter((p) =>
+					ids.includes(p.id)
+				);
 
 				// Test each problem client-side (run in background, don't await)
 				Promise.all(
@@ -335,7 +352,7 @@ export function TestRunner() {
 								problem.secondaryPassingCode?.[language];
 
 							// Test primary code
-							let primaryResult = {
+							const primaryResult = {
 								language,
 								passed: false,
 								error: undefined as string | undefined,
@@ -355,27 +372,31 @@ export function TestRunner() {
 
 									if (testResult.status === "error") {
 										primaryResult.error =
-											testResult.message || "Unknown error";
+											testResult.message ||
+											"Unknown error";
 									} else {
-										const failedTestCases = testResult.results.filter(
-											(r) => !r.passed
-										);
-										primaryResult.passed = failedTestCases.length === 0;
+										const failedTestCases =
+											testResult.results.filter(
+												(r) => !r.passed
+											);
+										primaryResult.passed =
+											failedTestCases.length === 0;
 										primaryResult.failedTestCasesCount =
 											failedTestCases.length;
-										primaryResult.failedTestCases = failedTestCases.map(
-											(tc) => ({
+										primaryResult.failedTestCases =
+											failedTestCases.map((tc) => ({
 												case: tc.case,
 												input: tc.input,
 												expected: tc.expected,
 												actual: tc.actual,
 												error: tc.error,
-											})
-										);
+											}));
 									}
 								} catch (error) {
 									primaryResult.error =
-										error instanceof Error ? error.message : "Unknown error";
+										error instanceof Error
+											? error.message
+											: "Unknown error";
 								}
 							}
 
@@ -394,28 +415,34 @@ export function TestRunner() {
 									if (testResult.status === "error") {
 										secondaryValidation = {
 											passed: false,
-											error: testResult.message || "Unknown error",
+											error:
+												testResult.message ||
+												"Unknown error",
 											failedTestCasesCount: 0,
 											failedTestCases: [],
 										};
 									} else {
-										const failedTestCases = testResult.results.filter(
-											(r) => !r.passed
-										);
+										const failedTestCases =
+											testResult.results.filter(
+												(r) => !r.passed
+											);
 										secondaryValidation = {
-											passed: failedTestCases.length === 0,
+											passed:
+												failedTestCases.length === 0,
 											error:
 												failedTestCases.length === 0
 													? undefined
 													: `Secondary code failed ${failedTestCases.length} test cases`,
-											failedTestCasesCount: failedTestCases.length,
-											failedTestCases: failedTestCases.map((tc) => ({
-												case: tc.case,
-												input: tc.input,
-												expected: tc.expected,
-												actual: tc.actual,
-												error: tc.error,
-											})),
+											failedTestCasesCount:
+												failedTestCases.length,
+											failedTestCases:
+												failedTestCases.map((tc) => ({
+													case: tc.case,
+													input: tc.input,
+													expected: tc.expected,
+													actual: tc.actual,
+													error: tc.error,
+												})),
 										};
 									}
 								} catch (error) {
@@ -466,7 +493,8 @@ export function TestRunner() {
 							setSummary({
 								...summary,
 								passedProblems,
-								failedProblems: newResults.length - passedProblems,
+								failedProblems:
+									newResults.length - passedProblems,
 							});
 						}
 

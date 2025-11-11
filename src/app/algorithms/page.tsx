@@ -16,10 +16,9 @@ export default async function AlgorithmsPage() {
 	const session = await getSession();
 
 	// Get user progress if authenticated
-	let progress = null;
 	let recentProblem = null;
 	let recentLesson = null;
-	let stats = {
+	const stats = {
 		problemsCompleted: 0,
 		problemsInProgress: 0,
 		lessonsCompleted: 0,

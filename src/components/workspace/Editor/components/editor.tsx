@@ -67,7 +67,7 @@ const Editor = ({
 		? "correct"
 		: isThinking
 		? "wrong"
-		: "run";
+		: "submit";
 
 	const buttonDisabled =
 		!isInitialized || isExecuting || isThinking || isDebouncing;

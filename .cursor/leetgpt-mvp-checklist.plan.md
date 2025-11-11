@@ -272,11 +272,11 @@
 -   **Analytics** - Important for understanding usage, medium effort
 -   **Feedback button** - Quick feature, good for user input
 -   **Daily limits** - Must be done before Stripe to define premium value
+-   **AI Chat suggestions** - UX enhancement, medium effort
 
 ### Todo
 
 -   **Finalize algorithm lesson system** - Complete core system before UX enhancements
--   **AI Chat suggestions** - UX enhancement, medium effort
 -   **Stripe/payment** - Final monetization step, depends on #8
 
 ## Notes

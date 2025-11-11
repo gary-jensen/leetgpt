@@ -33,7 +33,7 @@ interface WorkspaceLayoutProps {
 	onHint: () => void;
 	onShowSolution: () => void;
 	iframeRef: React.RefObject<HTMLIFrameElement | null>;
-	buttonVariant: "correct" | "wrong" | "run";
+	buttonVariant: "correct" | "wrong" | "submit";
 	buttonDisabled: boolean;
 	// AI Chat props
 	chatMessages: any[];
