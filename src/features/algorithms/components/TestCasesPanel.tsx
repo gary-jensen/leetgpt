@@ -364,18 +364,20 @@ function TestResultsTab({
 	processedInputs,
 	isExecuting = false,
 }: TestResultsTabProps) {
+	// Show loading state while executing, even if we have test results
+	if (isExecuting) {
+		return (
+			<div className="flex-1 flex flex-col items-center justify-center h-full mb-16">
+				<div className="flex items-center gap-2 text-muted-foreground">
+					<Clock className="w-5 h-5 animate-spin text-primary" />
+					<span>Running tests...</span>
+				</div>
+			</div>
+		);
+	}
+
 	const status = getOverallStatus(testResults);
 	if (status === "pending") {
-		if (isExecuting) {
-			return (
-				<div className="flex-1 flex flex-col items-center justify-center h-full mb-16">
-					<div className="flex items-center gap-2 text-muted-foreground">
-						<Clock className="w-5 h-5 animate-spin text-primary" />
-						<span>Running tests...</span>
-					</div>
-				</div>
-			);
-		}
 		return (
 			<div className="flex-1 flex flex-col items-center justify-center h-full mb-16">
 				You must run your code first.

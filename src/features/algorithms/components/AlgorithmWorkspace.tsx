@@ -73,13 +73,16 @@ export function AlgorithmWorkspace({
 		setCode,
 		testResults,
 		isExecuting,
+		executionType,
 		iframeRef,
 		executeCode,
+		runTestsOnly,
 		resetCode,
 		showSolution,
 		buttonVariant,
 		buttonDisabled,
 		allTestsPassed,
+		isTestOnlyRunRef,
 	} = useAlgoProblemExecution(problem, (submission) => {
 		// Call the handler registered by ProblemStatementChat
 		if (addSubmissionHandlerRef.current) {
@@ -129,6 +132,14 @@ export function AlgorithmWorkspace({
 	useEffect(() => {
 		// Only create submission message after execution completes (transition from executing to done)
 		if (!isExecuting && previousIsExecutingRef.current) {
+			// Skip creating chat message if this was a test-only run
+			if (isTestOnlyRunRef?.current) {
+				// Reset the flag after checking
+				isTestOnlyRunRef.current = false;
+				previousIsExecutingRef.current = isExecuting;
+				return;
+			}
+
 			// Create submission message if we have test results OR if execution just finished
 			// This ensures errors are shown even if testResults is empty or errors occurred
 			if (testResults.length > 0) {
@@ -963,7 +974,9 @@ export function AlgorithmWorkspace({
 				setCode={setCode}
 				testResults={testResults}
 				isExecuting={isExecuting}
-				onRun={executeCode}
+				executionType={executionType}
+				onRun={runTestsOnly}
+				onSubmit={executeCode}
 				onReset={resetCode}
 				onHint={handleHint}
 				onShowSolution={showSolution}

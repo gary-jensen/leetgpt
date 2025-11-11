@@ -28,6 +28,9 @@ export function useAlgoProblemExecution(
 ) {
 	const [testResults, setTestResults] = useState<TestResult[]>([]);
 	const [isExecuting, setIsExecuting] = useState(false);
+	const [executionType, setExecutionType] = useState<"run" | "submit" | null>(
+		null
+	);
 	const [code, setCode] = useState(problem?.startingCode?.javascript || "");
 	const { data: session } = useSession();
 	const progress = useProgress();
@@ -35,6 +38,7 @@ export function useAlgoProblemExecution(
 	const problemStartTimeRef = useRef<number | null>(null);
 	const initialCodeRef = useRef<string>("");
 	const lastExecutionTimeRef = useRef<number | null>(null);
+	const isTestOnlyRunRef = useRef(false);
 
 	// Initialize problem start time and initial code
 	useEffect(() => {
@@ -187,7 +191,9 @@ export function useAlgoProblemExecution(
 					(MIN_RUN_INTERVAL_MS - timeSinceLastRun) / 1000
 				);
 				toast.error(
-					`You are submitting too frequently. Please wait ${secondsRemaining} second${secondsRemaining !== 1 ? "s" : ""} before running again. Upgrade to Pro to remove this limit.`
+					`You are submitting too frequently. Please wait ${secondsRemaining} second${
+						secondsRemaining !== 1 ? "s" : ""
+					} before running again. Upgrade to Pro to remove this limit.`
 				);
 				return;
 			}
@@ -231,7 +237,9 @@ export function useAlgoProblemExecution(
 
 		setIsExecuting(true);
 		setTestResults([]);
-		
+		setExecutionType("submit");
+		isTestOnlyRunRef.current = false; // Mark as full submission
+
 		// Update last execution time
 		lastExecutionTimeRef.current = Date.now();
 
@@ -377,7 +385,7 @@ export function useAlgoProblemExecution(
 		} finally {
 			setIsExecuting(false);
 		}
-	}, [code, problem, session?.user?.id]);
+	}, [code, problem, session?.user?.id, progress, onSubmissionCreated]);
 
 	const resetCode = useCallback(() => {
 		if (!problem) return;
@@ -387,8 +395,127 @@ export function useAlgoProblemExecution(
 			: undefined;
 		setCode(problem.startingCode.javascript || "");
 		setTestResults([]);
+		setExecutionType(null);
 		trackAlgoCodeReset(problem.id, timeSinceStart, hadModifications);
 	}, [problem, code]);
+
+	const runTestsOnly = useCallback(async () => {
+		if (!problem || !code.trim()) {
+			setTestResults([]);
+			return;
+		}
+
+		// Require authentication to execute code
+		if (!session?.user?.id) {
+			toast.error("You must be logged in to run code");
+			return;
+		}
+
+		// Ensure CodeExecutor is initialized with iframe
+		if (!codeExecutorRef.current) {
+			if (iframeRef.current) {
+				codeExecutorRef.current = new CodeExecutor();
+				codeExecutorRef.current.setIframe(iframeRef.current);
+			} else {
+				// Iframe not available, show error
+				setTestResults([
+					{
+						case: 1,
+						passed: false,
+						input: problem.tests[0]?.input || [],
+						expected: problem.tests[0]?.output,
+						error: "Code executor not ready. Please wait a moment and try again.",
+					},
+				]);
+				return;
+			}
+		} else if (iframeRef.current) {
+			// Ensure iframe is set (in case it changed)
+			codeExecutorRef.current.setIframe(iframeRef.current);
+		}
+
+		if (!codeExecutorRef.current) {
+			setTestResults([
+				{
+					case: 1,
+					passed: false,
+					input: problem.tests[0]?.input || [],
+					expected: problem.tests[0]?.output,
+					error: "Code executor not ready. Please wait a moment and try again.",
+				},
+			]);
+			return;
+		}
+
+		setIsExecuting(true);
+		setTestResults([]);
+		setExecutionType("run");
+		isTestOnlyRunRef.current = true; // Mark as test-only run
+
+		try {
+			// Execute only first 5 test cases
+			const result = await executeAlgoTests(
+				problem,
+				code,
+				"javascript",
+				10000,
+				codeExecutorRef.current,
+				5 // maxTests: 5
+			);
+
+			if (result.status === "error") {
+				setTestResults([
+					{
+						case: 1,
+						passed: false,
+						input: problem.tests[0]?.input || [],
+						expected: problem.tests[0]?.output,
+						error: result.message || "Unknown error",
+					},
+				]);
+			} else {
+				// Format results for our component
+				const formattedResults: TestResult[] = result.results.map(
+					(testResult) => ({
+						case: testResult.case,
+						passed: testResult.passed,
+						input: testResult.input,
+						expected: testResult.expected,
+						actual: testResult.actual,
+						error: testResult.error,
+						runtime: testResult.runtime,
+					})
+				);
+
+				setTestResults(formattedResults);
+
+				// Play sound effects based on test results
+				if (formattedResults.length > 0) {
+					const passed = formattedResults.every((r) => r.passed);
+					if (passed) {
+						playSuccessSound();
+					} else {
+						playErrorSound();
+					}
+				}
+			}
+		} catch (error) {
+			setTestResults([
+				{
+					case: 1,
+					passed: false,
+					input: problem.tests[0]?.input || [],
+					expected: problem.tests[0]?.output,
+					error:
+						error instanceof Error
+							? error.message
+							: "Unknown error",
+				},
+			]);
+		} finally {
+			setIsExecuting(false);
+		}
+	}, [code, problem, session?.user?.id]);
 
 	const showSolution = useCallback(() => {
 		if (!problem) return;
@@ -420,12 +547,15 @@ export function useAlgoProblemExecution(
 		setCode,
 		testResults,
 		isExecuting,
+		executionType,
 		iframeRef,
 		executeCode,
+		runTestsOnly,
 		resetCode,
 		showSolution,
 		buttonVariant,
 		buttonDisabled: isExecuting || !code.trim(),
 		allTestsPassed,
+		isTestOnlyRunRef,
 	};
 }

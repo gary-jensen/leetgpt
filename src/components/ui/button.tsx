@@ -11,7 +11,16 @@ const buttonVariants = cva(
 			variant: {
 				default:
 					"bg-primary text-primary-foreground hover:bg-primary/90",
-				run: "bg-green-600 text-white hover:bg-green-600/70",
+				run: "bg-white/15 text-white hover:bg-white/20",
+				submit: "bg-green-600 text-white hover:bg-green-600/70",
+				runCorrect:
+					"bg-green-600 disabled:opacity-100 text-white hover:bg-green-600/70 button-run-glow-green",
+				runWrong:
+					"bg-red-600 disabled:opacity-100 text-white hover:bg-red-600/70 button-run-glow-red",
+				submitCorrect:
+					"bg-green-600 disabled:opacity-100 text-white hover:bg-green-600/70 button-submit-glow-green",
+				submitWrong:
+					"bg-red-600 disabled:opacity-100 text-white hover:bg-red-600/70 button-submit-glow-red",
 				correct:
 					"bg-green-600 disabled:opacity-100 text-white hover:bg-green-600/70 button-glow-green",
 				wrong: "bg-red-600 disabled:opacity-100 text-white hover:bg-red-600/70 button-glow-red",

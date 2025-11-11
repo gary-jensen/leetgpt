@@ -61,10 +61,12 @@ export function SubmissionsTab({
 
 	if (submissions.length === 0) {
 		return (
-			<div className="flex-1 flex items-center justify-center">
-				<p className="text-muted-foreground">
-					No submissions yet. Run your code to see your submission
-					history here.
+			<div className="flex-1 flex flex-col items-center justify-center">
+				<p className="text-muted-foreground text-center">
+					No submissions yet.
+				</p>
+				<p className="text-muted-foreground text-center">
+					Run your code to see your submission history here.
 				</p>
 			</div>
 		);

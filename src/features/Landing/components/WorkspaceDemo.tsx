@@ -41,7 +41,7 @@ export default function WorkspaceDemo() {
 		? "correct"
 		: isThinking
 		? "wrong"
-		: "run";
+		: "submit";
 
 	const buttonDisabled = isExecuting || isThinking;
 

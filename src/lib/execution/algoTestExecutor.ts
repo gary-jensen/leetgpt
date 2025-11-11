@@ -31,7 +31,8 @@ export async function executeAlgoTests(
 	code: string,
 	language: string = "javascript",
 	timeoutMs: number = 10000,
-	codeExecutor?: CodeExecutor
+	codeExecutor?: CodeExecutor,
+	maxTests?: number
 ): Promise<AlgoExecutionResult> {
 	if (!codeExecutor) {
 		return {
@@ -46,7 +47,8 @@ export async function executeAlgoTests(
 		problem,
 		code,
 		timeoutMs,
-		codeExecutor
+		codeExecutor,
+		maxTests
 	);
 }
 
@@ -57,13 +59,15 @@ async function executeAlgoTestsWithCodeExecutor(
 	problem: AlgoProblemDetail,
 	code: string,
 	timeoutMs: number,
-	codeExecutor: CodeExecutor
+	codeExecutor: CodeExecutor,
+	maxTests?: number
 ): Promise<AlgoExecutionResult> {
 	// Generate execution script
 	const executionScript = generateAlgoTestExecutionScript(
 		problem,
 		code,
-		timeoutMs
+		timeoutMs,
+		maxTests
 	);
 
 	// Execute using CodeExecutor with custom script
@@ -250,7 +254,8 @@ export function createFunctionFromCode(
 function generateAlgoTestExecutionScript(
 	problem: AlgoProblemDetail,
 	code: string,
-	timeoutMs: number
+	timeoutMs: number,
+	maxTests?: number
 ): string {
 	const functionName =
 		problem.functionName ||
@@ -796,8 +801,10 @@ function generateAlgoTestExecutionScript(
 					throw new Error('Function ' + functionName + ' not found. Available functions: ' + (available || 'none'));
 				}
 				
-				// Run all test cases
-				for (let i = 0; i < problem.tests.length; i++) {
+				// Run test cases (limited by maxTests if provided)
+				${maxTests !== undefined ? `const maxTests = ${maxTests};` : ''}
+				const testLimit = ${maxTests !== undefined ? `Math.min(problem.tests.length, ${maxTests})` : 'problem.tests.length'};
+				for (let i = 0; i < testLimit; i++) {
 					// Check for cancellation before each test
 					if (cancelled) {
 						break;

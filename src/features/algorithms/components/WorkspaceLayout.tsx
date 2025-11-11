@@ -26,7 +26,9 @@ interface WorkspaceLayoutProps {
 	setCode: (code: string) => void;
 	testResults: TestResult[];
 	isExecuting: boolean;
+	executionType?: "run" | "submit" | null;
 	onRun: () => void;
+	onSubmit: () => void;
 	onReset: () => void;
 	onHint: () => void;
 	onShowSolution: () => void;
@@ -51,7 +53,9 @@ export function WorkspaceLayout({
 	setCode,
 	testResults,
 	isExecuting,
+	executionType,
 	onRun,
+	onSubmit,
 	onReset,
 	onHint,
 	onShowSolution,
@@ -67,10 +71,11 @@ export function WorkspaceLayout({
 	onNewSubmission,
 }: WorkspaceLayoutProps) {
 	const processedStatement = useProcessedStatement(problem);
-	const { activeTestTab, setActiveTestTab, testCasesPanelRef: separatePanelRef } = useTestTab(
-		testResults,
-		isExecuting
-	);
+	const {
+		activeTestTab,
+		setActiveTestTab,
+		testCasesPanelRef: separatePanelRef,
+	} = useTestTab(testResults, isExecuting);
 
 	return (
 		<div className="w-screen h-screen max-h-screen flex flex-col bg-background-4 overflow-hidden">
@@ -107,7 +112,9 @@ export function WorkspaceLayout({
 							setCode={setCode}
 							testResults={testResults}
 							isExecuting={isExecuting}
+							executionType={executionType}
 							onRun={onRun}
+							onSubmit={onSubmit}
 							onReset={onReset}
 							onHint={onHint}
 							onShowSolution={onShowSolution}

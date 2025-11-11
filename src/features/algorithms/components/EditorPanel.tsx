@@ -25,7 +25,7 @@ import {
 	AlertDialogTitle,
 	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { FeedbackDialog } from "./FeedbackDialog";
 import {
 	Tooltip,
@@ -38,7 +38,9 @@ interface EditorPanelProps {
 	setCode: (code: string) => void;
 	testResults: TestResult[];
 	isExecuting: boolean;
+	executionType?: "run" | "submit" | null;
 	onRun: () => void;
+	onSubmit: () => void;
 	onReset: () => void;
 	onHint: () => void;
 	onShowSolution: () => void;
@@ -56,7 +58,9 @@ export function EditorPanel({
 	setCode,
 	testResults,
 	isExecuting,
+	executionType,
 	onRun,
+	onSubmit,
 	onReset,
 	onHint,
 	onShowSolution,
@@ -79,15 +83,84 @@ export function EditorPanel({
 	const { data: session, status } = useSession();
 	const isAdmin = session?.user?.role === "ADMIN";
 	const [resetDialogOpen, setResetDialogOpen] = useState(false);
+	const [showGlow, setShowGlow] = useState<"run" | "submit" | null>(null);
+	const glowTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+	const previousIsExecutingRef = useRef(isExecuting);
 
-	const buttonVariant =
-		testResults.length > 0 && testResults.every((r) => r.passed)
-			? "correct"
-			: isThinking
-			? "wrong"
-			: "run";
+	// Trigger glow animation when execution finishes
+	useEffect(() => {
+		// When execution transitions from true to false and we have results
+		if (
+			!isExecuting &&
+			previousIsExecutingRef.current &&
+			executionType &&
+			testResults.length > 0
+		) {
+			// Show glow immediately
+			setShowGlow(executionType);
+
+			// Clear any existing timeout
+			if (glowTimeoutRef.current) {
+				clearTimeout(glowTimeoutRef.current);
+			}
+
+			// Hide glow after 1s (animation duration) and return to original colors
+			glowTimeoutRef.current = setTimeout(() => {
+				setShowGlow(null);
+			}, 1000);
+		} else if (isExecuting) {
+			// Clear glow when execution starts
+			setShowGlow(null);
+			if (glowTimeoutRef.current) {
+				clearTimeout(glowTimeoutRef.current);
+			}
+		}
+
+		// Update previous execution state
+		previousIsExecutingRef.current = isExecuting;
+
+		return () => {
+			if (glowTimeoutRef.current) {
+				clearTimeout(glowTimeoutRef.current);
+			}
+		};
+	}, [isExecuting, executionType, testResults.length]);
+
+	// Determine button variants based on execution type and results
+	const allTestsPassed =
+		testResults.length > 0 && testResults.every((r) => r.passed);
+	const hasResults = testResults.length > 0;
+
+	// Run button: grey (outline) when not executing, glow variants during animation, then back to outline
+	const runButtonVariant = isExecuting
+		? "outline"
+		: showGlow === "run" && hasResults
+		? allTestsPassed
+			? "runCorrect"
+			: "runWrong"
+		: "run";
+
+	// Submit button: run variant when not executing, glow variants during animation, then back to run
+	const submitButtonVariant = isExecuting
+		? "run"
+		: showGlow === "submit" && hasResults
+		? allTestsPassed
+			? "submitCorrect"
+			: "submitWrong"
+		: "submit";
 
 	const buttonDisabled = isExecuting || isThinking;
+
+	// Button text logic
+	const getRunButtonText = () => {
+		if (isExecuting) return "Pending...";
+		return "Run";
+	};
+
+	const getSubmitButtonText = () => {
+		if (isExecuting) return "Pending...";
+		return "Submit";
+	};
 
 	const handleReset = () => {
 		onReset();
@@ -120,13 +193,30 @@ export function EditorPanel({
 		<div className="w-full h-[64px] px-3 bg-background-2 items-center justify-between gap-2 border-t border-border flex">
 			{status === "loading" || session?.user?.id ? (
 				<>
-					<Button
-						onClick={onRun}
-						variant={buttonVariant}
-						disabled={buttonDisabled}
-					>
-						{isExecuting ? "Running..." : "Run"}
-					</Button>
+					<div className="flex items-center gap-2">
+						{isExecuting ? (
+							<div className="flex items-center justify-center px-4 py-2 text-muted-foreground">
+								Pending...
+							</div>
+						) : (
+							<>
+								<Button
+									onClick={onRun}
+									variant={runButtonVariant}
+									disabled={buttonDisabled}
+								>
+									{getRunButtonText()}
+								</Button>
+								<Button
+									onClick={onSubmit}
+									variant={submitButtonVariant}
+									disabled={buttonDisabled}
+								>
+									{getSubmitButtonText()}
+								</Button>
+							</>
+						)}
+					</div>
 					{/* <Button
 						onClick={onHint}
 						variant="outline"
@@ -142,7 +232,7 @@ export function EditorPanel({
 								onClick={onShowSolution}
 								variant="outline"
 								disabled={buttonDisabled}
-								className="text-orange-600 border-orange-200 hover:bg-orange-50"
+								className="opacity-0 disabled:opacity-0 hover:opacity-100 !text-orange-600 border-orange-600 duration-0"
 							>
 								Show Solution
 							</Button>
@@ -151,9 +241,9 @@ export function EditorPanel({
 							open={resetDialogOpen}
 							onOpenChange={setResetDialogOpen}
 						>
-							<AlertDialogTrigger asChild>
-								<Tooltip>
-									<TooltipTrigger asChild>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<AlertDialogTrigger asChild>
 										<Button
 											variant="outline"
 											disabled={buttonDisabled}
@@ -161,12 +251,12 @@ export function EditorPanel({
 										>
 											<RotateCcw className="w-4 h-4" />
 										</Button>
-									</TooltipTrigger>
-									<TooltipContent>
-										<p>Reset</p>
-									</TooltipContent>
-								</Tooltip>
-							</AlertDialogTrigger>
+									</AlertDialogTrigger>
+								</TooltipTrigger>
+								<TooltipContent>
+									<p>Reset</p>
+								</TooltipContent>
+							</Tooltip>
 							<AlertDialogContent>
 								<AlertDialogHeader>
 									<AlertDialogTitle>
