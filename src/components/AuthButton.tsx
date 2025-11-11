@@ -116,14 +116,14 @@ export default function AuthButton({
 		<>
 			<Button
 				className="hidden xs:block"
-				variant="run"
+				variant="correct"
 				onClick={handleSignIn}
 			>
 				Sign In
 			</Button>
 			<Button
 				className="block xs:hidden"
-				variant="run"
+				variant="correct"
 				onClick={handleSignIn}
 			>
 				<UserIcon size={20} />
