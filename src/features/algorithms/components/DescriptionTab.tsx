@@ -88,6 +88,7 @@ export function DescriptionTab({
 }: DescriptionTabProps) {
 	const { data: session } = useSession();
 	const isLoggedIn = !!session?.user?.id;
+	const isDisabled = !isLoggedIn || session.user.role === "BASIC";
 
 	// Auto-scroll to bottom when new messages arrive (but not for initial problem statement/examples)
 	useEffect(() => {
@@ -411,7 +412,7 @@ export function DescriptionTab({
 						onChange={(e) => setInputValue(e.target.value)}
 						onKeyPress={handleKeyPress}
 						placeholder="Ask anything"
-						disabled={isThinking || !isLoggedIn}
+						disabled={isThinking || isDisabled}
 						className="flex-1 bg-transparent text-white placeholder:text-white/50 px-3 py-1 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed text-base"
 					/>
 

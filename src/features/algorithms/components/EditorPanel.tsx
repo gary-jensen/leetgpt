@@ -12,7 +12,7 @@ import { AlgoProblemDetail } from "@/types/algorithm-types";
 import { Button } from "@/components/ui/button";
 import { RotateCcw, Lightbulb, MessageCircleQuestionIcon } from "lucide-react";
 import { useTestTab } from "../hooks/useTestTab";
-import { useSession } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import type { ImperativePanelHandle } from "react-resizable-panels";
 import {
 	AlertDialog,
@@ -32,6 +32,11 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+	trackSignInButtonClick,
+	trackUpgradeToProButtonClick,
+} from "@/lib/analytics";
+import Link from "next/link";
 
 interface EditorPanelProps {
 	code: string;
@@ -51,6 +56,7 @@ interface EditorPanelProps {
 	activeTestTab?: "examples" | "testcase" | "results"; // Passed from parent when hideTestCasesPanel is false
 	setActiveTestTab?: (tab: "examples" | "testcase" | "results") => void; // Passed from parent when hideTestCasesPanel is false
 	testCasesPanelRef?: React.RefObject<ImperativePanelHandle | null>; // Passed from parent when hideTestCasesPanel is false
+	buttonDisabled?: boolean; // External button disabled state (e.g., subscription-based)
 }
 
 export function EditorPanel({
@@ -71,6 +77,7 @@ export function EditorPanel({
 	activeTestTab: propActiveTestTab,
 	setActiveTestTab: propSetActiveTestTab,
 	testCasesPanelRef: propTestCasesPanelRef,
+	buttonDisabled: externalButtonDisabled,
 }: EditorPanelProps) {
 	// Only use hook if we need the test cases panel and props aren't provided
 	const hookResult = useTestTab(testResults, isExecuting);
@@ -149,7 +156,9 @@ export function EditorPanel({
 			: "submitWrong"
 		: "submit";
 
-	const buttonDisabled = isExecuting || isThinking;
+	const internalButtonDisabled = isExecuting || isThinking;
+	const buttonDisabled =
+		internalButtonDisabled || externalButtonDisabled || false;
 
 	// Button text logic
 	const getRunButtonText = () => {
@@ -165,6 +174,17 @@ export function EditorPanel({
 	const handleReset = () => {
 		onReset();
 		setResetDialogOpen(false);
+	};
+
+	const handleSignIn = async () => {
+		// Track the signin button click event
+		trackSignInButtonClick("algo_editor_panel");
+		await signIn();
+	};
+	const handleUpgradeToPro = () => {
+		// Track the signin button click event
+		trackUpgradeToProButtonClick("algo_editor_panel");
+		// await signIn();
 	};
 
 	// Reusable Editor component
@@ -191,7 +211,7 @@ export function EditorPanel({
 	// Reusable Action Buttons Toolbar
 	const actionButtonsToolbar = (
 		<div className="w-full h-[64px] px-3 bg-background-2 items-center justify-between gap-2 border-t border-border flex">
-			{status === "loading" || session?.user?.id ? (
+			{session?.user?.id && session?.user?.role !== "BASIC" ? (
 				<>
 					<div className="flex items-center gap-2">
 						{isExecuting ? (
@@ -296,10 +316,31 @@ export function EditorPanel({
 						</FeedbackDialog>
 					</div>
 				</>
+			) : status === "unauthenticated" ? (
+				<div className="w-full flex items-center justify-center text-muted-foreground text-sm">
+					You need to{" "}
+					<Button
+						variant="link"
+						onClick={handleSignIn}
+						className="mx-2 px-0 text-blue-500 cursor-pointer"
+					>
+						log in / sign up
+					</Button>{" "}
+					to run code
+				</div>
 			) : (
-				status === "unauthenticated" && (
+				session?.user?.role === "BASIC" && (
 					<div className="w-full flex items-center justify-center text-muted-foreground text-sm">
-						You need to log in / sign up to run code
+						<Link href="/billing">
+							<Button
+								variant="link"
+								onClick={handleUpgradeToPro}
+								className="mx-2 px-0 text-blue-500 cursor-pointer"
+							>
+								Upgrade to PRO
+							</Button>
+						</Link>{" "}
+						to run code
 					</div>
 				)
 			)}

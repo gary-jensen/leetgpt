@@ -18,6 +18,7 @@ import {
 import { UserIcon } from "lucide-react";
 import SoundToggle from "./SoundToggle";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 export default function AuthButton({
 	size = "md",
@@ -55,24 +56,48 @@ export default function AuthButton({
 		);
 	}
 
+	const PremiumButton = () => {
+		if (session?.user.role === "BASIC") {
+			return (
+				<Link href="/billing?nav">
+					<Button
+						variant="premium"
+						className={cn(
+							"px-6 h-8 font-dm-sans cursor-pointer",
+							size === "sm"
+								? "h-8 text-sm"
+								: size === "md"
+								? "h-9 text-base"
+								: "h-11 text-lg"
+						)}
+					>
+						Pro
+					</Button>
+				</Link>
+			);
+		}
+	};
+
 	if (session) {
 		return (
-			<DropdownMenu>
-				<DropdownMenuTrigger asChild>
-					<button className="focus:outline-none focus:ring-0 focus:ring-transparent rounded-full">
-						<div
-							className={cn(
-								"w-10 h-10 rounded-full bg-[#455a64] flex items-center justify-center text-white text-xl font-medium cursor-pointer hover:bg-[#3d4e56]  transition-colors",
-								size === "sm"
-									? "w-7 h-7 text-sm"
-									: size === "md"
-									? "w-9 h-9 text-base"
-									: "w-11 h-11 text-lg"
-							)}
-						>
-							{session.user.name?.charAt(0).toUpperCase() || "U"}
-						</div>
-						{/* {session.user.image ? (
+			<div className="flex items-center gap-2">
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>
+						<button className="focus:outline-none focus:ring-0 focus:ring-transparent rounded-full cursor-pointer">
+							<div
+								className={cn(
+									"w-10 h-10 rounded-full bg-[#455a64] flex items-center justify-center text-white text-xl font-medium cursor-pointer hover:bg-[#3d4e56]  transition-colors",
+									size === "sm"
+										? "w-7 h-7 text-sm"
+										: size === "md"
+										? "w-9 h-9 text-base"
+										: "w-11 h-11 text-lg"
+								)}
+							>
+								{session.user.name?.charAt(0).toUpperCase() ||
+									"U"}
+							</div>
+							{/* {session.user.image ? (
 							<img
 								src={session.user.image}
 								alt={session.user.name || "User"}
@@ -84,45 +109,56 @@ export default function AuthButton({
 									"U"}
 							</div>
 						)} */}
-					</button>
-				</DropdownMenuTrigger>
-				<DropdownMenuContent align="end" className="w-56">
-					<DropdownMenuLabel>
-						<div className="flex justify-between">
-							<div className="flex flex-col space-y-1">
-								<p className="text-sm font-medium leading-none">
-									{session.user.name}
-								</p>
-								<p className="text-xs leading-none text-muted-foreground">
-									{session.user.email}
-								</p>
+						</button>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="end" className="w-56">
+						<DropdownMenuLabel>
+							<div className="flex justify-between cursor-pointer">
+								<div className="flex flex-col space-y-1">
+									<p className="text-sm font-medium leading-none">
+										{session.user.name}
+									</p>
+									<p className="text-xs leading-none text-muted-foreground">
+										{session.user.email}
+									</p>
+								</div>
+								<SoundToggle />
 							</div>
-							<SoundToggle />
-						</div>
-					</DropdownMenuLabel>
-					<DropdownMenuSeparator />
-					<DropdownMenuItem
-						onClick={handleSignOut}
-						className="cursor-pointer text-red-600"
-					>
-						Sign Out
-					</DropdownMenuItem>
-				</DropdownMenuContent>
-			</DropdownMenu>
+						</DropdownMenuLabel>
+						<DropdownMenuSeparator />
+						<DropdownMenuLabel>
+							<Link
+								href="/billing"
+								className="flex justify-between cursor-pointer"
+							>
+								Billing
+							</Link>
+						</DropdownMenuLabel>
+						<DropdownMenuSeparator />
+						<DropdownMenuItem
+							onClick={handleSignOut}
+							className="cursor-pointer text-red-600"
+						>
+							Sign Out
+						</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
+				<PremiumButton />
+			</div>
 		);
 	}
 
 	return (
 		<>
 			<Button
-				className="hidden xs:block"
+				className="hidden xs:block  cursor-pointer"
 				variant="correct"
 				onClick={handleSignIn}
 			>
 				Sign In
 			</Button>
 			<Button
-				className="block xs:hidden"
+				className="block xs:hidden  cursor-pointer"
 				variant="correct"
 				onClick={handleSignIn}
 			>

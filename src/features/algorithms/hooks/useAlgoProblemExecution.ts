@@ -180,23 +180,11 @@ export function useAlgoProblemExecution(
 			return;
 		}
 
-		// Check rate limit for BASIC users (8 seconds between runs)
+		// Block BASIC users from executing code
 		const userRole = session?.user?.role || "BASIC";
-		if (userRole === "BASIC" && lastExecutionTimeRef.current !== null) {
-			const timeSinceLastRun = Date.now() - lastExecutionTimeRef.current;
-			const MIN_RUN_INTERVAL_MS = 8 * 1000; // 8 seconds
-
-			if (timeSinceLastRun < MIN_RUN_INTERVAL_MS) {
-				const secondsRemaining = Math.ceil(
-					(MIN_RUN_INTERVAL_MS - timeSinceLastRun) / 1000
-				);
-				toast.error(
-					`You are submitting too frequently. Please wait ${secondsRemaining} second${
-						secondsRemaining !== 1 ? "s" : ""
-					} before running again. Upgrade to Pro to remove this limit.`
-				);
-				return;
-			}
+		if (userRole === "BASIC") {
+			toast.error("Access denied. Please upgrade to Pro.");
+			return;
 		}
 
 		// Ensure CodeExecutor is initialized with iframe
@@ -332,7 +320,7 @@ export function useAlgoProblemExecution(
 							}
 						}
 
-						const submission = await createSubmission(
+						const submissionResult = await createSubmission(
 							session.user.id,
 							problem.id,
 							"javascript",
@@ -342,9 +330,18 @@ export function useAlgoProblemExecution(
 							testsPassed,
 							problem.tests.length
 						);
+
+						if (!submissionResult.success) {
+							toast.error(
+								submissionResult.error ||
+									"Failed to save submission"
+							);
+							return;
+						}
+
 						// Notify parent about new submission
 						if (onSubmissionCreated) {
-							onSubmissionCreated(submission);
+							onSubmissionCreated(submissionResult.submission);
 						}
 						// Track run event with enhanced metadata
 						runCountRef.current += 1;

@@ -6,6 +6,11 @@ import {
 } from "@/features/algorithms/data";
 import { redirect } from "next/navigation";
 import { Metadata } from "next";
+import { getSession } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { getSubscriptionTier } from "@/lib/hourlyLimits";
+import { getSubscriptionStatusFromSession } from "@/lib/utils/subscription";
+import { AlgoLesson } from "@/types/algorithm-types";
 
 interface AlgorithmWorkspacePageProps {
 	params: Promise<{
@@ -63,8 +68,10 @@ export default async function AlgorithmWorkspacePage({
 	params,
 }: AlgorithmWorkspacePageProps) {
 	const { problemSlug } = await params;
+
 	// Fetch problem and all problems metadata for navigation (lightweight, only what we need) (also cached)
-	const [problem, problemsMeta] = await Promise.all([
+	const [session, problem, problemsMeta] = await Promise.all([
+		getSession(),
 		getAlgoProblemBySlug(problemSlug),
 		getAlgoProblemsMeta(),
 	]);
@@ -74,13 +81,19 @@ export default async function AlgorithmWorkspacePage({
 	}
 
 	// Fetch related lessons for this problem's topics
-	const relatedLessons = await getLessonsByTopics(problem.topics);
+	// const relatedLessons = await getLessonsByTopics(problem.topics);
+	// Temporarily disable related lessons
+	const relatedLessons: AlgoLesson[] = [];
+
+	// Get subscription status from session (synchronous, no database calls)
+	const subscriptionStatus = getSubscriptionStatusFromSession(session);
 
 	return (
 		<AlgorithmWorkspace
 			problem={problem}
 			relatedLessons={relatedLessons}
 			problemsMeta={problemsMeta}
+			subscriptionStatus={subscriptionStatus}
 		/>
 	);
 }

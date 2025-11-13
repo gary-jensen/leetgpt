@@ -1,6 +1,8 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { getSubscriptionTier } from "@/lib/hourlyLimits";
+import { SubscriptionStatusValue } from "@/lib/actions/billing";
 import {
 	AlgoProblemProgress,
 	AlgoLessonProgress,
@@ -389,25 +391,74 @@ export async function createSubmission(
 	runtime: number | undefined,
 	testsPassed: number,
 	testsTotal: number
-): Promise<AlgoProblemSubmission> {
-	const submission = await (prisma as any).algoProblemSubmission.create({
-		data: {
-			userId,
-			problemId,
-			language,
-			code: escapeHtml(code),
-			passed,
-			runtime,
-			testsPassed,
-			testsTotal,
+): Promise<
+	| { success: true; submission: AlgoProblemSubmission }
+	| { success: false; error: string }
+> {
+	// Check user subscription status
+	const user = await prisma.user.findUnique({
+		where: { id: userId },
+		select: {
+			role: true,
+			subscriptionStatus: true,
+			stripePriceId: true,
 		},
 	});
 
-	return {
-		...submission,
-		runtime: submission.runtime || undefined,
-		submittedAt: submission.submittedAt,
-	};
+	if (!user) {
+		return {
+			success: false,
+			error: "User not found. Please sign in and try again.",
+		};
+	}
+
+	// Block BASIC users and canceled subscriptions
+	const subscriptionTier = getSubscriptionTier(
+		user.role,
+		user.subscriptionStatus as SubscriptionStatusValue,
+		user.stripePriceId
+	);
+
+	if (subscriptionTier === "CANCELED") {
+		const isExpired = user.subscriptionStatus === "expired";
+		const errorMessage = isExpired
+			? "Your free trial has expired. Please upgrade to Pro to submit code."
+			: "Access denied. Please upgrade to Pro to submit code.";
+		return {
+			success: false,
+			error: errorMessage,
+		};
+	}
+
+	try {
+		const submission = await (prisma as any).algoProblemSubmission.create({
+			data: {
+				userId,
+				problemId,
+				language,
+				code: escapeHtml(code),
+				passed,
+				runtime,
+				testsPassed,
+				testsTotal,
+			},
+		});
+
+		return {
+			success: true,
+			submission: {
+				...submission,
+				runtime: submission.runtime || undefined,
+				submittedAt: submission.submittedAt,
+			},
+		};
+	} catch (error) {
+		console.error("Failed to create submission:", error);
+		return {
+			success: false,
+			error: "Failed to save submission. Please try again.",
+		};
+	}
 }
 
 export async function getSubmissionHistory(

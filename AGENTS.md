@@ -57,3 +57,7 @@ Each feature has its own folder:
 
 -   I do not want to use APIs at all
 -   We shall use only server functions
+
+## Other Notes
+
+-   Never use dynamic imports

@@ -1,6 +1,7 @@
 "use server";
 
 import OpenAI from "openai";
+import { SubscriptionStatusValue } from "@/lib/actions/billing";
 import {
 	AlgoProblemDetail,
 	ChatMessage,
@@ -8,8 +9,13 @@ import {
 } from "@/types/algorithm-types";
 import { getAlgoProblem } from "@/features/algorithms/data";
 import { getSession } from "@/lib/auth";
-import { checkHourlyLimit } from "@/lib/hourlyLimits";
+import { checkHourlyLimit, getSubscriptionTier } from "@/lib/hourlyLimits";
 import { checkRateLimit, getRateLimitKey } from "@/lib/rateLimit";
+import { prisma } from "@/lib/prisma";
+import {
+	checkAndExpireTrial,
+	updateExpiredTrial,
+} from "@/lib/utils/subscription";
 import {
 	getCoachSystemPrompt,
 	buildHintContext,
@@ -107,31 +113,61 @@ export async function reviewOptimality(
 		throw new Error("Authentication required to use AI coach");
 	}
 
-	// Get user role (default to BASIC if not set)
-	const userRole = (session.user.role || "BASIC") as
-		| "BASIC"
-		| "PRO"
-		| "ADMIN";
+	// Check and expire trial if needed (synchronous, uses session data)
+	if (session.user.subscriptionStatus === undefined) {
+		throw new Error("Subscription data not available");
+	}
+
+	const needsDbUpdate = checkAndExpireTrial(
+		{
+			subscriptionStatus: session.user.subscriptionStatus,
+			stripeCurrentPeriodEnd: session.user.stripeCurrentPeriodEnd || null,
+			stripeSubscriptionId: session.user.stripeSubscriptionId || null,
+			role: session.user.role || null,
+		},
+		session
+	);
+
+	// Update database asynchronously if needed (fire and forget)
+	if (needsDbUpdate) {
+		updateExpiredTrial(session.user.id).catch((error) => {
+			console.error("Failed to update expired trial:", error);
+		});
+	}
+
+	// Determine subscription tier using session data
+	const subscriptionTier = getSubscriptionTier(
+		session.user.role || null,
+		session.user.subscriptionStatus,
+		session.user.stripePriceId || null
+	);
+
+	// Block canceled/expired users (BASIC role with no subscription or expired trial)
+	if (subscriptionTier === "CANCELED") {
+		const isExpired = session.user.subscriptionStatus === "expired";
+		const errorMessage = isExpired
+			? "Your free trial has expired. Please upgrade to Pro to use chat."
+			: "Access denied. Please upgrade to Pro.";
+		throw new Error(errorMessage);
+	}
 
 	// Check hourly limit (optimality reviews use submission limit since they're part of submission flow)
 	const limitCheck = await checkHourlyLimit(
 		session.user.id,
 		"submission",
-		userRole
+		subscriptionTier
 	);
 	if (!limitCheck.allowed) {
 		const minutesRemaining = Math.ceil(
 			(limitCheck.resetTime - Date.now()) / 60000
 		);
-		let errorMessage = `You've reached your hourly limit of ${
-			limitCheck.limit
-		} optimality reviews. Please try again in ${minutesRemaining} minute${
+		let errorMessage = `You've reached your hourly limit for optimality reviews. Please try again in ${minutesRemaining} minute${
 			minutesRemaining !== 1 ? "s" : ""
 		}.`;
 
-		// Add upgrade suggestion for BASIC users
-		if (userRole === "BASIC") {
-			errorMessage += ` Upgrade to Pro for higher limits!`;
+		// Add upgrade suggestion for trial users
+		if (subscriptionTier === "TRIAL") {
+			errorMessage += ` Pick a plan for higher limits!`;
 		}
 
 		throw new Error(errorMessage);
@@ -246,6 +282,44 @@ export async function getChatResponse(
 		throw new Error("Authentication required to use AI coach");
 	}
 
+	// Check and expire trial if needed (synchronous, uses session data)
+	if (session.user.subscriptionStatus === undefined) {
+		throw new Error("Subscription data not available");
+	}
+
+	const needsDbUpdate = checkAndExpireTrial(
+		{
+			subscriptionStatus: session.user.subscriptionStatus,
+			stripeCurrentPeriodEnd: session.user.stripeCurrentPeriodEnd || null,
+			stripeSubscriptionId: session.user.stripeSubscriptionId || null,
+			role: session.user.role || null,
+		},
+		session
+	);
+
+	// Update database asynchronously if needed (fire and forget)
+	if (needsDbUpdate) {
+		updateExpiredTrial(session.user.id).catch((error) => {
+			console.error("Failed to update expired trial:", error);
+		});
+	}
+
+	// Determine subscription tier using session data
+	const subscriptionTier = getSubscriptionTier(
+		session.user.role || null,
+		session.user.subscriptionStatus,
+		session.user.stripePriceId || null
+	);
+
+	// Block canceled/expired users (BASIC role with no subscription or expired trial)
+	if (subscriptionTier === "CANCELED") {
+		const isExpired = session.user.subscriptionStatus === "expired";
+		const errorMessage = isExpired
+			? "Your free trial has expired. Please upgrade to Pro to use chat."
+			: "Access denied. Please upgrade to Pro.";
+		throw new Error(errorMessage);
+	}
+
 	// Check rate limit (60/hour per user)
 	const rateLimitKey = getRateLimitKey(
 		session.user.id,
@@ -312,6 +386,44 @@ export async function getSubmissionResponse(
 	const session = await getSession();
 	if (!session?.user?.id) {
 		throw new Error("Authentication required to use AI coach");
+	}
+
+	// Check and expire trial if needed (synchronous, uses session data)
+	if (session.user.subscriptionStatus === undefined) {
+		throw new Error("Subscription data not available");
+	}
+
+	const needsDbUpdate = checkAndExpireTrial(
+		{
+			subscriptionStatus: session.user.subscriptionStatus,
+			stripeCurrentPeriodEnd: session.user.stripeCurrentPeriodEnd || null,
+			stripeSubscriptionId: session.user.stripeSubscriptionId || null,
+			role: session.user.role || null,
+		},
+		session
+	);
+
+	// Update database asynchronously if needed (fire and forget)
+	if (needsDbUpdate) {
+		updateExpiredTrial(session.user.id).catch((error) => {
+			console.error("Failed to update expired trial:", error);
+		});
+	}
+
+	// Determine subscription tier using session data
+	const subscriptionTier = getSubscriptionTier(
+		session.user.role || null,
+		session.user.subscriptionStatus,
+		session.user.stripePriceId || null
+	);
+
+	// Block canceled/expired users (BASIC role with no subscription or expired trial)
+	if (subscriptionTier === "CANCELED") {
+		const isExpired = session.user.subscriptionStatus === "expired";
+		const errorMessage = isExpired
+			? "Your free trial has expired. Please upgrade to Pro to use chat."
+			: "Access denied. Please upgrade to Pro.";
+		throw new Error(errorMessage);
 	}
 
 	// Check rate limit (60/hour per user)

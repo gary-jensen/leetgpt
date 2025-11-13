@@ -125,6 +125,7 @@ export function WorkspaceLayout({
 							activeTestTab={activeTestTab}
 							setActiveTestTab={setActiveTestTab}
 							testCasesPanelRef={undefined}
+							buttonDisabled={buttonDisabled}
 						/>
 
 						{/* Right Panel - Test Cases (hidden below 2xl, visible at 2xl+) */}

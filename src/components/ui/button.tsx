@@ -24,6 +24,8 @@ const buttonVariants = cva(
 				correct:
 					"bg-green-600 disabled:opacity-100 text-white hover:bg-green-600/70 button-glow-green",
 				wrong: "bg-red-600 disabled:opacity-100 text-white hover:bg-red-600/70 button-glow-red",
+				premium:
+					"bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg text-center transition-all duration-200 hover:scale-105 hover:shadow-lg hover:shadow-orange-500/25 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100",
 				destructive:
 					"bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
 				outline:

@@ -228,37 +228,24 @@
 
 #### 9. Stripe, payment, billing, premium 💳
 
-**Status**: Not implemented
-**Dependencies**: Daily limits (#8) should be done first to define premium benefits
+**Status**: ✅ **COMPLETED** - Full Stripe integration with subscription state machine
+**Dependencies**: None (can work independently)
 **Effort**: High
 **Details**:
 
--   Integrate Stripe for payments
--   Set up subscription plans (monthly/yearly)
--   Create billing page
--   Handle subscription lifecycle (create, update, cancel)
--   Update user role to PRO when subscribed
--   Webhook handling for Stripe events
--   Payment success/failure pages
--   Premium badge/indicators in UI
+-   ✅ Stripe integration with subscription state machine
+-   ✅ Subscription plans (PRO/EXPERT, monthly/yearly)
+-   ✅ Billing page with status-based display
+-   ✅ Full subscription lifecycle (create, update, cancel, expire)
+-   ✅ Webhook handling for all Stripe events
+-   ✅ App-managed and Stripe-managed trial support
+-   ✅ Payment success page
+-   ✅ Manual subscription sync functionality
 
-**Files to create/modify**:
+**Reference**:
 
--   `prisma/schema.prisma` (add Stripe customer/subscription fields to User)
--   `src/lib/stripe.ts` (Stripe client setup)
--   `src/lib/actions/billing.ts` (server actions for billing)
--   `src/app/api/stripe/webhook/route.ts` (webhook handler)
--   `src/app/billing/page.tsx` (billing page)
--   `src/app/payment/success/page.tsx`
--   `src/app/payment/cancel/page.tsx`
--   Update User model to track subscription status
--   UI components for upgrade prompts
-
-**Dependencies**:
-
--   Stripe account setup
--   Environment variables for Stripe keys
--   Database migration for new fields
+-   `.cursor/stripe/STRIPE_OUTLINE.md` - Complete implementation details and production checklist
+-   `docs/SUBSCRIPTION_STATE_MACHINE.md` - State machine documentation
 
 ---
 
@@ -269,20 +256,17 @@
 -   **Async execution and execution timeout** - Foundation, affects all execution
 -   **Submission history** - Core feature, can work in parallel with #1
 -   **Sound effects** - Quick UX win, low effort
--   **Analytics** - Important for understanding usage, medium effort
--   **Feedback button** - Quick feature, good for user input
--   **Daily limits** - Must be done before Stripe to define premium value
 -   **AI Chat suggestions** - UX enhancement, medium effort
+-   **Stripe/payment** - Full subscription system with state machine
 
 ### Todo
 
 -   **Finalize algorithm lesson system** - Complete core system before UX enhancements
--   **Stripe/payment** - Final monetization step, depends on #8
+-   **Stripe Prod**
 
 ## Notes
 
 -   Algorithm lesson system (#10) should be finalized early as it's foundational
 -   Items 4-7 can be done in parallel as they're independent
--   Analytics (#8) benefits from having submission history (#2) in place
--   Daily limits (#9) should define what premium gets you before building Stripe (#10)
+-   Stripe integration (#9) is complete - see `.cursor/stripe/STRIPE_OUTLINE.md` for details
 -   Consider MVP scope: Some items might be simplified for initial launch

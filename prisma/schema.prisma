@@ -13,6 +13,7 @@ generator client {
 enum Role {
     BASIC
     PRO
+    EXPERT
     ADMIN
 }
 
@@ -26,6 +27,11 @@ model User {
     createdAt              DateTime                @default(now())
     updatedAt              DateTime                @updatedAt
     role                   Role                    @default(PRO)
+    stripeCustomerId       String?                 @unique
+    stripeSubscriptionId   String?                 @unique
+    stripePriceId          String?
+    stripeCurrentPeriodEnd DateTime?
+    subscriptionStatus     String?
     progress               UserProgress?
     sessions               UserSession[]
     analyticsEvents        AnalyticsEvent[]
@@ -211,13 +217,13 @@ model AlgoProblemSubmission {
 }
 
 model AlgoProblemFeedback {
-    id                String   @id @default(cuid())
-    userId            String?
-    problemId         String
-    issues            String[]
-    additionalFeedback String? @db.Text
-    createdAt         DateTime @default(now())
-    user              User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+    id                 String   @id @default(cuid())
+    userId             String?
+    problemId          String
+    issues             String[]
+    additionalFeedback String?  @db.Text
+    createdAt          DateTime @default(now())
+    user               User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
     @@index([problemId])
     @@index([createdAt])

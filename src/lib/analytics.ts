@@ -215,8 +215,14 @@ export const trackAuthSignin = () => {
 	);
 };
 
-export const trackSignInButtonClick = () => {
-	trackEvent("Auth", "sign_in_button_click", undefined, undefined, {
+export const trackUpgradeToProButtonClick = (source?: string) => {
+	trackEvent("Billing", "upgrade_to_pro_button_click", source, undefined, {
+		timestamp: new Date().toISOString(),
+	});
+};
+
+export const trackSignInButtonClick = (source?: string) => {
+	trackEvent("Auth", "sign_in_button_click", source, undefined, {
 		timestamp: new Date().toISOString(),
 	});
 };

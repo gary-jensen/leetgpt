@@ -1,12 +1,18 @@
 import { NextRequest } from "next/server";
 import OpenAI from "openai";
 import { getSession } from "@/lib/auth";
-import { checkHourlyLimit } from "@/lib/hourlyLimits";
+import { checkHourlyLimit, getSubscriptionTier } from "@/lib/hourlyLimits";
+import { SubscriptionStatusValue } from "@/lib/actions/billing";
 import { getAlgoProblem } from "@/features/algorithms/data";
+import { prisma } from "@/lib/prisma";
 import {
 	getCoachSystemPrompt,
 	buildStreamContext,
 } from "@/lib/prompts/algoCoach";
+import {
+	checkAndExpireTrial,
+	updateExpiredTrial,
+} from "@/lib/utils/subscription";
 
 const openai = new OpenAI({
 	apiKey: process.env.OPENAI_API_KEY,
@@ -33,11 +39,53 @@ export async function POST(req: NextRequest) {
 			type = "chat", // 'chat' | 'hint' | 'submission'
 		} = body;
 
-		// Get user role (default to BASIC if not set)
-		const userRole = (session.user.role || "BASIC") as
-			| "BASIC"
-			| "PRO"
-			| "ADMIN";
+		// Check and expire trial if needed (synchronous, uses session data)
+		if (session.user.subscriptionStatus === undefined) {
+			return new Response(
+				JSON.stringify({ error: "Subscription data not available" }),
+				{ status: 500 }
+			);
+		}
+
+		const needsDbUpdate = checkAndExpireTrial(
+			{
+				subscriptionStatus: session.user.subscriptionStatus,
+				stripeCurrentPeriodEnd:
+					session.user.stripeCurrentPeriodEnd || null,
+				stripeSubscriptionId: session.user.stripeSubscriptionId || null,
+				role: session.user.role || null,
+			},
+			session
+		);
+
+		// Update database asynchronously if needed (fire and forget)
+		if (needsDbUpdate) {
+			updateExpiredTrial(session.user.id).catch((error) => {
+				console.error("Failed to update expired trial:", error);
+			});
+		}
+
+		// Determine subscription tier using session data
+		const subscriptionTier = getSubscriptionTier(
+			session.user.role || null,
+			session.user.subscriptionStatus,
+			session.user.stripePriceId || null
+		);
+
+		// Block canceled/expired users (BASIC role with no subscription or expired trial)
+		if (subscriptionTier === "CANCELED") {
+			const isExpired = session.user.subscriptionStatus === "expired";
+			const errorMessage = isExpired
+				? "Your free trial has expired. Please upgrade to Pro to use chat."
+				: "Access denied. Please upgrade to Pro.";
+
+			return new Response(
+				JSON.stringify({
+					error: errorMessage,
+				}),
+				{ status: 403 }
+			);
+		}
 
 		// Map request type to limit type
 		// 'hint' and 'chat' share the same limit pool
@@ -50,11 +98,11 @@ export async function POST(req: NextRequest) {
 			(type === "submission" && submissionData?.allPassed === true);
 
 		if (shouldCheckLimit) {
-			// Check hourly limit based on user role
+			// Check hourly limit based on subscription tier
 			const limitCheck = await checkHourlyLimit(
 				session.user.id,
 				limitType,
-				userRole
+				subscriptionTier
 			);
 
 			if (!limitCheck.allowed) {
@@ -68,15 +116,13 @@ export async function POST(req: NextRequest) {
 						? "hints"
 						: "chat messages";
 
-				let errorMessage = `You've reached your hourly limit of ${
-					limitCheck.limit
-				} ${actionName}. Please try again in ${minutesRemaining} minute${
+				let errorMessage = `You've reached your hourly limit for ${actionName}. Please try again in ${minutesRemaining} minute${
 					minutesRemaining !== 1 ? "s" : ""
 				}.`;
 
-				// Add upgrade suggestion for BASIC users
-				if (userRole === "BASIC") {
-					errorMessage += ` Upgrade to Pro for higher limits!`;
+				// Add upgrade suggestion for trial users
+				if (subscriptionTier === "TRIAL") {
+					errorMessage += ` Pick a plan for higher limits!`;
 				}
 
 				return new Response(JSON.stringify({ error: errorMessage }), {

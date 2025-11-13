@@ -1,3 +1,5 @@
+import { getSession } from "@/lib/auth";
+import { getSubscriptionStatusFromSession } from "@/lib/utils/subscription";
 import { AlgoNavbar } from "@/features/algorithms/components/AlgoNavbar";
 import { AlgoSidebar } from "@/features/algorithms/components/AlgoSidebar";
 import { ProblemsList } from "@/features/algorithms/components/ProblemsList";
@@ -8,6 +10,11 @@ import {
 } from "@/features/algorithms/data";
 
 export default async function ProblemsListPage() {
+	const session = await getSession();
+
+	// Check and expire trial if needed (handles everything internally)
+	getSubscriptionStatusFromSession(session);
+
 	const [problems, allTopics, lessons] = await Promise.all([
 		getAlgoProblemsMeta(),
 		getAllTopics(),

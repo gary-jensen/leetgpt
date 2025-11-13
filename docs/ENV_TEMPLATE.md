@@ -47,6 +47,27 @@ OPENAI_API_KEY="sk-..."
 # For local development, you can use a local Redis instance or leave unset
 # If not set, rate limiting will use in-memory fallback (resets on server restart)
 REDIS_URL="redis://localhost:6379"
+
+# Stripe Configuration
+# Get from: Stripe Dashboard → Developers → API keys
+STRIPE_SECRET_KEY="sk_test_..."  # Test mode key for development
+# STRIPE_SECRET_KEY="sk_live_..."  # Live mode key for production
+
+# Stripe Webhook Secret
+# For local testing: Get from `stripe listen` command output
+# For production: Get from Stripe Dashboard → Developers → Webhooks → [Your Endpoint] → Signing secret
+STRIPE_WEBHOOK_SECRET="whsec_..."
+
+# Stripe Price IDs (Public - safe to expose)
+# Get from: Stripe Dashboard → Products → [Your Product] → Pricing
+NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY="price_..."
+NEXT_PUBLIC_STRIPE_PRICE_PRO_YEARLY="price_..."
+NEXT_PUBLIC_STRIPE_PRICE_EXPERT_MONTHLY="price_..."
+NEXT_PUBLIC_STRIPE_PRICE_EXPERT_YEARLY="price_..."
+
+# App URL (for Stripe redirects)
+NEXT_PUBLIC_APP_URL="http://localhost:3000"  # Local development
+# NEXT_PUBLIC_APP_URL="https://yourdomain.com"  # Production
 ```
 
 ## Production Environment Variables (Vercel)

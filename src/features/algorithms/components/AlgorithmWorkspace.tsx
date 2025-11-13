@@ -30,17 +30,27 @@ import { toast } from "sonner";
 import { TopicsDropdown } from "./TopicsDropdown";
 
 import { AlgoProblemMeta } from "@/types/algorithm-types";
+import { SubscriptionStatusValue } from "@/lib/actions/billing";
 
 interface AlgorithmWorkspaceProps {
 	problem: AlgoProblemDetail;
 	relatedLessons: AlgoLesson[];
 	problemsMeta: AlgoProblemMeta[];
+	subscriptionStatus?: {
+		subscriptionStatus: SubscriptionStatusValue;
+		stripePriceId: string | null;
+		stripeCurrentPeriodEnd: Date | null;
+		planTier: "PRO" | "EXPERT" | null;
+		isYearly: boolean;
+		trialDaysRemaining: number | null;
+	} | null;
 }
 
 export function AlgorithmWorkspace({
 	problem,
 	relatedLessons,
 	problemsMeta,
+	subscriptionStatus: initialSubscriptionStatus,
 }: AlgorithmWorkspaceProps) {
 	const [chatMessages, setChatMessages] = useState<any[]>([]);
 	const [isThinking, setIsThinking] = useState(false);
@@ -53,6 +63,16 @@ export function AlgorithmWorkspace({
 	const submissionCounterRef = useRef(0);
 	const { data: session } = useSession();
 	const progress = useProgress();
+
+	// Determine subscription status from props
+	const isSubscriptionExpired =
+		initialSubscriptionStatus?.subscriptionStatus === "expired";
+	const isBasicUser = session?.user?.role === "BASIC";
+	const isSubscriptionCanceled =
+		!initialSubscriptionStatus ||
+		initialSubscriptionStatus.subscriptionStatus === null ||
+		initialSubscriptionStatus.subscriptionStatus === "expired" ||
+		isBasicUser;
 	const addSubmissionHandlerRef = useRef<
 		((submission: AlgoProblemSubmission) => void) | null
 	>(null);
@@ -303,15 +323,41 @@ export function AlgorithmWorkspace({
 			// Ctrl/Cmd + Enter: Run code
 			if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
 				e.preventDefault();
-				if (!buttonDisabled && !isExecuting) {
+				if (
+					!buttonDisabled &&
+					!isExecuting &&
+					!isBasicUser &&
+					!isSubscriptionExpired &&
+					!isSubscriptionCanceled
+				) {
 					executeCode();
+				} else if (
+					isBasicUser ||
+					isSubscriptionExpired ||
+					isSubscriptionCanceled
+				) {
+					const message = isSubscriptionExpired
+						? "Your free trial has expired. Please upgrade to Pro to submit code."
+						: "Access denied. Please upgrade to Pro.";
+					toast.error(message);
 				}
 			}
 
 			// Ctrl/Cmd + H: Request hint
 			if ((e.ctrlKey || e.metaKey) && e.key === "h") {
 				e.preventDefault();
-				handleHint();
+				if (
+					!isBasicUser &&
+					!isSubscriptionExpired &&
+					!isSubscriptionCanceled
+				) {
+					handleHint();
+				} else {
+					const message = isSubscriptionExpired
+						? "Your free trial has expired. Please upgrade to Pro to use hints."
+						: "Access denied. Please upgrade to Pro.";
+					toast.error(message);
+				}
 			}
 
 			// Escape: Reset code (optional)
@@ -322,9 +368,23 @@ export function AlgorithmWorkspace({
 
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [executeCode, buttonDisabled, isExecuting]);
+	}, [
+		executeCode,
+		buttonDisabled,
+		isExecuting,
+		isSubscriptionExpired,
+		isSubscriptionCanceled,
+	]);
 
 	const handleHint = async () => {
+		if (isBasicUser || isSubscriptionExpired || isSubscriptionCanceled) {
+			const message = isSubscriptionExpired
+				? "Your free trial has expired. Please upgrade to Pro to use hints."
+				: "Access denied. Please upgrade to Pro.";
+			toast.error(message);
+			return;
+		}
+
 		trackProblemStarted(); // Track if this is first interaction
 		const timeSinceStart = problemViewTimeRef.current
 			? Date.now() - problemViewTimeRef.current
@@ -743,6 +803,14 @@ export function AlgorithmWorkspace({
 	const handleSendMessage = async (message: string) => {
 		if (!message.trim()) return;
 
+		if (isBasicUser || isSubscriptionExpired || isSubscriptionCanceled) {
+			const errorMessage = isSubscriptionExpired
+				? "Your free trial has expired. Please upgrade to Pro to use chat."
+				: "Access denied. Please upgrade to Pro.";
+			toast.error(errorMessage);
+			return;
+		}
+
 		trackProblemStarted(); // Track if this is first interaction
 
 		const userMessage = {
@@ -938,7 +1006,15 @@ export function AlgorithmWorkspace({
 			let errorContent = "Failed to get AI response. Please try again.";
 			let errorType = "unknown";
 			if (error instanceof Error) {
-				if (error.message.includes("Rate limit")) {
+				if (
+					error.message.includes("trial has expired") ||
+					error.message.includes("expired")
+				) {
+					errorContent =
+						"Your free trial has expired. Please upgrade to Pro to use chat.";
+					errorType = "trial_expired";
+					toast.error(errorContent);
+				} else if (error.message.includes("Rate limit")) {
 					errorContent = error.message;
 					errorType = "rate_limit";
 					toast.error(error.message);
@@ -982,7 +1058,12 @@ export function AlgorithmWorkspace({
 				onShowSolution={showSolution}
 				iframeRef={iframeRef}
 				buttonVariant={buttonVariant}
-				buttonDisabled={buttonDisabled}
+				buttonDisabled={
+					buttonDisabled ||
+					isBasicUser ||
+					isSubscriptionExpired ||
+					isSubscriptionCanceled
+				}
 				chatMessages={chatMessages}
 				onSendMessage={handleSendMessage}
 				isThinking={isThinking}

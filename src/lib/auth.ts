@@ -9,6 +9,7 @@ import {
 	recalculateSkillNodes,
 	calculateCurrentSkillNodeId,
 } from "@/lib/progressionSystem";
+import type { SubscriptionStatusValue } from "@/lib/actions/billing";
 
 // Lightweight lesson metadata for calculating progress
 // This will be replaced with actual lesson metadata when available
@@ -52,10 +53,52 @@ export const authOptions: AuthOptions = {
 					return session;
 				}
 
+				// Check if user has never had a subscription
+				// Start trial for users who:
+				// - Have no stripeSubscriptionId (never subscribed to a paid plan)
+				// - Have no subscriptionStatus or it's null (not currently trialing/active/expired)
+				// - Role is NOT BASIC (if role is BASIC, their trial already expired)
+				// This allows both new users and past users who never subscribed to get a trial
+				// BUT prevents restarting trials for users whose trial already expired
+				const shouldStartTrial =
+					!userWithProgress.stripeSubscriptionId &&
+					(!userWithProgress.subscriptionStatus ||
+						userWithProgress.subscriptionStatus === null) &&
+					userWithProgress.subscriptionStatus !== "expired" && // Don't restart if trial expired
+					userWithProgress.role !== "BASIC"; // Don't restart if trial already expired
+
+				if (shouldStartTrial) {
+					// Start 3-day free trial (app-managed trial)
+					const trialEndDate = new Date();
+					trialEndDate.setDate(trialEndDate.getDate() + 3);
+
+					await prisma.user.update({
+						where: { id: user.id },
+						data: {
+							role: "PRO",
+							subscriptionStatus: "app_trialing",
+							stripeCurrentPeriodEnd: trialEndDate,
+						},
+					});
+
+					// Update userWithProgress to reflect the new trial
+					userWithProgress.role = "PRO";
+					userWithProgress.subscriptionStatus = "app_trialing";
+					userWithProgress.stripeCurrentPeriodEnd = trialEndDate;
+				}
+
 				session.user.id = userWithProgress.id;
 				session.user.role = userWithProgress.role;
 				session.user.emailNotifications =
 					userWithProgress.emailNotifications;
+				// Add subscription data to session
+				session.user.subscriptionStatus =
+					userWithProgress.subscriptionStatus as SubscriptionStatusValue;
+				session.user.stripePriceId = userWithProgress.stripePriceId;
+				session.user.stripeCurrentPeriodEnd =
+					userWithProgress.stripeCurrentPeriodEnd;
+				session.user.stripeSubscriptionId =
+					userWithProgress.stripeSubscriptionId;
 
 				// Load and calculate progress
 				if (userWithProgress.progress) {
@@ -95,10 +138,17 @@ export const authOptions: AuthOptions = {
 	},
 	events: {
 		async createUser({ user }) {
-			// Set default role when user is created by adapter
+			// Automatically start 3-day free trial for new users (app-managed trial)
+			const trialEndDate = new Date();
+			trialEndDate.setDate(trialEndDate.getDate() + 3);
+
 			await prisma.user.update({
 				where: { id: user.id },
-				data: { role: "BASIC" },
+				data: {
+					role: "PRO",
+					subscriptionStatus: "app_trialing",
+					stripeCurrentPeriodEnd: trialEndDate,
+				},
 			});
 		},
 	},

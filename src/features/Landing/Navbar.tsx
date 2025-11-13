@@ -9,9 +9,9 @@ import { useSession } from "next-auth/react";
 
 export default function Navbar() {
 	const { data: session } = useSession();
-	if (session?.user) {
-		redirect("/learn");
-	}
+	// if (session?.user) {
+	// 	redirect("/learn");
+	// }
 	return (
 		<nav className="fifxed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b border-border">
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
