@@ -471,7 +471,7 @@ export function ProgressProvider({
 
 		// Track sign-in events
 		const lastAuthStatus = sessionStorage.getItem(
-			"bitschool-last-auth-status"
+			"leetgpt-last-auth-status"
 		);
 		const wasUnauthenticated =
 			lastAuthStatus === "unauthenticated" || lastAuthStatus === null;
@@ -484,7 +484,7 @@ export function ProgressProvider({
 		) {
 			trackAuthSignin();
 		}
-		sessionStorage.setItem("bitschool-last-auth-status", status);
+		sessionStorage.setItem("leetgpt-last-auth-status", status);
 
 		// Skip if we already have progress loaded
 		if (
@@ -494,8 +494,8 @@ export function ProgressProvider({
 		) {
 			setIsProgressLoading(false);
 			// clear local storage
-			localStorage.removeItem("bitschool-progress");
-			localStorage.removeItem("bitschool-progress-checksum");
+			localStorage.removeItem("leetgpt-progress");
+			localStorage.removeItem("leetgpt-progress-checksum");
 			clearGuestId();
 
 			// Algorithm progress is preloaded in layout when available
@@ -543,9 +543,9 @@ export function ProgressProvider({
 						);
 
 						if (migrationResult.success) {
-							localStorage.removeItem("bitschool-progress");
+							localStorage.removeItem("leetgpt-progress");
 							localStorage.removeItem(
-								"bitschool-progress-checksum"
+								"leetgpt-progress-checksum"
 							);
 							clearGuestId();
 

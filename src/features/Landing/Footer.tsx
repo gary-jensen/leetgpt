@@ -12,13 +12,13 @@ export default function Footer() {
 					<div className="md:col-span-2">
 						<div className="flex items-center gap-3 mb-4">
 							<Image
-								src="/BitSchool Logo.png"
-								alt="BitSchool"
+								src="/LeetGPT Logo.png"
+								alt="LeetGPT"
 								width={48}
 								height={48}
 							/>
 							<span className="text-xl font-bold text-foreground">
-								BitSchool
+								LeetGPT
 							</span>
 						</div>
 						<p className="text-muted-foreground mb-4 max-w-md">
@@ -123,7 +123,7 @@ export default function Footer() {
 				{/* Bottom Bar */}
 				<div className="border-t border-border mt-8 pt-8 flex flex-col sm:flex-row justify-between items-center">
 					<p className="text-muted-foreground text-sm">
-						© 2024 BitSchool. All rights reserved.
+						© 2024 LeetGPT. All rights reserved.
 					</p>
 					<div className="flex items-center gap-6 mt-4 sm:mt-0">
 						<Link

@@ -20,13 +20,13 @@ export function AlgoNavbar() {
 				<div className="flex items-center gap-6">
 					<Link href="/" className="flex items-center gap-2">
 						<Image
-							src="/BitSchool Logo.png"
-							alt="BitSchool"
+							src="/LeetGPT Logo.png"
+							alt="LeetGPT"
 							width={32}
 							height={32}
 						/>
 						<span className="text-lg font-extrabold text-foreground">
-							BitSchool
+							LeetGPT
 						</span>
 					</Link>
 					<nav className="hidden md:flex items-center gap-4 text-sm">

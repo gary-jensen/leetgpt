@@ -27,9 +27,7 @@ function LoginForm() {
 					</div>
 				)}
 
-				<h1 className="text-4xl font-bold text-center mb-8">
-					BitSchool
-				</h1>
+				<h1 className="text-4xl font-bold text-center mb-8">LeetGPT</h1>
 
 				<div className="space-y-3">
 					{/* Google Sign In Button */}
@@ -101,7 +99,7 @@ export default function LoginPage() {
 					<div className="w-full max-w-md mb-6">
 						<div className="bg-card border border-border rounded-xl p-8 shadow-lg">
 							<h1 className="text-4xl font-bold text-center mb-8">
-								BitSchool
+								LeetGPT
 							</h1>
 							<div className="space-y-3">
 								<div className="w-full h-12 bg-muted animate-pulse rounded-lg" />

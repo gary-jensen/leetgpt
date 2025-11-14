@@ -16,7 +16,7 @@ const getEncryptionKey = async (): Promise<CryptoKey | null> => {
 	try {
 		const secret =
 			process.env.LOCAL_STORAGE_SECRET ||
-			"bitschool-default-secret-change-in-production";
+			"leetgpt-default-secret-change-in-production";
 
 		// Convert secret to key material
 		const encoder = new TextEncoder();
@@ -32,7 +32,7 @@ const getEncryptionKey = async (): Promise<CryptoKey | null> => {
 		const key = await crypto.subtle.deriveKey(
 			{
 				name: "PBKDF2",
-				salt: encoder.encode("bitschool-salt"), // Static salt for deterministic key
+				salt: encoder.encode("leetgpt-salt"), // Static salt for deterministic key
 				iterations: 100000,
 				hash: "SHA-256",
 			},
@@ -246,15 +246,12 @@ export const saveProgressToStorage = async (
 		const encryptedData = await encrypt(jsonData);
 
 		// Store encrypted data and checksum separately
-		localStorage.setItem("bitschool-progress", encryptedData);
-		localStorage.setItem("bitschool-progress-checksum", checksum);
+		localStorage.setItem("leetgpt-progress", encryptedData);
+		localStorage.setItem("leetgpt-progress-checksum", checksum);
 	} catch (error) {
 		// Fallback: try to save unencrypted if encryption fails
 		try {
-			localStorage.setItem(
-				"bitschool-progress",
-				JSON.stringify(progress)
-			);
+			localStorage.setItem("leetgpt-progress", JSON.stringify(progress));
 		} catch (fallbackError) {
 			// Silent fallback failure
 		}
@@ -267,9 +264,9 @@ export const saveProgressToStorage = async (
 export const loadProgressFromStorage =
 	async (): Promise<UserProgress | null> => {
 		try {
-			const encryptedData = localStorage.getItem("bitschool-progress");
+			const encryptedData = localStorage.getItem("leetgpt-progress");
 			const storedChecksum = localStorage.getItem(
-				"bitschool-progress-checksum"
+				"leetgpt-progress-checksum"
 			);
 
 			if (!encryptedData) {
@@ -290,8 +287,8 @@ export const loadProgressFromStorage =
 				const calculatedChecksum = await createChecksum(jsonData);
 				if (calculatedChecksum !== storedChecksum) {
 					// Clear corrupted data
-					localStorage.removeItem("bitschool-progress");
-					localStorage.removeItem("bitschool-progress-checksum");
+					localStorage.removeItem("leetgpt-progress");
+					localStorage.removeItem("leetgpt-progress-checksum");
 					return null;
 				}
 			}
@@ -307,8 +304,8 @@ export const loadProgressFromStorage =
 				const age = Date.now() - parsedData._timestamp;
 				const maxAge = 90 * 24 * 60 * 60 * 1000; // 90 days
 				if (age > maxAge) {
-					localStorage.removeItem("bitschool-progress");
-					localStorage.removeItem("bitschool-progress-checksum");
+					localStorage.removeItem("leetgpt-progress");
+					localStorage.removeItem("leetgpt-progress-checksum");
 					return null;
 				}
 			}
@@ -316,8 +313,8 @@ export const loadProgressFromStorage =
 			// Validate structure (validates the progress data, not metadata)
 			if (!validateProgress(parsedData)) {
 				// Clear invalid data
-				localStorage.removeItem("bitschool-progress");
-				localStorage.removeItem("bitschool-progress-checksum");
+				localStorage.removeItem("leetgpt-progress");
+				localStorage.removeItem("leetgpt-progress-checksum");
 				return null;
 			}
 
@@ -333,8 +330,8 @@ export const loadProgressFromStorage =
 			return progress;
 		} catch (error) {
 			// Clear corrupted data
-			localStorage.removeItem("bitschool-progress");
-			localStorage.removeItem("bitschool-progress-checksum");
+			localStorage.removeItem("leetgpt-progress");
+			localStorage.removeItem("leetgpt-progress-checksum");
 			return null;
 		}
 	};
@@ -343,8 +340,8 @@ export const loadProgressFromStorage =
  * Clear all progress data from localStorage
  */
 export const clearProgressFromStorage = (): void => {
-	localStorage.removeItem("bitschool-progress");
-	localStorage.removeItem("bitschool-progress-checksum");
+	localStorage.removeItem("leetgpt-progress");
+	localStorage.removeItem("leetgpt-progress-checksum");
 };
 
 /**
@@ -424,7 +421,7 @@ function createFallbackKey(): string {
 		typeof navigator !== "undefined" ? navigator.language : "en";
 
 	// Create a deterministic key from available data
-	const keyData = `${domain}:${userAgent}:${language}:bitschool_storage_key`;
+	const keyData = `${domain}:${userAgent}:${language}:leetgpt_storage_key`;
 
 	// Simple hash function
 	let hash = 0;

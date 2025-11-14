@@ -24,13 +24,13 @@ export default function Navbar() {
 							<div className="w-2 h-8 bg-orange-500 rounded-sm"></div>
 						</div> */}
 						<Image
-							src="/BitSchool Logo.png"
-							alt="BitSchool"
+							src="/LeetGPT Logo.png"
+							alt="LeetGPT"
 							width={48}
 							height={48}
 						/>
 						<span className="text-lg font-extrabold text-foreground">
-							BitSchool
+							LeetGPT
 						</span>
 					</Link>
 

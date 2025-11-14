@@ -261,15 +261,16 @@
 -   **Turn off lesson system**
 -   **Move problems and get rid of "algo" dashboard**
 -   **hide /learn and get rid of any links to it**
+-   **Rebrand to LeetGPT**
 
 ### Todo
 
 <!-- -   **Finalize algorithm lesson system** - Complete core system before UX enhancements -->
 
--   **Rebrand to LeetGPT**
 -   **Fix Problem statement not initial render**
 -   **responsiveness**
 -   **Create new landing page**
+-   **Create preview image**
 -   **Stripe Prod**
 
 ## Notes

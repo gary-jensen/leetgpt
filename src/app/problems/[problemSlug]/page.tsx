@@ -38,7 +38,7 @@ export async function generateMetadata({
 		.slice(0, 160);
 
 	return {
-		title: `${problem.title} - Algorithm Practice | BitSchool`,
+		title: `${problem.title} - LeetGPT`,
 		description:
 			description ||
 			`Practice ${problem.difficulty} algorithm problem: ${problem.title}`,

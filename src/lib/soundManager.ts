@@ -29,7 +29,7 @@ function initializeSounds() {
 	}
 
 	// Load mute preference from localStorage
-	const savedMuteState = localStorage.getItem("bitschool-sound-muted");
+	const savedMuteState = localStorage.getItem("leetgpt-sound-muted");
 	isMuted = savedMuteState === "true";
 
 	// Initialize each sound with error handling
@@ -86,7 +86,7 @@ export function playErrorSound() {
 
 export function toggleMute(): boolean {
 	isMuted = !isMuted;
-	localStorage.setItem("bitschool-sound-muted", isMuted.toString());
+	localStorage.setItem("leetgpt-sound-muted", isMuted.toString());
 	return isMuted;
 }
 
@@ -96,7 +96,7 @@ export function isSoundMuted(): boolean {
 
 export function setMute(muted: boolean) {
 	isMuted = muted;
-	localStorage.setItem("bitschool-sound-muted", muted.toString());
+	localStorage.setItem("leetgpt-sound-muted", muted.toString());
 }
 
 // Initialize sounds on module load

@@ -181,13 +181,13 @@ export function WorkspaceNavbar({ problemsMeta }: WorkspaceNavbarProps) {
 						<div className="flex items-center gap-4">
 							<Link href="/" className="flex items-center gap-2">
 								<Image
-									src="/BitSchool Logo.png"
-									alt="BitSchool"
+									src="/LeetGPT Logo.png"
+									alt="LeetGPT"
 									width={32}
 									height={32}
 								/>
 								<span className="text-lg font-extrabold text-foreground">
-									BitSchool
+									LeetGPT
 								</span>
 							</Link>
 

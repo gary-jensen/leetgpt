@@ -21,32 +21,33 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-	title: "BitSchool - Learn JavaScript Through Interactive Coding",
+	title: "LeetGPT - Master Algorithms & Coding Challenges",
 	description:
-		"Master JavaScript through hands-on, interactive lessons. Learn by doing with real-time code execution, AI-powered guidance, and gamified progression.",
+		"Practice coding problems and master algorithms with AI-powered guidance. Solve challenges, improve your problem-solving skills, and prepare for technical interviews with real-time feedback.",
 	keywords: [
-		"JavaScript",
-		"learn to code",
-		"programming",
-		"web development",
-		"coding tutorial",
-		"interactive learning",
+		"algorithms",
+		"coding challenges",
+		"data structures",
+		"programming practice",
+		"technical interview prep",
+		"problem solving",
+		"competitive programming",
 	],
-	authors: [{ name: "BitSchool" }],
+	authors: [{ name: "LeetGPT" }],
 	openGraph: {
-		title: "BitSchool - Learn JavaScript Through Interactive Coding",
+		title: "LeetGPT - Master Algorithms & Coding Challenges",
 		description:
-			"Master JavaScript through hands-on, interactive lessons. Learn by doing with real-time code execution and gamified progression.",
+			"Practice coding problems and master algorithms with AI-powered guidance. Solve challenges and improve your problem-solving skills with real-time feedback.",
 		type: "website",
-		url: "https://thebitschool.com",
-		images: ["https://thebitschool.com/preview-image.png"], // URL to the image for the card
+		url: "https://leetgpt.app",
+		images: ["https://leetgpt.app/preview-image.png"], // URL to the image for the card
 	},
 	twitter: {
 		card: "summary_large_image",
-		title: "BitSchool - Learn JavaScript Through Interactive Coding",
+		title: "LeetGPT - Master Algorithms & Coding Challenges",
 		description:
-			"Master JavaScript through hands-on, interactive lessons. Learn by doing with real-time code execution and gamified progression.",
-		images: ["https://thebitschool.com/preview-image.png"], // URL to the image for the card
+			"Practice coding problems and master algorithms with AI-powered guidance. Solve challenges and improve your problem-solving skills with real-time feedback.",
+		images: ["https://leetgpt.app/preview-image.png"], // URL to the image for the card
 	},
 };
 

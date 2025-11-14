@@ -7,8 +7,8 @@ import {
 	decryptData,
 } from "@/lib/cryptoUtils";
 
-const GUEST_ID_KEY = "bitschool_guest_id";
-const APP_SECRET = "bitschool-v1-secret-2025"; // Application secret for key derivation
+const GUEST_ID_KEY = "leetgpt_guest_id";
+const APP_SECRET = "leetgpt-v1-secret-2025"; // Application secret for key derivation
 
 // Memory cache for decrypted guest ID (survives component re-renders, not page refreshes)
 let cachedGuestId: string | null = null;
