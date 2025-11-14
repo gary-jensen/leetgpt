@@ -83,7 +83,7 @@ export default async function PaymentSuccessPage({
 						</div>
 					)}
 					<div className="pt-4">
-						<Link href="/algorithms/problems" className="block">
+						<Link href="/problems" className="block">
 							<Button
 								variant="correct"
 								className="w-full"

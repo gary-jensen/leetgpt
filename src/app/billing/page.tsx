@@ -204,9 +204,9 @@ export default async function TwoPlansBillingPage() {
 												{currentStatus ===
 													"canceled" && (
 													<p className="text-xs text-muted-foreground mt-1">
-														You'll lose access to
-														premium features after
-														this date
+														You&apos;ll lose access
+														to premium features
+														after this date
 													</p>
 												)}
 											</div>

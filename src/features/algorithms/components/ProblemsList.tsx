@@ -418,7 +418,7 @@ function ProblemRow({
 
 	return (
 		<Link
-			href={`/algorithms/problems/${problem.slug}`}
+			href={`/problems/${problem.slug}`}
 			onClick={() => {
 				trackAlgoProblemClicked(
 					problem.id,
@@ -454,7 +454,7 @@ function ProblemRow({
 				))}
 			</div> */}
 			{/* <div className="text-right">
-				<Link href={`/algorithms/problems/${problem.slug}`}>
+				<Link href={`/problems/${problem.slug}`}>
 					<Button size="sm" variant="outline" className="px-3">
 						Solve
 					</Button>

@@ -472,7 +472,8 @@ export function ProblemStatementChat({
 					}}
 				>
 					<DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-						<DialogTitle>Topics & Related Lessons</DialogTitle>
+						<DialogTitle>Topics</DialogTitle>
+						{/* <DialogTitle>Topics & Related Lessons</DialogTitle> */}
 						<div className="mt-3 mb-2">
 							<div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
 								<p className="text-sm text-foreground mb-2">

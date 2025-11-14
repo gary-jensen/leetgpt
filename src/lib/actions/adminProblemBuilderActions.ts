@@ -19,7 +19,7 @@ export async function revalidateAlgorithmPaths() {
 	requireAdmin();
 
 	revalidatePath("/algorithms");
-	revalidatePath("/algorithms/problems");
+	revalidatePath("/problems");
 	revalidateTag("algo:problems");
 }
 

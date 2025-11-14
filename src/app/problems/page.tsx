@@ -10,16 +10,16 @@ import {
 } from "@/features/algorithms/data";
 
 export default async function ProblemsListPage() {
-	const session = await getSession();
+	const [session, problems, allTopics, lessons] = await Promise.all([
+		getSession(),
+		getAlgoProblemsMeta(),
+		getAllTopics(),
+		// getAlgoLessons(),
+		[],
+	]);
 
 	// Check and expire trial if needed (handles everything internally)
 	getSubscriptionStatusFromSession(session);
-
-	const [problems, allTopics, lessons] = await Promise.all([
-		getAlgoProblemsMeta(),
-		getAllTopics(),
-		getAlgoLessons(),
-	]);
 
 	const difficultyTotals = { easy: 0, medium: 0, hard: 0 } as Record<
 		string,

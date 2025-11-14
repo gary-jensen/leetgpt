@@ -65,8 +65,8 @@ export function AlgoSidebar({ problems, lessonsTotal }: AlgoSidebarProps) {
 
 	const links = [
 		// { href: "/algorithms", label: "Home", icon: Home },
-		{ href: "/algorithms/problems", label: "Problems", icon: ListChecks },
-		{ href: "/algorithms/lessons", label: "Lessons", icon: BookOpenCheck },
+		{ href: "/problems", label: "Problems", icon: ListChecks },
+		// { href: "/algorithms/lessons", label: "Lessons", icon: BookOpenCheck },
 	];
 
 	// Compute totals using helpers
@@ -80,9 +80,9 @@ export function AlgoSidebar({ problems, lessonsTotal }: AlgoSidebarProps) {
 	const totalSolved = progress.algoProblemProgress.filter(
 		(p) => p.status === "completed"
 	).length;
-	const lessonsCompleted = progress.algoLessonProgress.filter(
-		(l) => l.status === "completed"
-	).length;
+	// const lessonsCompleted = progress.algoLessonProgress.filter(
+	// 	(l) => l.status === "completed"
+	// ).length;
 
 	return (
 		<aside className="hidden md:flex md:flex-col w-56 shrink-0 h-[calc(100vh-48px)] border-r border-border fixed left-0 top-12 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -136,7 +136,7 @@ export function AlgoSidebar({ problems, lessonsTotal }: AlgoSidebarProps) {
 				</div>
 
 				{/* Lessons stats */}
-				<div className="text-xs uppercase tracking-wide text-muted-foreground pt-3">
+				{/* <div className="text-xs uppercase tracking-wide text-muted-foreground pt-3">
 					Lessons
 				</div>
 				<div className="flex items-center justify-between">
@@ -145,7 +145,7 @@ export function AlgoSidebar({ problems, lessonsTotal }: AlgoSidebarProps) {
 						{isProgressLoaded && lessonsCompleted}/
 						{lessonsTotal ?? 0}
 					</span>
-				</div>
+				</div> */}
 			</div>
 		</aside>
 	);

@@ -62,7 +62,7 @@ export async function createAlgoProblem(data: AlgoProblemData) {
 
 		// Revalidate algorithm pages
 		revalidatePath("/algorithms");
-		revalidatePath("/algorithms/problems");
+		revalidatePath("/problems");
 
 		return { success: true, data: problem };
 	} catch (error: any) {
@@ -97,7 +97,7 @@ export async function updateAlgoProblem(id: string, data: AlgoProblemData) {
 
 		// Revalidate algorithm pages
 		revalidatePath("/algorithms");
-		revalidatePath("/algorithms/problems");
+		revalidatePath("/problems");
 		revalidateTag("algo:problems");
 
 		return { success: true, data: problem };
@@ -116,7 +116,7 @@ export async function deleteAlgoProblem(id: string) {
 
 		// Revalidate algorithm pages
 		revalidatePath("/algorithms");
-		revalidatePath("/algorithms/problems");
+		revalidatePath("/problems");
 
 		return { success: true };
 	} catch (error: any) {
@@ -257,7 +257,7 @@ export async function updateProblemPublishedStatus(
 		// Revalidate algorithm pages
 		revalidatePath("/admin/problems");
 		revalidatePath("/algorithms");
-		revalidatePath("/algorithms/problems");
+		revalidatePath("/problems");
 
 		return { success: true };
 	} catch (error: any) {

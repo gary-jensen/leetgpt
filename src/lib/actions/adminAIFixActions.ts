@@ -152,7 +152,6 @@ export async function generateProblemFix(
 	}
 }
 
-
 /**
  * Validate the AI response structure
  */
@@ -627,8 +626,8 @@ export async function applyProblemFix(
 		// Revalidate pages (these are fire-and-forget, don't block)
 		// The revalidation happens asynchronously, so we can return immediately
 		revalidatePath("/algorithms");
-		revalidatePath("/algorithms/problems");
-		revalidatePath(`/algorithms/problems/${problem.slug}`);
+		revalidatePath("/problems");
+		revalidatePath(`/problems/${problem.slug}`);
 		revalidatePath("/admin/problems");
 		revalidatePath("/admin/problems/test");
 

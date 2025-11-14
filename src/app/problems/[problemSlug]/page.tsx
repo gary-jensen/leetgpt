@@ -77,7 +77,7 @@ export default async function AlgorithmWorkspacePage({
 	]);
 
 	if (!problem) {
-		redirect("/algorithms/problems");
+		redirect("/problems");
 	}
 
 	// Fetch related lessons for this problem's topics

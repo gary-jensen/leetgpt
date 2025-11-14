@@ -74,7 +74,7 @@ export default function TwoPlansSelector({
 			{/* Header */}
 			<div className="flex items-end justify-between">
 				<div className="flex flex-col gap-2">
-					<Link href="/algorithms/problems">
+					<Link href="/problems">
 						<Button
 							variant="outline"
 							size="sm"

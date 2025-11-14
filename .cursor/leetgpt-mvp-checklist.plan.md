@@ -258,10 +258,18 @@
 -   **Sound effects** - Quick UX win, low effort
 -   **AI Chat suggestions** - UX enhancement, medium effort
 -   **Stripe/payment** - Full subscription system with state machine
+-   **Turn off lesson system**
+-   **Move problems and get rid of "algo" dashboard**
+-   **hide /learn and get rid of any links to it**
 
 ### Todo
 
--   **Finalize algorithm lesson system** - Complete core system before UX enhancements
+<!-- -   **Finalize algorithm lesson system** - Complete core system before UX enhancements -->
+
+-   **Rebrand to LeetGPT**
+-   **Fix Problem statement not initial render**
+-   **responsiveness**
+-   **Create new landing page**
 -   **Stripe Prod**
 
 ## Notes

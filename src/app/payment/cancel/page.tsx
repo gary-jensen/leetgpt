@@ -48,7 +48,7 @@ export default function PaymentCancelPage() {
 								Try Again
 							</Button>
 						</Link>
-						<Link href="/algorithms/problems" className="block">
+						<Link href="/problems" className="block">
 							<Button
 								className="w-full"
 								variant="outline"

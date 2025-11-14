@@ -85,7 +85,7 @@ export function WorkspaceNavbar({ problemsMeta }: WorkspaceNavbarProps) {
 		filters.searchTerm,
 	]);
 
-	// Extract current problem slug from path: /algorithms/problems/[slug]
+	// Extract current problem slug from path: /problems/[slug]
 	const currentSlug = useMemo(() => {
 		if (!pathname) return null;
 		const parts = pathname.split("/").filter(Boolean);
@@ -158,7 +158,7 @@ export function WorkspaceNavbar({ problemsMeta }: WorkspaceNavbarProps) {
 				trackAlgoProblemSwitched(currentProblem.id, targetProblem.id);
 			}
 		}
-		router.push(`/algorithms/problems/${targetProblem.slug}`);
+		router.push(`/problems/${targetProblem.slug}`);
 	};
 
 	const goPrev = () => {
@@ -214,7 +214,7 @@ export function WorkspaceNavbar({ problemsMeta }: WorkspaceNavbarProps) {
 												<TooltipTrigger asChild>
 													<div className="border shadow-xs hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 size-9 hidden group-hover:flex h-fit w-fit rounded-[4px] bg-white/10 hover:bg-white/15 hover:border-white/1">
 														<Link
-															href="/algorithms/problems"
+															href="/problems"
 															target="_blank"
 															onClick={(e) => {
 																e.stopPropagation();
@@ -238,7 +238,7 @@ export function WorkspaceNavbar({ problemsMeta }: WorkspaceNavbarProps) {
 										<DrawerHeader className="py-0 border-b border-border mb-2 h-16 justify-center">
 											<DrawerTitle>
 												<Link
-													href="/algorithms/problems"
+													href="/problems"
 													className="text-lg text-foreground hover:underline py-4 flex items-center gap-1"
 													onClick={() =>
 														setDrawerOpen(false)
@@ -513,7 +513,7 @@ export function WorkspaceNavbar({ problemsMeta }: WorkspaceNavbarProps) {
 																false
 															);
 															router.push(
-																`/algorithms/problems/${p.slug}`
+																`/problems/${p.slug}`
 															);
 														}}
 														className={`w-full text-left px-3 py-2 rounded-md border border-transparent hover:bg-white/10 ${
