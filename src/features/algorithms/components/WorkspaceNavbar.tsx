@@ -204,7 +204,7 @@ export function WorkspaceNavbar({ problemsMeta }: WorkspaceNavbarProps) {
 										<Button
 											variant="outline"
 											size="sm"
-											className="group gap-2 bg-transparent border-transparent hover:border-border hover:bg-white/10 w-35 justify-start cursor-pointer"
+											className="group gap-2 bg-transparent border-transparent hover:border-border hover:bg-white/10 sm:w-35 justify-start cursor-pointer"
 										>
 											<List className="w-4 h-4" />
 											<span className="hidden sm:inline truncate">

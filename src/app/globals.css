@@ -50,12 +50,16 @@
 	--breakpoint-xs: 480px;
 	--breakpoint-sm: 640px;
 	--breakpoint-sm-2: 768px;
+	--breakpoint-sm-3: 850px;
 	--breakpoint-md: 980px;
 	--breakpoint-lg: 1100px;
 	--breakpoint-xl: 1280px;
 	--breakpoint-2xl: 1536px;
 	--breakpoint-3xl: 1800px;
 }
+
+/* @custom-media --sm-3 (min-width: 850px); */
+@custom-variant sm-3 (@media (--sm-3));
 
 :root {
 	--radius: 0.625rem;

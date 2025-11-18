@@ -264,13 +264,13 @@
 -   **Rebrand to LeetGPT**
 -   **Create new landing page**
 -   **Fix Problem statement not initial render**
+-   **responsiveness**
+-   **Create preview image**
 
 ### Todo
 
 <!-- -   **Finalize algorithm lesson system** - Complete core system before UX enhancements -->
 
--   **responsiveness**
--   **Create preview image**
 -   **Stripe Prod**
 
 ## Notes
