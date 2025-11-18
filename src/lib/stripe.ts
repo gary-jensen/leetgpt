@@ -17,15 +17,7 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 export {
 	STRIPE_PRICE_PRO_MONTHLY,
 	STRIPE_PRICE_PRO_YEARLY,
-	STRIPE_PRICE_EXPERT_MONTHLY,
-	STRIPE_PRICE_EXPERT_YEARLY,
-	isExpertPrice,
-	getPlanTier,
 	isYearlyPrice,
-	// Legacy exports for backward compatibility
-	STRIPE_PRICE_PRO_PLUS_MONTHLY,
-	STRIPE_PRICE_PRO_PLUS_YEARLY,
-	isProPlusPrice,
 } from "./stripeConfig";
 
 /**

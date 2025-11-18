@@ -1,8 +1,7 @@
 import type { SubscriptionStatusValue, SubscriptionStatus } from "@/lib/actions/billing";
-import { getPlanTier } from "@/lib/stripeConfig";
 import {
 	STRIPE_PRICE_PRO_YEARLY,
-	STRIPE_PRICE_EXPERT_YEARLY,
+	STRIPE_PRICE_PRO_MONTHLY,
 } from "@/lib/stripeConfig";
 import { prisma } from "@/lib/prisma";
 
@@ -182,10 +181,17 @@ export function getSubscriptionStatusFromSession(
 		}
 	}
 
-	const planTier = getPlanTier(session.user.stripePriceId || null);
-	const isYearly =
-		session.user.stripePriceId === STRIPE_PRICE_PRO_YEARLY ||
-		session.user.stripePriceId === STRIPE_PRICE_EXPERT_YEARLY;
+	// Determine plan tier: EXPERT if manually assigned role, PRO if Stripe subscription
+	let planTier: "PRO" | "EXPERT" | null = null;
+	if (session.user.role === "EXPERT") {
+		planTier = "EXPERT";
+	} else if (session.user.stripePriceId && (
+		session.user.stripePriceId === STRIPE_PRICE_PRO_MONTHLY ||
+		session.user.stripePriceId === STRIPE_PRICE_PRO_YEARLY
+	)) {
+		planTier = "PRO";
+	}
+	const isYearly = session.user.stripePriceId === STRIPE_PRICE_PRO_YEARLY;
 
 	// Calculate trial days remaining for app_trialing or stripe_trialing
 	let trialDaysRemaining: number | null = null;

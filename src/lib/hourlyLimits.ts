@@ -1,10 +1,9 @@
 /**
  * Hourly limit checking utility for algorithm workspace
- * Provides subscription-based limits (TRIAL, PRO, EXPERT) using the existing rate limit infrastructure
+ * Provides subscription-based limits (TRIAL, PRO) using the existing rate limit infrastructure
  */
 
 import { checkRateLimit, getRateLimitKey } from "./rateLimit";
-import { isExpertPrice } from "./stripeConfig";
 import { SubscriptionStatusValue } from "@/lib/actions/billing";
 
 // 1 hour in milliseconds
@@ -65,12 +64,12 @@ export function getSubscriptionTier(
 		return "TRIAL";
 	}
 
-	// Active subscribers - check price ID to determine PRO vs EXPERT
-	if (subscriptionStatus === "active" && stripePriceId) {
-		return isExpertPrice(stripePriceId) ? "EXPERT" : "PRO";
+	// Check if user has EXPERT role (manually assigned, not via Stripe)
+	if (role === "EXPERT") {
+		return "EXPERT";
 	}
 
-	// Default to PRO for active subscriptions without price ID
+	// Active subscribers are PRO (all Stripe subscriptions are PRO tier now)
 	if (subscriptionStatus === "active") {
 		return "PRO";
 	}

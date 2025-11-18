@@ -7,12 +7,8 @@ import {
 	createCheckoutSession,
 	createPortalSession,
 	getSubscription,
-	isExpertPrice,
-	getPlanTier,
 	STRIPE_PRICE_PRO_MONTHLY,
 	STRIPE_PRICE_PRO_YEARLY,
-	STRIPE_PRICE_EXPERT_MONTHLY,
-	STRIPE_PRICE_EXPERT_YEARLY,
 	createCustomer,
 } from "@/lib/stripe";
 import { getSubscriptionStatusFromSession } from "@/lib/utils/subscription";
@@ -64,8 +60,6 @@ export async function createCheckoutSessionAction(priceId: string): Promise<{
 		const validPriceIds = [
 			STRIPE_PRICE_PRO_MONTHLY,
 			STRIPE_PRICE_PRO_YEARLY,
-			STRIPE_PRICE_EXPERT_MONTHLY,
-			STRIPE_PRICE_EXPERT_YEARLY,
 		];
 
 		if (!validPriceIds.includes(priceId)) {
@@ -212,9 +206,9 @@ export async function getSubscriptionStatus(): Promise<SubscriptionStatus | null
 }
 
 /**
- * Get current plan tier (PRO or EXPERT)
- * Returns null if user is not authenticated (graceful handling for guests)
- */
+* Get current plan tier (PRO via Stripe, EXPERT via manual assignment)
+* Returns null if user is not authenticated (graceful handling for guests)
+*/
 export async function getCurrentPlanTier(): Promise<"PRO" | "EXPERT" | null> {
 	try {
 		// Check authentication without throwing
@@ -227,10 +221,24 @@ export async function getCurrentPlanTier(): Promise<"PRO" | "EXPERT" | null> {
 			where: { id: session.user.id },
 			select: {
 				stripePriceId: true,
+				role: true,
 			},
 		});
 
-		return getPlanTier(dbUser?.stripePriceId || null);
+		// Check if user has EXPERT role (manually assigned)
+		if (dbUser?.role === "EXPERT") {
+			return "EXPERT";
+		}
+
+		// If user has a valid Stripe price ID, they're PRO
+		if (dbUser?.stripePriceId && (
+			dbUser.stripePriceId === STRIPE_PRICE_PRO_MONTHLY ||
+			dbUser.stripePriceId === STRIPE_PRICE_PRO_YEARLY
+		)) {
+			return "PRO";
+		}
+
+		return null;
 	} catch (error) {
 		console.error("Failed to get current plan tier:", error);
 		return null;
@@ -238,8 +246,8 @@ export async function getCurrentPlanTier(): Promise<"PRO" | "EXPERT" | null> {
 }
 
 /**
- * Update user role (used by webhook)
- */
+* Update user role (used by webhook and manual admin assignment)
+*/
 export async function updateUserRole(
 	userId: string,
 	role: "BASIC" | "PRO" | "EXPERT" | "ADMIN"
@@ -396,10 +404,11 @@ export async function syncSubscriptionFromStripe(
 			subscriptionStatus = null;
 		}
 
-		// Determine role based on price ID (PRO or EXPERT)
+		// Determine role based on subscription status (only PRO tier available via Stripe)
 		let role: "BASIC" | "PRO" | "EXPERT" = "BASIC";
 		if (subscriptionStatus && priceId) {
-			role = isExpertPrice(priceId) ? "EXPERT" : "PRO";
+			// All Stripe subscriptions are PRO tier now
+			role = "PRO";
 		}
 
 		// Update user with subscription data
