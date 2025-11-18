@@ -26,8 +26,6 @@ interface DescriptionTabProps {
 	streamingMessageId?: string | null;
 	relatedLessons?: AlgoLesson[];
 	processedExamplesAndConstraints: string;
-	examplesConstraintsMessage?: any;
-	problemStatementMessage?: any;
 	displayMessages: any[];
 	hasUserMessages: boolean;
 	messagesEndRef: React.RefObject<HTMLDivElement | null>;
@@ -61,8 +59,6 @@ export function DescriptionTab({
 	streamingMessageId = null,
 	relatedLessons = [],
 	processedExamplesAndConstraints,
-	examplesConstraintsMessage,
-	problemStatementMessage,
 	displayMessages,
 	hasUserMessages,
 	messagesEndRef,
@@ -90,15 +86,10 @@ export function DescriptionTab({
 	const isLoggedIn = !!session?.user?.id;
 	const isDisabled = !isLoggedIn || session.user.role === "BASIC";
 
-	// Auto-scroll to bottom when new messages arrive (but not for initial problem statement/examples)
+	// Auto-scroll to bottom when new messages arrive
 	useEffect(() => {
-		// Only auto-scroll if there are actual chat messages beyond the initial ones
-		const nonInitialMessages = chatMessages.filter(
-			(msg) =>
-				msg.id !== "problem-statement" &&
-				msg.id !== "examples-constraints"
-		);
-		if (nonInitialMessages.length > 0) {
+		// Only auto-scroll if there are actual chat messages
+		if (chatMessages.length > 0) {
 			messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
 		}
 	}, [chatMessages, isThinking]);
@@ -121,7 +112,7 @@ export function DescriptionTab({
 				hasInitializedExpandedStateRef.current = true;
 			}
 		});
-	}, [problemStatementMessage, processedStatement, hasUserMessages]);
+	}, [processedStatement, hasUserMessages]);
 
 	// Trigger animation when hasUserMessages becomes true for the first time
 	useEffect(() => {
@@ -194,7 +185,7 @@ export function DescriptionTab({
 				</Button>
 			</div>
 			{/* Problem Statement - Sticky only after user messages */}
-			{problemStatementMessage && (
+			{processedStatement && (
 				<div
 					className={cn(
 						hasUserMessages
@@ -234,9 +225,7 @@ export function DescriptionTab({
 									ref={problemStatementContentRef}
 									className="markdown-content"
 									dangerouslySetInnerHTML={{
-										__html:
-											problemStatementMessage.content ||
-											processedStatement,
+										__html: processedStatement,
 									}}
 								/>
 							</div>
@@ -291,32 +280,18 @@ export function DescriptionTab({
 			)}
 			<div className="flex-1 flex flex-col overflow-y-auto space-y-4">
 				{/* Examples & Constraints (scrollable) */}
-				{examplesConstraintsMessage && (
+				{processedExamplesAndConstraints && (
 					<div className="space-y-1 px-3">
 						<div className="chat-markdown-display algo-problem">
 							<div
 								className="markdown-content"
 								dangerouslySetInnerHTML={{
-									__html: examplesConstraintsMessage.content,
+									__html: processedExamplesAndConstraints,
 								}}
 							/>
 						</div>
 					</div>
 				)}
-				{/* Fallback to processed examples/constraints if not in messages */}
-				{!examplesConstraintsMessage &&
-					processedExamplesAndConstraints && (
-						<div className="space-y-1 px-3">
-							<div className="chat-markdown-display algo-problem">
-								<div
-									className="markdown-content"
-									dangerouslySetInnerHTML={{
-										__html: processedExamplesAndConstraints,
-									}}
-								/>
-							</div>
-						</div>
-					)}
 
 				{/* Regular Chat Messages */}
 				{displayMessages.map((message, index) => {

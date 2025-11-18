@@ -263,12 +263,12 @@
 -   **hide /learn and get rid of any links to it**
 -   **Rebrand to LeetGPT**
 -   **Create new landing page**
+-   **Fix Problem statement not initial render**
 
 ### Todo
 
 <!-- -   **Finalize algorithm lesson system** - Complete core system before UX enhancements -->
 
--   **Fix Problem statement not initial render**
 -   **responsiveness**
 -   **Create preview image**
 -   **Stripe Prod**

@@ -1,47 +1,29 @@
 "use client";
 
+import { processMarkdown } from "@/components/MarkdownEditor/markdown-processor";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ResizablePanel } from "@/components/ui/resizable";
-import { AlgoProblemDetail, AlgoLesson } from "@/types/algorithm-types";
-import { ChatMarkdownDisplay } from "@/components/workspace/Chat/components/ChatMarkdownDisplay";
-import { useState, useRef, useEffect, useCallback } from "react";
+import "@/components/workspace/Chat/components/ChatMarkdownDisplay.css";
+import { getSubmissionHistory } from "@/lib/actions/algoProgress";
 import {
-	trackAlgoTabSwitched,
 	trackAlgoSubmissionsTabViewed,
+	trackAlgoTabSwitched,
 	trackAlgoTopicsDialogOpened,
 } from "@/lib/analytics";
-import { processMarkdown } from "@/components/MarkdownEditor/markdown-processor";
-import ThinkingAnimation from "@/components/workspace/Chat/components/ThinkingAnimation";
-import { SubmissionMessage } from "./SubmissionMessage";
-import { TopicsDropdown } from "./TopicsDropdown";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogTitle,
-} from "@/components/ui/dialog";
-import {
-	TagIcon,
-	ChevronUp,
-	ChevronDown,
-	Plus,
-	Mic,
-	ArrowUp,
-	CodeXmlIcon,
-	ScanTextIcon,
-	FlaskConicalIcon,
-	HistoryIcon,
-} from "lucide-react";
 import { cn } from "@/lib/utils";
-import "@/components/workspace/Chat/components/ChatMarkdownDisplay.css";
-import "./ProblemStatement.css";
-import { Button } from "@/components/ui/button";
+import {
+	AlgoLesson,
+	AlgoProblemDetail,
+	AlgoProblemSubmission,
+} from "@/types/algorithm-types";
+import { FlaskConicalIcon, HistoryIcon, ScanTextIcon, X } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { SubmissionsTab } from "./SubmissionsTab";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { DescriptionTab } from "./DescriptionTab";
+import "./ProblemStatement.css";
 import { SubmissionDetailTab } from "./SubmissionDetailTab";
-import { getSubmissionHistory } from "@/lib/actions/algoProgress";
-import { AlgoProblemSubmission } from "@/types/algorithm-types";
-import { X } from "lucide-react";
+import { SubmissionsTab } from "./SubmissionsTab";
+import { TopicsDropdown } from "./TopicsDropdown";
 
 interface ProblemStatementChatProps {
 	problem: AlgoProblemDetail;
@@ -191,21 +173,10 @@ export function ProblemStatementChat({
 		}
 	};
 
-	// Get problem statement and examples/constraints from chatMessages
-	const problemStatementMessage = chatMessages.find(
-		(msg) => msg.id === "problem-statement"
-	);
-	const examplesConstraintsMessage = chatMessages.find(
-		(msg) => msg.id === "examples-constraints"
-	);
+	// All chatMessages are actual interactions (no problem statement/examples in chat)
+	const displayMessages = chatMessages;
 
-	// Filter out initial messages from chatMessages for display
-	const displayMessages = chatMessages.filter(
-		(msg) =>
-			msg.id !== "problem-statement" && msg.id !== "examples-constraints"
-	);
-
-	// Check if user has interacted (any message beyond problem statement/examples-constraints)
+	// Check if user has interacted (any chat message means interaction)
 	// This includes: user messages, submissions, hints (AI responses), or any other interaction
 	// If yes, make problem statement sticky
 	const hasUserMessages = displayMessages.length > 0;
@@ -228,7 +199,7 @@ export function ProblemStatementChat({
 				hasInitializedExpandedStateRef.current = true;
 			}
 		});
-	}, [problemStatementMessage, processedStatement, hasUserMessages]);
+	}, [processedStatement, hasUserMessages]);
 
 	// Measure problem statement content height to determine if expand/collapse is needed
 	useEffect(() => {
@@ -255,7 +226,7 @@ export function ProblemStatementChat({
 			window.removeEventListener("resize", measureHeight);
 			resizeObserver.disconnect();
 		};
-	}, [problemStatementMessage, processedStatement]);
+	}, [processedStatement]);
 
 	// Trigger animation when hasUserMessages becomes true for the first time
 	useEffect(() => {
@@ -511,24 +482,8 @@ export function ProblemStatementChat({
 							processedExamplesAndConstraints={
 								processedExamplesAndConstraints
 							}
-							examplesConstraintsMessage={chatMessages.find(
-								(msg) => msg.id === "examples-constraints"
-							)}
-							problemStatementMessage={chatMessages.find(
-								(msg) => msg.id === "problem-statement"
-							)}
-							displayMessages={chatMessages.filter(
-								(msg) =>
-									msg.id !== "problem-statement" &&
-									msg.id !== "examples-constraints"
-							)}
-							hasUserMessages={
-								chatMessages.filter(
-									(msg) =>
-										msg.id !== "problem-statement" &&
-										msg.id !== "examples-constraints"
-								).length > 0
-							}
+							displayMessages={displayMessages}
+							hasUserMessages={hasUserMessages}
 							messagesEndRef={messagesEndRef}
 							chatContainerRef={chatContainerRef}
 							problemStatementContentRef={

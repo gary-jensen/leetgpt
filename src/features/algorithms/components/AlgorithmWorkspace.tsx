@@ -110,42 +110,15 @@ export function AlgorithmWorkspace({
 		}
 	});
 
-	// Create new chat session on mount and initialize with problem statement
+	// Create new chat session on mount
 	useEffect(() => {
 		const sessionId = `session_${Date.now()}_${Math.random()
 			.toString(36)
 			.substring(7)}`;
 		setCurrentSessionId(sessionId);
 
-		// Initialize chat with problem statement and examples/constraints
-		const initialMessages: any[] = [
-			{
-				id: "problem-statement",
-				role: "assistant" as const,
-				content: problem.statementHtml || problem.statementMd,
-				timestamp: new Date(),
-				type: "problem_statement",
-			},
-		];
-
-		// Add examples/constraints if available
-		if (
-			problem.examplesAndConstraintsHtml ||
-			problem.examplesAndConstraintsMd
-		) {
-			initialMessages.push({
-				id: "examples-constraints",
-				role: "assistant" as const,
-				content:
-					problem.examplesAndConstraintsHtml ||
-					problem.examplesAndConstraintsMd ||
-					"",
-				timestamp: new Date(),
-				type: "examples_constraints",
-			});
-		}
-
-		setChatMessages(initialMessages);
+		// Reset chat messages when problem changes (only actual chat, not problem statement)
+		setChatMessages([]);
 	}, [problem.id]); // Re-initialize when problem changes
 
 	// Create submission message when code execution completes
