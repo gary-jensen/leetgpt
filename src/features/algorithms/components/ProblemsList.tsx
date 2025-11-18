@@ -430,22 +430,27 @@ function ProblemRow({
 			}}
 			className="border-t border-border hover:bg-white/5 w-full text-sm group px-4 py-3 flex justify-between items-center min-h-14"
 		>
-			<div className="truncate pr-4 flex items-center gap-6">
+			<div className="truncate pfr-4 w-full grid grid-cols-[20px_20px_1fr_60px] gap-2">
 				<div className="w-4 flex items-center justify-center">
 					{isCompleted ? (
 						<Check className="w-4 h-4 text-green-500" />
-					) : null}
+					) : (
+						<div></div>
+					)}
 				</div>
-				<div className="text-sm text-muted-foreground">
+				<div className="text-sm text-muted-foreground text-right">
 					{displayNumber}
 				</div>
-				<span className="group-hover:underline">{problem.title}</span>
+				<div className="group-hover:underline text-ellipsis overflow-hidden ml-4">
+					{problem.title}
+				</div>
+				<div className="text-sm font-medium capitalize text-right">
+					<span className={getDifficultyColor(problem.difficulty)}>
+						{problem.difficulty}
+					</span>
+				</div>
 			</div>
-			<div className="text-sm font-medium capitalize {getDifficultyColor(problem.difficulty)}">
-				<span className={getDifficultyColor(problem.difficulty)}>
-					{problem.difficulty}
-				</span>
-			</div>
+
 			{/* <div className="hidden md:flex flex-wrap gap-2">
 				{problem.topics.map((topic) => (
 					<Badge key={topic} variant="secondary" className="text-2xs">

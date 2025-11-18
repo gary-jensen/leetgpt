@@ -42,7 +42,7 @@ export default async function ProblemsListPage() {
 				}))}
 				lessonsTotal={lessonsTotal}
 			/>
-			<div className="max-w-7xl pt-20 mx-auto px-4 py-4 ">
+			<div className="max-w-7xl md:ml-[250px] 3xl:mx-auto pt-20 mx-auto px-4 py-4 ">
 				<ProblemsList problems={problems} allTopics={allTopics} />
 			</div>
 		</div>
