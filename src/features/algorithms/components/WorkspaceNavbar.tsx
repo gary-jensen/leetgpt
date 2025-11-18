@@ -1,31 +1,10 @@
 "use client";
 
-import Link from "next/link";
-import Image from "next/image";
-import { Button } from "@/components/ui/button";
-import {
-	ArrowLeft,
-	ArrowRight,
-	List,
-	Search,
-	Filter,
-	ArrowUpDown,
-	ChevronRightIcon,
-	Check,
-	ExternalLinkIcon,
-	SquareArrowOutUpRightIcon,
-} from "lucide-react";
-import { useSession } from "next-auth/react";
 import AuthButton from "@/components/AuthButton";
-import { useMemo, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { useProgress } from "@/contexts/ProgressContext";
-import { trackAlgoProblemSwitched } from "@/lib/analytics";
-import { getDifficultyColor } from "../utils/difficultyUtils";
-import { useAlgoFilters } from "../hooks/useAlgoFilters";
-import type { FilterSortBy } from "../utils/filterStorage";
-import TrialBanner from "@/components/TrialBanner";
 import ProBadge from "@/components/ProBadge";
+import TrialBanner from "@/components/TrialBanner";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
 	Drawer,
 	DrawerContent,
@@ -33,25 +12,45 @@ import {
 	DrawerTitle,
 	DrawerTrigger,
 } from "@/components/ui/drawer";
-import type { AlgoProblemMeta } from "@/types/algorithm-types";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
-	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuRadioGroup,
 	DropdownMenuRadioItem,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import {
 	Tooltip,
-	TooltipTrigger,
 	TooltipContent,
+	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useProgress } from "@/contexts/ProgressContext";
+import { trackAlgoProblemSwitched } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
+import type { AlgoProblemMeta } from "@/types/algorithm-types";
+import {
+	ArrowLeft,
+	ArrowRight,
+	ArrowUpDown,
+	Check,
+	ChevronRightIcon,
+	Filter,
+	List,
+	Search,
+	SquareArrowOutUpRightIcon,
+	X,
+} from "lucide-react";
+import { useSession } from "next-auth/react";
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
+import { useAlgoFilters } from "../hooks/useAlgoFilters";
+import { getDifficultyColor } from "../utils/difficultyUtils";
+import type { FilterSortBy } from "../utils/filterStorage";
 
 interface WorkspaceNavbarProps {
 	problemsMeta: AlgoProblemMeta[];
@@ -234,9 +233,9 @@ export function WorkspaceNavbar({ problemsMeta }: WorkspaceNavbarProps) {
 											</Tooltip>
 										</Button>
 									</DrawerTrigger>
-									<DrawerContent className="!max-w-2xl">
+									<DrawerContent className="!w-full !max-w-[100%] sm:!max-w-2xl">
 										<DrawerHeader className="py-0 border-b border-border mb-2 h-16 justify-center">
-											<DrawerTitle>
+											<DrawerTitle className="flex items-center justify-between">
 												<Link
 													href="/problems"
 													className="text-lg text-foreground hover:underline py-4 flex items-center gap-1"
@@ -247,6 +246,19 @@ export function WorkspaceNavbar({ problemsMeta }: WorkspaceNavbarProps) {
 													Problem List
 													<ChevronRightIcon />
 												</Link>
+												<Button
+													variant="ghost"
+													className=""
+													aria-label="Close"
+													onClick={() =>
+														setDrawerOpen(false)
+													}
+												>
+													<X
+														className="size-full"
+														size={32}
+													/>
+												</Button>
 											</DrawerTitle>
 										</DrawerHeader>
 										<div className="px-4 pb-4 flex items-center gap-2">
@@ -523,27 +535,29 @@ export function WorkspaceNavbar({ problemsMeta }: WorkspaceNavbarProps) {
 														}`}
 													>
 														<div className="flex items-center justify-between">
-															<div className="flex items-center gap-3 truncate">
+															<div className="truncate w-full grid grid-cols-[16px_20px_1fr_60px] sm:grid-cols-[20px_20px_1fr_60px] gap-1 sm:gap-2">
 																<div className="w-4 flex items-center justify-center">
 																	{isCompleted ? (
 																		<Check className="w-4 h-4 text-green-500" />
 																	) : null}
 																</div>
-																<span className="text-xs text-muted-foreground">
+																<span className="text-sm text-muted-foreground text-right">
 																	{p.order ??
 																		idx + 1}
 																</span>
-																<span className="truncate text-sm">
+																<span className="group-hover:underline text-ellipsis overflow-hidden ml-4">
 																	{p.title}
 																</span>
+																<span
+																	className={` text-sm font-medium capitalize text-right ${getDifficultyColor(
+																		p.difficulty
+																	)}`}
+																>
+																	{
+																		p.difficulty
+																	}
+																</span>
 															</div>
-															<span
-																className={`text-xs capitalize ${getDifficultyColor(
-																	p.difficulty
-																)}`}
-															>
-																{p.difficulty}
-															</span>
 														</div>
 													</button>
 												);

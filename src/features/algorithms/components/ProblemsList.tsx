@@ -430,7 +430,7 @@ function ProblemRow({
 			}}
 			className="border-t border-border hover:bg-white/5 w-full text-sm group px-4 py-3 flex justify-between items-center min-h-14"
 		>
-			<div className="truncate pfr-4 w-full grid grid-cols-[20px_20px_1fr_60px] gap-2">
+			<div className="truncate w-full grid grid-cols-[20px_20px_1fr_60px] gap-2">
 				<div className="w-4 flex items-center justify-center">
 					{isCompleted ? (
 						<Check className="w-4 h-4 text-green-500" />
