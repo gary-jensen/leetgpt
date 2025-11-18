@@ -9,6 +9,7 @@ import { createCheckoutSessionAction } from "@/lib/actions/billing";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeftIcon } from "lucide-react";
+import FAQ3 from "@/features/LeetGPTLanding/FAQ";
 
 export default function TwoPlansSelector({
 	isTrialing,
@@ -36,22 +37,6 @@ export default function TwoPlansSelector({
 	// Only show "$0 then..." if trial is active AND has days remaining
 	const hasActiveTrial = isTrialing && trialDaysRemaining > 0;
 
-	const monthlyPriceText = hasActiveTrial
-		? `$0 then $${monthlyPrice.toFixed(
-				2
-		  )}/month in ${trialDaysRemaining} day${
-				trialDaysRemaining !== 1 ? "s" : ""
-		  }`
-		: `$${monthlyPrice.toFixed(2)}/month`;
-
-	const yearlyPriceText = hasActiveTrial
-		? `$0 then $${yearlyPrice.toFixed(
-				2
-		  )}/year in ${trialDaysRemaining} day${
-				trialDaysRemaining !== 1 ? "s" : ""
-		  }`
-		: `$${yearlyPrice.toFixed(2)}/year`;
-
 	const handleCheckout = async (priceId: string, planName: string) => {
 		setIsLoading(planName);
 		try {
@@ -68,6 +53,43 @@ export default function TwoPlansSelector({
 			setIsLoading(null);
 		}
 	};
+
+	const plans = [
+		{
+			name: "Monthly",
+			price: monthlyPrice,
+			originalPrice: monthlyOriginalPrice,
+			discount: monthlyDiscount,
+			period: "/month",
+			priceId: STRIPE_PRICE_PRO_MONTHLY,
+			planKey: "MONTHLY",
+			features: [
+				"Unlimited problems",
+				"AI-Powered hints and chat",
+				"Submission feedback",
+				"Advanced AI guidance",
+			],
+			highlighted: false,
+		},
+		{
+			name: "Yearly",
+			price: yearlyPrice / 12,
+			period: "/month",
+			annualPrice: yearlyPrice,
+			annualPeriod: "/year",
+			discount: yearlyDiscount,
+			priceId: STRIPE_PRICE_PRO_YEARLY,
+			planKey: "YEARLY",
+			badge: "Most Popular",
+			features: [
+				"All Monthly features",
+				`Save ${yearlyDiscount}% vs monthly`,
+				`Save 90% vs LeetCode Premium`,
+				`Only $${(yearlyPrice / 12).toFixed(2)}/month`,
+			],
+			highlighted: true,
+		},
+	];
 
 	return (
 		<div className="space-y-6">
@@ -88,280 +110,110 @@ export default function TwoPlansSelector({
 			</div>
 
 			{/* Plan Cards */}
-			<div className="grid sm-2:grid-cols-2 gap-6 relative">
-				{/* Monthly Plan Card */}
-				<div className="max-w-lg w-full mx-auto flex flex-col justify-between gap-4 bg-background-2 border border-white/50 rounded-lg p-8 hover:border-orange-500/50 transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/10">
-					<div>
-						{/* Header with Title */}
-						<div className="flex items-center justify-start gap-3 mb-6">
-							<h3 className="text-2xl font-bold text-foreground">
-								Monthly
-							</h3>
-						</div>
-						{/* Price Display */}
-						<div className="mb-8 flex items-center gap-2">
-							<div className="flex items-baseline gap-2 mb-1">
-								<span className="text-5xl font-bold text-white">
-									{hasActiveTrial
-										? "$0"
-										: `$${monthlyPrice.toFixed(2)}`}
-								</span>
-							</div>
-							<div className="flex flex-col items-start justify-between gap-1">
-								<div className="flex gap-2 items-center">
-									<span className="text-sm text-muted-foreground line-through">
-										${monthlyOriginalPrice.toFixed(2)}
-									</span>
-									<span className="text-xs bg-orange-500/20 text-orange-600 dark:text-orange-400 px-2 py-1 rounded">
-										{monthlyDiscount}% off
-									</span>
-								</div>
-								{hasActiveTrial ? (
-									<p className="text-sm text-muted-foreground">
-										then ${monthlyPrice.toFixed(2)}/month in{" "}
-										{trialDaysRemaining} day
-										{trialDaysRemaining !== 1 ? "s" : ""}
-									</p>
-								) : (
-									<p className="text-sm text-muted-foreground">
-										/month
-									</p>
-								)}
-							</div>
-						</div>
-						{/* Features List */}
-						<div className="space-y-4 mb-16">
-							<div className="flex items-center gap-3">
-								<svg
-									className="w-5 h-5 text-green-500 flex-shrink-0"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth={2}
-										d="M5 13l4 4L19 7"
-									/>
-								</svg>
-								<span className="text-foreground">
-									AI-powered hints and chat
-								</span>
-							</div>
-							<div className="flex items-center gap-3">
-								<svg
-									className="w-5 h-5 text-green-500 flex-shrink-0"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth={2}
-										d="M5 13l4 4L19 7"
-									/>
-								</svg>
-								<span className="text-foreground">
-									Submission feedback
-								</span>
-							</div>
-							<div className="flex items-center gap-3">
-								<svg
-									className="w-5 h-5 text-green-500 flex-shrink-0"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth={2}
-										d="M5 13l4 4L19 7"
-									/>
-								</svg>
-								<span className="text-foreground">
-									All algorithm problems and lessons
-								</span>
-							</div>
-							<div className="flex items-center gap-3">
-								<svg
-									className="w-5 h-5 text-green-500 flex-shrink-0"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth={2}
-										d="M5 13l4 4L19 7"
-									/>
-								</svg>
-								<span className="text-foreground">
-									Progress tracking
-								</span>
-							</div>
-						</div>
-					</div>
-					<div>
-						{/* CTA Button */}
-						<button
-							onClick={() =>
-								handleCheckout(
-									STRIPE_PRICE_PRO_MONTHLY,
-									"MONTHLY"
-								)
-							}
-							disabled={isLoading !== null}
-							className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-4 px-6 rounded-lg text-center block transition-all duration-200 mb-4 hover:scale-105 hover:shadow-lg hover:shadow-orange-500/25 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-						>
-							{isLoading === "MONTHLY"
-								? "Loading..."
-								: `Pick Monthly plan`}
-						</button>
-
-						{/* Reassurance */}
-						{hasActiveTrial && (
-							<p className="text-center text-sm text-muted-foreground">
-								No charge until your free trial ends in{" "}
-								{trialDaysRemaining} day
-								{trialDaysRemaining !== 1 ? "s" : ""}
-							</p>
-						)}
-					</div>
-				</div>
-
-				{/* Yearly Plan Card */}
-				<div className="max-w-lg w-full mx-auto flex flex-col justify-between gap-4 bg-background border border-orange-500/50 rounded-lg p-8 hover:border-orange-500 transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/25 relative overflow-hidden">
-					{/* Glow effect background - extends beyond card */}
-					<div className="absolute -inset-16 bg-gradient-to-b from-orange-500/60 via-orange-500/30 to-orange-500/10 rounded-lg blur-3xl opacity-15 z-0"></div>
-					{/* <div className="absolute -inset-2 bg-gradient-to-tr from-orange-500/40 via-orange-500/20 to-transparent rounded-lg blur-2xl opacity-30 z-0"></div>
-					<div className="absolute inset-0 bg-gradient-to-br from-orange-500/15 via-orange-500/5 to-transparent rounded-lg opacity-30 z-0"></div> */}
-					{/* Card content wrapper */}
-					<div className="relative z-10 flex flex-col flex-1 justify-between gap-4">
+			<div className="grid md:grid-cols-2 gap-8">
+				{plans.map((plan, index) => (
+					<div
+						key={index}
+						className={`max-w-[600px] w-full mx-auto flex flex-col justify-between bg-background border rounded-lg p-8 relative ${
+							plan.highlighted
+								? "border-2 border-orange-500 shadow-lg"
+								: "border-border"
+						}`}
+					>
 						<div>
-							{/* Header with Title */}
-							<div className="flex items-center justify-start gap-3 mb-6">
-								<h3 className="text-2xl font-bold text-foreground">
-									Yearly
-								</h3>
-								<span className="text-xs bg-orange-500/20 text-orange-600 dark:text-orange-400 px-2 py-1 rounded">
-									Best Value
-								</span>
-							</div>
-							{/* Price Display */}
-							<div className="mb-8 flex items-center gap-2">
-								<div className="flex items-baseline gap-2 mb-1">
-									<span className="text-5xl font-bold text-white">
+							{plan.badge && (
+								<div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-orange-500 text-white px-4 py-1 rounded-full text-sm font-semibold">
+									{plan.badge}
+								</div>
+							)}
+							<h3 className="text-2xl font-bold text-foreground mb-4">
+								{plan.name}
+							</h3>
+							<div className="mb-6">
+								<div className="flex items-baseline gap-2">
+									<span className="text-4xl font-bold text-foreground">
 										{hasActiveTrial
 											? "$0"
-											: `$${yearlyPrice.toFixed(2)}`}
+											: `$${plan.price.toFixed(2)}`}
+									</span>
+									<span className="text-muted-foreground">
+										{plan.period}
 									</span>
 								</div>
-								<div className="flex flex-col items-start justify-between gap-1">
-									<div className="flex gap-2 items-center">
-										<span className="text-sm text-muted-foreground line-through">
-											${yearlyOriginalPrice.toFixed(2)}
-										</span>
-										<span className="text-xs bg-orange-500/20 text-orange-600 dark:text-orange-400 px-2 py-1 rounded">
-											{yearlyDiscount}% off
-										</span>
+								{hasActiveTrial && (
+									<div className="mt-2 text-sm text-muted-foreground">
+										then ${plan.price.toFixed(2)}
+										{plan.period} in {trialDaysRemaining}{" "}
+										day{trialDaysRemaining !== 1 ? "s" : ""}
 									</div>
-									{hasActiveTrial ? (
-										<p className="text-sm text-muted-foreground">
-											then ${yearlyPrice.toFixed(2)}/year
-											in {trialDaysRemaining} day
-											{trialDaysRemaining !== 1
-												? "s"
-												: ""}
-										</p>
-									) : (
-										<p className="text-sm text-muted-foreground">
-											/year
-										</p>
-									)}
-								</div>
+								)}
+								{plan.annualPrice ? (
+									<div className="mt-2 text-sm text-muted-foreground">
+										billed annually at{" "}
+										<span className="font-semibold text-foreground">
+											${plan.annualPrice.toFixed(2)}
+										</span>
+										{plan.annualPeriod}
+									</div>
+								) : (
+									plan.originalPrice && (
+										<div className="mt-2 flex items-center gap-2">
+											<span className="text-sm text-muted-foreground line-through">
+												${plan.originalPrice.toFixed(2)}
+											</span>
+											<span className="text-xs bg-orange-500/20 text-orange-600 dark:text-orange-400 px-2 py-1 rounded">
+												{plan.discount}% off
+											</span>
+										</div>
+									)
+								)}
 							</div>
-							{/* Features List */}
-							<div className="space-y-4 mb-16">
-								<div className="flex items-center gap-3">
-									<svg
-										className="w-5 h-5 text-green-500 flex-shrink-0"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
+							<ul className="space-y-3 mb-8">
+								{plan.features.map((feature, featureIndex) => (
+									<li
+										key={featureIndex}
+										className="flex items-start gap-3"
 									>
-										<path
-											strokeLinecap="round"
-											strokeLinejoin="round"
-											strokeWidth={2}
-											d="M5 13l4 4L19 7"
-										/>
-									</svg>
-									<span className="text-foreground">
-										All Monthly features
-									</span>
-								</div>
-								<div className="flex items-center gap-3">
-									<svg
-										className="w-5 h-5 text-green-500 flex-shrink-0"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path
-											strokeLinecap="round"
-											strokeLinejoin="round"
-											strokeWidth={2}
-											d="M5 13l4 4L19 7"
-										/>
-									</svg>
-									<span className="text-foreground">
-										Save {yearlyDiscount}% vs monthly
-									</span>
-								</div>
-								<div className="flex items-center gap-3">
-									<svg
-										className="w-5 h-5 text-green-500 flex-shrink-0"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path
-											strokeLinecap="round"
-											strokeLinejoin="round"
-											strokeWidth={2}
-											d="M5 13l4 4L19 7"
-										/>
-									</svg>
-									<span className="text-foreground">
-										Only ${(yearlyPrice / 12).toFixed(2)}
-										/month
-									</span>
-								</div>
-							</div>
+										<svg
+											className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M5 13l4 4L19 7"
+											/>
+										</svg>
+										<span className="text-foreground">
+											{feature}
+										</span>
+									</li>
+								))}
+							</ul>
 						</div>
+
 						<div>
-							{/* CTA Button */}
 							<button
 								onClick={() =>
-									handleCheckout(
-										STRIPE_PRICE_PRO_YEARLY,
-										"YEARLY"
-									)
+									handleCheckout(plan.priceId, plan.planKey)
 								}
 								disabled={isLoading !== null}
-								className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-4 px-6 rounded-lg text-center block transition-all duration-200 mb-4 hover:scale-105 hover:shadow-lg hover:shadow-orange-500/25 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+								className={`w-full font-semibold py-3 px-6 rounded-lg text-center block transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 ${
+									plan.highlighted
+										? "bg-orange-500 hover:bg-orange-600 text-white hover:scale-105 hover:shadow-lg hover:shadow-orange-500/25"
+										: "bg-background-2 hover:bg-background-3 text-foreground border border-border hover:border-orange-500"
+								}`}
 							>
-								{isLoading === "YEARLY"
+								{isLoading === plan.planKey
 									? "Loading..."
-									: `Pick Yearly plan`}
+									: `Pick ${plan.name} plan`}
 							</button>
-							{/* Reassurance */}
+
 							{hasActiveTrial && (
-								<p className="text-center text-sm text-muted-foreground">
+								<p className="text-center text-sm text-muted-foreground mt-4">
 									No charge until your free trial ends in{" "}
 									{trialDaysRemaining} day
 									{trialDaysRemaining !== 1 ? "s" : ""}
@@ -369,8 +221,9 @@ export default function TwoPlansSelector({
 							)}
 						</div>
 					</div>
-				</div>
+				))}
 			</div>
+			<FAQ3 />
 		</div>
 	);
 }

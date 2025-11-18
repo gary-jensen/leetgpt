@@ -58,8 +58,10 @@
 
 :root {
 	--radius: 0.625rem;
-	--background: #2e2e2e;
-	--background-2: #2d2d2d;
+	--background: #272727;
+	/* --background: #2e2e2e; */
+	/* --background-2: #2d2d2d; */
+	--background-2: #272727;
 	--background-3: #212121;
 	--background-4: #1f1f1f;
 	/* --background: #252525;
@@ -287,4 +289,17 @@
 
 .dark-scrollbar::-webkit-scrollbar-thumb:hover {
 	background: #6B7280;
+}
+
+
+.hero-gradient {
+	background: radial-gradient(circle, #ff690090 0%, #00000000 50%);
+	opacity: 0.5;
+	backdrop-filter: blur(10px);
+	-webkit-backdrop-filter: blur(10px);
+	-moz-backdrop-filter: blur(10px);
+	-ms-backdrop-filter: blur(10px);
+	-o-backdrop-filter: blur(10px);
+	backdrop-filter: blur(10px);
+	backdrop-filter: blur(10px);
 }

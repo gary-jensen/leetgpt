@@ -181,7 +181,7 @@ export function WorkspaceNavbar({ problemsMeta }: WorkspaceNavbarProps) {
 						<div className="flex items-center gap-4">
 							<Link href="/" className="flex items-center gap-2">
 								<Image
-									src="/LeetGPT Logo.png"
+									src="/leetgpt_icon.svg"
 									alt="LeetGPT"
 									width={32}
 									height={32}

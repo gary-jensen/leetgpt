@@ -349,13 +349,13 @@ export function EditorPanel({
 
 	// Reusable editor content wrapper
 	const editorContent = (backgroundClass: string) => (
-		<div className="border-1 rounded-2xl overflow-hidden gap-2 h-full">
-			<div className="h-full flex rounfded-2xl overflow-hidden bforder-1">
+		<div className="border-1 border-[#2f2f2f] rounded-2xl overflow-hidden gap-2 h-full">
+			<div className="h-full flex rounfded-2xl overflow-hidden">
 				<div
 					className={`flex-3 h-full ${backgroundClass} flex flex-col`}
 				>
 					<div className="w-full h-full flex flex-col p-0">
-						<div className="min-h-[60vh] md:min-h-0 flex flex-1 flex-col overflow-hidden">
+						<div className="md:min-h-0 flex flex-1 flex-col overflow-hidden">
 							{editorComponent}
 						</div>
 						{actionButtonsToolbar}
@@ -393,7 +393,7 @@ export function EditorPanel({
 					defaultSize={95}
 					minSize={30}
 					maxSize={95}
-					className="border-1 rounded-2xl overflow-hidden gap-2"
+					className="overflow-hidden gap-2"
 				>
 					{editorContent("bg-background")}
 				</ResizablePanel>

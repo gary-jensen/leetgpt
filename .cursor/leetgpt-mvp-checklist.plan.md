@@ -262,6 +262,7 @@
 -   **Move problems and get rid of "algo" dashboard**
 -   **hide /learn and get rid of any links to it**
 -   **Rebrand to LeetGPT**
+-   **Create new landing page**
 
 ### Todo
 
@@ -269,7 +270,6 @@
 
 -   **Fix Problem statement not initial render**
 -   **responsiveness**
--   **Create new landing page**
 -   **Create preview image**
 -   **Stripe Prod**
 
