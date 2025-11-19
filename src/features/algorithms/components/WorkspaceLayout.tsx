@@ -102,7 +102,7 @@ export function WorkspaceLayout({
 	}, [onSubmit]);
 
 	return (
-		<div className="w-screen h-screen max-h-screen flex flex-col bg-background-4 overflow-hidden">
+		<div className="w-screen h-[100dvh] max-h-screen flex flex-col bg-background-4 overflow-hidden">
 			<WorkspaceNavbar problemsMeta={problemsMeta} />
 
 			{/* Mobile Tabs - shown below lg breakpoint (1024px) */}
@@ -114,9 +114,9 @@ export function WorkspaceLayout({
 			</div>
 
 			{/* Mobile Layout - Single Panel with Tabs - shown below lg breakpoint (1024px) */}
-			<div className="flex-1 overflow-hidden p-2 lg:hidden">
+			<div className="flex-1 hf-[100dvh] overflow-hidden p-2 lg:hidden">
 				{activeMobileTab === "problem" && (
-					<div className="w-full h-full">
+					<div className="w-full h-full mfb-[60px]">
 						<ResizablePanelGroup
 							direction="horizontal"
 							className="h-full"

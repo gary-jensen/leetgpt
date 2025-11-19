@@ -58,9 +58,7 @@ export function AlgorithmWorkspace({
 	const chatMessagesRef = useRef<any[]>([]);
 	const previousIsExecutingRef = useRef(false);
 	const submissionCounterRef = useRef(0);
-	console.time("session");
 	const { data: session } = useSession();
-	console.timeEnd("session");
 	const progress = useProgress();
 
 	// Get subscription status from session (synchronous, no database calls)
