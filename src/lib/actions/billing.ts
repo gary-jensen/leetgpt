@@ -2,6 +2,7 @@
 
 import { requireAuth, getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import Stripe from "stripe";
 import {
 	stripe,
 	createCheckoutSession,
@@ -206,9 +207,9 @@ export async function getSubscriptionStatus(): Promise<SubscriptionStatus | null
 }
 
 /**
-* Get current plan tier (PRO via Stripe, EXPERT via manual assignment)
-* Returns null if user is not authenticated (graceful handling for guests)
-*/
+ * Get current plan tier (PRO via Stripe, EXPERT via manual assignment)
+ * Returns null if user is not authenticated (graceful handling for guests)
+ */
 export async function getCurrentPlanTier(): Promise<"PRO" | "EXPERT" | null> {
 	try {
 		// Check authentication without throwing
@@ -231,10 +232,11 @@ export async function getCurrentPlanTier(): Promise<"PRO" | "EXPERT" | null> {
 		}
 
 		// If user has a valid Stripe price ID, they're PRO
-		if (dbUser?.stripePriceId && (
-			dbUser.stripePriceId === STRIPE_PRICE_PRO_MONTHLY ||
-			dbUser.stripePriceId === STRIPE_PRICE_PRO_YEARLY
-		)) {
+		if (
+			dbUser?.stripePriceId &&
+			(dbUser.stripePriceId === STRIPE_PRICE_PRO_MONTHLY ||
+				dbUser.stripePriceId === STRIPE_PRICE_PRO_YEARLY)
+		) {
 			return "PRO";
 		}
 
@@ -246,8 +248,8 @@ export async function getCurrentPlanTier(): Promise<"PRO" | "EXPERT" | null> {
 }
 
 /**
-* Update user role (used by webhook and manual admin assignment)
-*/
+ * Update user role (used by webhook and manual admin assignment)
+ */
 export async function updateUserRole(
 	userId: string,
 	role: "BASIC" | "PRO" | "EXPERT" | "ADMIN"
@@ -341,7 +343,10 @@ export async function syncSubscriptionFromStripe(
 		// Retrieve full subscription details to get current_period_end
 		// The list() method may not return all fields, so we retrieve it explicitly
 		const fullSubscription = await stripe.subscriptions.retrieve(
-			subscription.id
+			subscription.id,
+			{
+				expand: ["latest_invoice"],
+			}
 		);
 
 		// Determine subscription status
@@ -352,41 +357,17 @@ export async function syncSubscriptionFromStripe(
 		// Check cancel_at_period_end first (takes precedence over active status)
 		const subscriptionAny = fullSubscription as any;
 
-		// Log all cancellation-related fields for debugging
-		console.log(
-			`Subscription ${subscription.id} details: ` +
-				`status=${fullSubscription.status}, ` +
-				`cancel_at_period_end=${subscriptionAny.cancel_at_period_end}, ` +
-				`cancel_at=${subscriptionAny.cancel_at}, ` +
-				`canceled_at=${subscriptionAny.canceled_at}, ` +
-				`cancellation_details=${JSON.stringify(
-					subscriptionAny.cancellation_details
-				)}`
-		);
-
 		// Check multiple ways cancel_at_period_end might be set
 		const cancelAtPeriodEnd =
 			subscriptionAny.cancel_at_period_end === true ||
 			subscriptionAny.cancel_at_period_end === "true" ||
 			(subscriptionAny.cancel_at && subscriptionAny.cancel_at > 0); // cancel_at is a timestamp when it will cancel
 
-		// Log cancellation status for debugging
-		if (cancelAtPeriodEnd) {
-			console.log(
-				`Subscription ${subscription.id} has cancel_at_period_end=true. Stripe status: ${fullSubscription.status}`
-			);
-		}
-
 		if (fullSubscription.status === "trialing") {
 			subscriptionStatus = "stripe_trialing";
 		} else if (fullSubscription.status === "active") {
 			// If canceled at period end, mark as canceled (user keeps access until period ends)
 			subscriptionStatus = cancelAtPeriodEnd ? "canceled" : "active";
-			if (cancelAtPeriodEnd) {
-				console.log(
-					`Setting subscriptionStatus to "canceled" for subscription ${subscription.id} (cancel_at_period_end=true)`
-				);
-			}
 		} else if (fullSubscription.status === "canceled") {
 			// Immediately canceled (no period end) → expired
 			subscriptionStatus = "expired";
@@ -412,12 +393,26 @@ export async function syncSubscriptionFromStripe(
 		}
 
 		// Update user with subscription data
-		// Try to get current_period_end from subscription object
-		// Note: TypeScript types don't expose these, but they exist in the API response
-		let currentPeriodEnd = subscriptionAny.current_period_end as
-			| number
-			| null
-			| undefined;
+		// In API version 2025-10-29.clover, current_period_end/start are on subscription items, not subscription
+		// Try to get current_period_end from subscription items first (new API structure)
+		let currentPeriodEnd: number | null | undefined = undefined;
+
+		const firstItem = fullSubscription.items?.data?.[0];
+		if (firstItem) {
+			const itemAny = firstItem as any;
+			currentPeriodEnd = itemAny.current_period_end as
+				| number
+				| null
+				| undefined;
+		}
+
+		// Fallback: try subscription level (old API structure)
+		if (!currentPeriodEnd) {
+			currentPeriodEnd = subscriptionAny.current_period_end as
+				| number
+				| null
+				| undefined;
+		}
 
 		// For trialing subscriptions, fall back to trial_end if current_period_end is missing
 		if (!currentPeriodEnd && fullSubscription.status === "trialing") {
@@ -425,13 +420,6 @@ export async function syncSubscriptionFromStripe(
 				| number
 				| null
 				| undefined;
-			if (currentPeriodEnd) {
-				console.log(
-					`Using trial_end for trialing subscription ${
-						subscription.id
-					}: ${new Date(currentPeriodEnd * 1000).toISOString()}`
-				);
-			}
 		}
 
 		// If still missing, try to get it from latest invoice
@@ -447,15 +435,14 @@ export async function syncSubscriptionFromStripe(
 						latestInvoiceId
 					);
 					const invoiceAny = invoice as any;
+
+					// Try multiple places where period_end might be
 					if (invoiceAny.period_end) {
 						currentPeriodEnd = invoiceAny.period_end as number;
-						console.log(
-							`Using period_end from latest invoice for subscription ${
-								subscription.id
-							}: ${new Date(
-								currentPeriodEnd * 1000
-							).toISOString()}`
-						);
+					} else if (invoiceAny.lines?.data?.[0]?.period?.end) {
+						// Period is in the first line item
+						currentPeriodEnd = invoiceAny.lines.data[0].period
+							.end as number;
 					}
 				}
 			} catch (error) {
@@ -515,23 +502,12 @@ export async function syncSubscriptionFromStripe(
 			}
 
 			currentPeriodEnd = nextPeriodEnd;
-			console.log(
-				`Calculated current_period_end from billing_cycle_anchor for subscription ${
-					subscription.id
-				}: ${new Date(
-					currentPeriodEnd * 1000
-				).toISOString()} (${interval}, ${intervalCount})`
-			);
 		}
 
-		// Log if current_period_end is still missing (for debugging)
+		// Log if current_period_end is still missing
 		if (!currentPeriodEnd) {
 			console.warn(
-				`Warning: current_period_end could not be determined for subscription ${subscription.id}. ` +
-					`Subscription status: ${fullSubscription.status}. ` +
-					`Available fields: ${Object.keys(subscriptionAny).join(
-						", "
-					)}`
+				`Warning: current_period_end could not be determined for subscription ${subscription.id}`
 			);
 		}
 
@@ -542,9 +518,6 @@ export async function syncSubscriptionFromStripe(
 			// Subscription is canceled - use cancel_at as the expiration date
 			periodEndDate = new Date(
 				(subscriptionAny.cancel_at as number) * 1000
-			);
-			console.log(
-				`Using cancel_at as expiration date for canceled subscription: ${periodEndDate.toISOString()}`
 			);
 		} else if (currentPeriodEnd) {
 			// Active subscription - use current_period_end
