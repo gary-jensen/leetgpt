@@ -1,41 +1,38 @@
 "use client";
 
-import { useParams } from "next/navigation";
-import { useEffect, useState, useRef } from "react";
-import { WorkspaceLayout } from "./WorkspaceLayout";
-import { TestResult } from "./TestResultsDisplay";
-import { useAlgoProblemExecution } from "../hooks/useAlgoProblemExecution";
-import { streamAlgoCoachMessage } from "../services/algoCoachStream";
-import { Button } from "@/components/ui/button";
-import {
-	AlgoProblemDetail,
-	AlgoLesson,
-	AlgoProblemSubmission,
-} from "@/types/algorithm-types";
 import { useProgress } from "@/contexts/ProgressContext";
-import { useSession } from "next-auth/react";
 import { updateAlgoProblemProgress } from "@/lib/actions/algoProgress";
 import {
-	trackAlgoProblemViewed,
+	trackAlgoChatError,
+	trackAlgoChatMessageReceived,
+	trackAlgoChatMessageSent,
 	trackAlgoHintRequested,
+	trackAlgoProblemCompleted,
 	trackAlgoProblemStarted,
 	trackAlgoProblemSwitched,
-	trackAlgoProblemCompleted,
-	trackAlgoChatMessageSent,
-	trackAlgoChatMessageReceived,
-	trackAlgoChatError,
+	trackAlgoProblemViewed,
 } from "@/lib/analytics";
-import { useProblemTimeTracking } from "../hooks/useProblemTimeTracking";
+import {
+	AlgoLesson,
+	AlgoProblemDetail,
+	AlgoProblemSubmission,
+} from "@/types/algorithm-types";
+import { useSession } from "next-auth/react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { TopicsDropdown } from "./TopicsDropdown";
+import { useAlgoProblemExecution } from "../hooks/useAlgoProblemExecution";
+import { useProblemTimeTracking } from "../hooks/useProblemTimeTracking";
+import { streamAlgoCoachMessage } from "../services/algoCoachStream";
+import { TestResult } from "./TestResultsDisplay";
+import { WorkspaceLayout } from "./WorkspaceLayout";
 
-import { AlgoProblemMeta } from "@/types/algorithm-types";
 import { SubscriptionStatusValue } from "@/lib/actions/billing";
+import { getSubscriptionStatusFromSession } from "@/lib/utils/subscription";
+import { AlgoProblemMeta } from "@/types/algorithm-types";
 
 interface AlgorithmWorkspaceProps {
 	problem: AlgoProblemDetail;
 	relatedLessons: AlgoLesson[];
-	problemsMeta: AlgoProblemMeta[];
 	subscriptionStatus?: {
 		subscriptionStatus: SubscriptionStatusValue;
 		stripePriceId: string | null;
@@ -44,13 +41,13 @@ interface AlgorithmWorkspaceProps {
 		isYearly: boolean;
 		trialDaysRemaining: number | null;
 	} | null;
+	problemsMeta: AlgoProblemMeta[];
 }
 
 export function AlgorithmWorkspace({
 	problem,
 	relatedLessons,
 	problemsMeta,
-	subscriptionStatus: initialSubscriptionStatus,
 }: AlgorithmWorkspaceProps) {
 	const [chatMessages, setChatMessages] = useState<any[]>([]);
 	const [isThinking, setIsThinking] = useState(false);
@@ -61,8 +58,13 @@ export function AlgorithmWorkspace({
 	const chatMessagesRef = useRef<any[]>([]);
 	const previousIsExecutingRef = useRef(false);
 	const submissionCounterRef = useRef(0);
+	console.time("session");
 	const { data: session } = useSession();
+	console.timeEnd("session");
 	const progress = useProgress();
+
+	// Get subscription status from session (synchronous, no database calls)
+	const initialSubscriptionStatus = getSubscriptionStatusFromSession(session);
 
 	// Determine subscription status from props
 	const isSubscriptionExpired =
@@ -1042,10 +1044,10 @@ export function AlgorithmWorkspace({
 				isThinking={isThinking}
 				streamingMessageId={streamingMessageId}
 				relatedLessons={relatedLessons}
-				problemsMeta={problemsMeta}
 				onNewSubmission={(handler) => {
 					addSubmissionHandlerRef.current = handler;
 				}}
+				problemsMeta={problemsMeta}
 			/>
 		</>
 	);

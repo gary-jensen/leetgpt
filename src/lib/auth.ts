@@ -43,9 +43,9 @@ export const authOptions: AuthOptions = {
 				// Load fresh user data from database
 				const userWithProgress = await prisma.user.findUnique({
 					where: { id: user.id },
-					include: { progress: true },
+					// disabled progress. this will disable the /learn page
+					// include: { progress: true },
 				});
-
 				if (!userWithProgress) {
 					// User deleted - return session without user ID
 					session.user.id = "";
@@ -101,37 +101,37 @@ export const authOptions: AuthOptions = {
 					userWithProgress.stripeSubscriptionId;
 
 				// Load and calculate progress
-				if (userWithProgress.progress) {
-					const lessonProgress = userWithProgress.progress
-						.lessonProgress as unknown as Record<
-						string,
-						{ currentStep: number; completed: boolean }
-					>;
+				// if (userWithProgress?.progress) {
+				// 	const lessonProgress = userWithProgress.progress
+				// 		.lessonProgress as unknown as Record<
+				// 		string,
+				// 		{ currentStep: number; completed: boolean }
+				// 	>;
 
-					// Calculate current skill node from lesson progress
-					const currentSkillNodeId = calculateCurrentSkillNodeId(
-						lessonProgress,
-						cachedLessonMetadata
-					);
+				// 	// Calculate current skill node from lesson progress
+				// 	const currentSkillNodeId = calculateCurrentSkillNodeId(
+				// 		lessonProgress,
+				// 		cachedLessonMetadata
+				// 	);
 
-					// Build skill tree and calculate progress
-					const skillNodes =
-						buildSkillTreeFromLessons(cachedLessonMetadata);
-					const calculatedSkillNodes = recalculateSkillNodes(
-						skillNodes,
-						lessonProgress
-					);
+				// 	// Build skill tree and calculate progress
+				// 	const skillNodes =
+				// 		buildSkillTreeFromLessons(cachedLessonMetadata);
+				// 	const calculatedSkillNodes = recalculateSkillNodes(
+				// 		skillNodes,
+				// 		lessonProgress
+				// 	);
 
-					session.progress = {
-						xp: userWithProgress.progress.xp,
-						level: userWithProgress.progress.level,
-						currentSkillNodeId,
-						lessonProgress,
-						skillNodes: calculatedSkillNodes,
-					};
-				} else {
-					session.progress = null;
-				}
+				// 	session.progress = {
+				// 		xp: userWithProgress.progress.xp,
+				// 		level: userWithProgress.progress.level,
+				// 		currentSkillNodeId,
+				// 		lessonProgress,
+				// 		skillNodes: calculatedSkillNodes,
+				// 	};
+				// } else {
+				// 	session.progress = null;
+				// }
 			}
 			return session;
 		},

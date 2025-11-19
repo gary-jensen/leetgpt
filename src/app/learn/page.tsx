@@ -1,6 +1,8 @@
 import Workspace from "@/features/Workspace/workspace";
+import { redirect } from "next/navigation";
 
 const LearnPage = () => {
-	return <Workspace />;
+	redirect("/problems");
+	// return <Workspace />;
 };
 export default LearnPage;

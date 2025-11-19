@@ -1,25 +1,13 @@
-import { getSession } from "@/lib/auth";
-import { getSubscriptionStatusFromSession } from "@/lib/utils/subscription";
-import { AlgoNavbar } from "@/features/algorithms/components/AlgoNavbar";
-import { AlgoSidebar } from "@/features/algorithms/components/AlgoSidebar";
-import { ProblemsList } from "@/features/algorithms/components/ProblemsList";
-import {
-	getAlgoLessons,
-	getAlgoProblemsMeta,
-	getAllTopics,
-} from "@/features/algorithms/data";
+import ProblemsPage from "@/features/algorithms/components/ProblemsPage";
+import { getAlgoProblemsMeta, getAllTopics } from "@/features/algorithms/data";
 
 export default async function ProblemsListPage() {
-	const [session, problems, allTopics, lessons] = await Promise.all([
-		getSession(),
+	const [problems, allTopics, lessons] = await Promise.all([
 		getAlgoProblemsMeta(),
 		getAllTopics(),
 		// getAlgoLessons(),
 		[],
 	]);
-
-	// Check and expire trial if needed (handles everything internally)
-	getSubscriptionStatusFromSession(session);
 
 	const difficultyTotals = { easy: 0, medium: 0, hard: 0 } as Record<
 		string,
@@ -33,18 +21,10 @@ export default async function ProblemsListPage() {
 	const lessonsTotal = lessons.length;
 
 	return (
-		<div className="min-h-screen bg-background-4">
-			<AlgoNavbar />
-			<AlgoSidebar
-				problems={problems.map((p) => ({
-					id: p.id,
-					difficulty: p.difficulty as "easy" | "medium" | "hard",
-				}))}
-				lessonsTotal={lessonsTotal}
-			/>
-			<div className="max-w-7xl md:ml-[250px] 3xl:mx-auto pt-20 mx-auto px-4 py-4 ">
-				<ProblemsList problems={problems} allTopics={allTopics} />
-			</div>
-		</div>
+		<ProblemsPage
+			problems={problems}
+			lessonsTotal={lessonsTotal}
+			allTopics={allTopics}
+		/>
 	);
 }

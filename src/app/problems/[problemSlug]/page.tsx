@@ -69,9 +69,7 @@ export default async function AlgorithmWorkspacePage({
 }: AlgorithmWorkspacePageProps) {
 	const { problemSlug } = await params;
 
-	// Fetch problem and all problems metadata for navigation (lightweight, only what we need) (also cached)
-	const [session, problem, problemsMeta] = await Promise.all([
-		getSession(),
+	const [problem, problemsMeta] = await Promise.all([
 		getAlgoProblemBySlug(problemSlug),
 		getAlgoProblemsMeta(),
 	]);
@@ -85,15 +83,11 @@ export default async function AlgorithmWorkspacePage({
 	// Temporarily disable related lessons
 	const relatedLessons: AlgoLesson[] = [];
 
-	// Get subscription status from session (synchronous, no database calls)
-	const subscriptionStatus = getSubscriptionStatusFromSession(session);
-
 	return (
 		<AlgorithmWorkspace
 			problem={problem}
 			relatedLessons={relatedLessons}
 			problemsMeta={problemsMeta}
-			subscriptionStatus={subscriptionStatus}
 		/>
 	);
 }

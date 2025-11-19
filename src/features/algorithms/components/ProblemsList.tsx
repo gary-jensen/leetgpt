@@ -1,39 +1,31 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { AlgoProblemMeta } from "@/types/algorithm-types";
-import { getDifficultyColor } from "../utils/difficultyUtils";
-import { useAlgoFilters } from "../hooks/useAlgoFilters";
-import type { FilterSortBy } from "../utils/filterStorage";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
 	DropdownMenuLabel,
-	DropdownMenuSeparator,
-	DropdownMenuCheckboxItem,
 	DropdownMenuRadioGroup,
 	DropdownMenuRadioItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
-import {
-	Search,
-	Filter,
-	Circle,
-	Clock,
-	ArrowUpDown,
-	Check,
-} from "lucide-react";
-import Link from "next/link";
-import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
 import { useProgress } from "@/contexts/ProgressContext";
 import {
-	trackAlgoProblemListViewed,
 	trackAlgoProblemClicked,
+	trackAlgoProblemListViewed,
 } from "@/lib/analytics";
+import { cn } from "@/lib/utils";
+import { AlgoProblemMeta } from "@/types/algorithm-types";
+import { ArrowUpDown, Check, Circle, Filter, Search } from "lucide-react";
+import { useSession } from "next-auth/react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { useAlgoFilters } from "../hooks/useAlgoFilters";
+import { getDifficultyColor } from "../utils/difficultyUtils";
+import type { FilterSortBy } from "../utils/filterStorage";
 
 interface ProblemsListProps {
 	problems: AlgoProblemMeta[];
@@ -42,6 +34,7 @@ interface ProblemsListProps {
 
 export function ProblemsList({ problems, allTopics }: ProblemsListProps) {
 	const progress = useProgress();
+	const { data: session } = useSession();
 	const filters = useAlgoFilters({ saveOnUnmount: true, autoPersist: false });
 
 	const [filterSearch, setFilterSearch] = useState("");
