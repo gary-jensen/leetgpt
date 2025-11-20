@@ -300,6 +300,33 @@ export function convertInput(value: any, paramType: string): any {
 				return arrayTo_Node(value);
 			}
 			return value; // Already _Node or null
+		case "ListNode[]":
+			// Convert array of arrays to array of ListNode objects
+			if (Array.isArray(value)) {
+				return value.map((arr: any) => {
+					if (!Array.isArray(arr) || arr.length === 0) return null;
+					return arrayToListNode(arr);
+				});
+			}
+			return value;
+		case "TreeNode[]":
+			// Convert array of arrays to array of TreeNode objects
+			if (Array.isArray(value)) {
+				return value.map((arr: any) => {
+					if (!Array.isArray(arr) || arr.length === 0 || arr[0] === null) return null;
+					return arrayToTreeNode(arr);
+				});
+			}
+			return value;
+		case "_Node[]":
+			// Convert array of arrays to array of _Node objects
+			if (Array.isArray(value)) {
+				return value.map((arr: any) => {
+					if (!Array.isArray(arr) || arr.length === 0 || arr[0] === null) return null;
+					return arrayTo_Node(arr);
+				});
+			}
+			return value;
 		case "number[]":
 		case "string[]":
 			// For arrays, return a shallow clone to prevent shared state
